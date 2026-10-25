@@ -9,7 +9,7 @@ data class ThreatReport(
     val isApk: Boolean = true,
     val localScore: Int = 0,
     val cloudScore: Int = 0,
-    val finalScore: Int = 0,
+    val currentScore: Int = 0,
     val severity: ThreatSeverity = ThreatSeverity.SAFE,
     val threatFamily: String = "Clean",
     val detectedBehaviors: List<String> = emptyList(),
@@ -18,13 +18,16 @@ data class ThreatReport(
     val cloudEnginesTotal: Int = 0,
     val cloudSources: List<String> = emptyList(),
     val aiExplanation: String? = null,
+    val isFinal: Boolean = false,
+    val pendingEngines: List<String> = emptyList(),
+    val statusMessage: String = "Analyzing...",
     val timestamp: Long = System.currentTimeMillis()
 )
 
 enum class ThreatSeverity(val label: String, val colorHex: Long) {
-    SAFE("Clean", 0xFF00E676),          // Neon Green
-    SUSPICIOUS("Suspicious", 0xFFFFB300),// Cyber Amber
-    HIGH_RISK("High Risk", 0xFFFF5722),  // Neon Orange
+    SAFE("Clean", 0xFF00E676),            // Neon Green
+    SUSPICIOUS("Suspicious", 0xFFFFB300),  // Cyber Amber
+    HIGH_RISK("High Risk", 0xFFFF5722),    // Neon Orange
     MALICIOUS("Critical Malware", 0xFFFF1744) // Neon Crimson
 }
 

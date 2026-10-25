@@ -96,7 +96,7 @@ fun CyberRadarShield(
 }
 
 @Composable
-fun ScoreBadge(score: Int, severity: ThreatSeverity) {
+fun ScoreBadge(score: Int, severity: ThreatSeverity, isFinal: Boolean = true) {
     val (color, label) = when (severity) {
         ThreatSeverity.SAFE -> NeonEmerald to "CLEAN"
         ThreatSeverity.SUSPICIOUS -> CyberAmber to "SUSPICIOUS"
@@ -113,6 +113,14 @@ fun ScoreBadge(score: Int, severity: ThreatSeverity) {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (!isFinal) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(10.dp),
+                    strokeWidth = 1.5.dp,
+                    color = color
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+            }
             Text(
                 text = "$score/100",
                 color = color,
@@ -122,7 +130,7 @@ fun ScoreBadge(score: Int, severity: ThreatSeverity) {
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = "• $label",
+                text = if (isFinal) "• $label" else "• LIVE",
                 color = color,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold
@@ -141,41 +149,66 @@ fun ThreatItemRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable { onClick() }
-            .border(1.dp, CyberCardBorder.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+            .border(
+                1.dp,
+                if (!report.isFinal) NeonCyan.copy(alpha = 0.5f) else CyberCardBorder.copy(alpha = 0.6f),
+                RoundedCornerShape(12.dp)
+            ),
         colors = CardDefaults.cardColors(containerColor = CyberCardSurface),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = report.targetName,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "${report.threatFamily} • ${report.targetPath.substringAfterLast("/")}",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    maxLines = 1
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = report.targetName,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = report.threatFamily,
+                        color = if (report.threatFamily != "Clean") NeonCyan else TextSecondary,
+                        fontSize = 12.sp,
+                        maxLines = 1
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                ScoreBadge(report.currentScore, report.severity, report.isFinal)
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Details",
+                    tint = TextMuted,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            ScoreBadge(report.finalScore, report.severity)
-            Spacer(modifier = Modifier.width(6.dp))
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Details",
-                tint = TextMuted,
-                modifier = Modifier.size(20.dp)
-            )
+
+            // Live status message or pending engines line
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!report.isFinal) {
+                    Text(
+                        text = "⚡ ${report.statusMessage}",
+                        color = NeonCyan,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1
+                    )
+                } else {
+                    Text(
+                        text = report.statusMessage,
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
 package io.threatlens.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,13 +7,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +23,7 @@ import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ScoreBadge
 import io.threatlens.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ThreatDetailSheet(
     report: ThreatReport,
@@ -63,10 +61,53 @@ fun ThreatDetailSheet(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
-                ScoreBadge(report.finalScore, report.severity)
+                ScoreBadge(report.currentScore, report.severity, report.isFinal)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Dynamic Scanning Progress Banner (if still analyzing)
+            if (!report.isFinal) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, NeonCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = CyberCardSurface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = NeonCyan
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Dynamic Scan in Progress",
+                                color = NeonCyan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = report.statusMessage,
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        if (report.pendingEngines.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Awaiting response from: ${report.pendingEngines.joinToString(", ")}",
+                                color = CyberAmber,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
 
             // AI Explanation Card
             if (!report.aiExplanation.isNullOrBlank()) {
@@ -104,7 +145,29 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Suspicious Behaviors & Findings
+            // Cloud Sources Breakdown
+            if (report.cloudSources.isNotEmpty()) {
+                GlassCard {
+                    Text(
+                        text = "Cloud Detections & Sources",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    report.cloudSources.forEach { src ->
+                        Text(
+                            text = "✓ $src",
+                            color = NeonEmerald,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            // Observed Heuristics
             if (report.detectedBehaviors.isNotEmpty()) {
                 GlassCard {
                     Text(
@@ -161,7 +224,7 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Technical Hash
+            // Technical Checksum
             GlassCard {
                 Text(
                     text = "SHA-256 Checksum",
