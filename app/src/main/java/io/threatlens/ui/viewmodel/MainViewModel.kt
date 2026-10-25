@@ -40,12 +40,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val vtKey = MutableStateFlow(prefs.getString("vt_key", "") ?: "")
     val haKey = MutableStateFlow(prefs.getString("ha_key", "") ?: "")
     val kasperskyKey = MutableStateFlow(prefs.getString("kaspersky_key", "") ?: "")
+    val metaDefenderKey = MutableStateFlow(prefs.getString("metadefender_key", "") ?: "")
+    val filescanKey = MutableStateFlow(prefs.getString("filescan_key", "") ?: "")
 
     init {
-        // Hydrate API keys into RealtimeScanCoordinator
         syncKeysToCoordinator()
 
-        // Listen for live background scan events
         viewModelScope.launch {
             RealtimeScanCoordinator.scanReports.collect { newReport ->
                 val current = _scansList.value.toMutableList()
@@ -55,7 +55,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Start shield service by default
         startShieldService()
     }
 
@@ -124,7 +123,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ),
                 cloudEnginesFlagged = 42,
                 cloudEnginesTotal = 71,
-                cloudSources = listOf("MalwareBazaar (Abuse.ch)", "VirusTotal (42/71)"),
+                cloudSources = listOf("MalwareBazaar (Abuse.ch)", "VirusTotal (42/71)", "MetaDefender (28/35)"),
                 aiExplanation = "🚨 **What is this?** This is Cerberus, a notorious Android banking trojan that disguises itself as a legit utility.\n\n⚠️ **What can it cause?**\n• Steals bank login credentials and credit card numbers.\n• Intercepts one-time SMS verification passwords (OTPs).\n• Can remotely control your screen.\n\n🛡️ **What to do:** Delete and uninstall this application immediately!"
             )
             val current = _scansList.value.toMutableList()
@@ -147,13 +146,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saveApiKeys(gemini: String, groq: String, vt: String, ha: String, kaspersky: String) {
+    fun saveApiKeys(gemini: String, groq: String, vt: String, ha: String, kaspersky: String, metaDefender: String, filescan: String) {
         prefs.edit()
             .putString("gemini_key", gemini.trim())
             .putString("groq_key", groq.trim())
             .putString("vt_key", vt.trim())
             .putString("ha_key", ha.trim())
             .putString("kaspersky_key", kaspersky.trim())
+            .putString("metadefender_key", metaDefender.trim())
+            .putString("filescan_key", filescan.trim())
             .apply()
 
         geminiKey.value = gemini.trim()
@@ -161,6 +162,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         vtKey.value = vt.trim()
         haKey.value = ha.trim()
         kasperskyKey.value = kaspersky.trim()
+        metaDefenderKey.value = metaDefender.trim()
+        filescanKey.value = filescan.trim()
 
         syncKeysToCoordinator()
     }
@@ -171,5 +174,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         RealtimeScanCoordinator.virusTotalKey = vtKey.value
         RealtimeScanCoordinator.hybridAnalysisKey = haKey.value
         RealtimeScanCoordinator.kasperskyKey = kasperskyKey.value
+        RealtimeScanCoordinator.metaDefenderKey = metaDefenderKey.value
+        RealtimeScanCoordinator.filescanKey = filescanKey.value
     }
 }

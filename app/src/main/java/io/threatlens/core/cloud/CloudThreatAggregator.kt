@@ -15,7 +15,9 @@ data class CloudAggregatedVerdict(
 class CloudThreatAggregator(
     private val vtApiKey: String? = null,
     private val haApiKey: String? = null,
-    private val kasperskyKey: String? = null
+    private val kasperskyKey: String? = null,
+    private val metaDefenderKey: String? = null,
+    private val filescanKey: String? = null
 ) {
 
     suspend fun inspectHash(sha256: String): CloudAggregatedVerdict = withContext(Dispatchers.IO) {
@@ -25,25 +27,35 @@ class CloudThreatAggregator(
         var highestScore = 0
         var detectedFamily: String? = null
 
-        // 1. Run MalwareBazaar asynchronously (Free & fast)
+        // 1. MalwareBazaar (Abuse.ch - Free community lookup)
         val bazaarDeferred = async { MalwareBazaarProvider.queryHash(sha256) }
 
-        // 2. Run VirusTotal if key present
+        // 2. VirusTotal (v3)
         val vtDeferred = async {
             if (!vtApiKey.isNullOrBlank()) VirusTotalProvider.queryHash(sha256, vtApiKey) else null
         }
 
-        // 3. Run HybridAnalysis if key present
+        // 3. Hybrid Analysis (Falcon Sandbox)
         val haDeferred = async {
             if (!haApiKey.isNullOrBlank()) HybridAnalysisProvider.queryHash(sha256, haApiKey) else null
         }
 
-        // 4. Run Kaspersky if key present
+        // 4. Kaspersky OpenTIP
         val kasperskyDeferred = async {
             if (!kasperskyKey.isNullOrBlank()) KasperskyOpenTipProvider.queryHash(sha256, kasperskyKey) else null
         }
 
-        // Collect Bazaar
+        // 5. MetaDefender Cloud (OPSWAT)
+        val metaDefenderDeferred = async {
+            if (!metaDefenderKey.isNullOrBlank()) MetaDefenderProvider.queryHash(sha256, metaDefenderKey) else null
+        }
+
+        // 6. Filescan.io
+        val filescanDeferred = async {
+            if (!filescanKey.isNullOrBlank()) FilescanProvider.queryHash(sha256, filescanKey) else null
+        }
+
+        // Await Bazaar
         val bazaar = bazaarDeferred.await()
         if (bazaar != null && bazaar.isMalicious) {
             sources.add("MalwareBazaar (Abuse.ch)")
@@ -53,7 +65,7 @@ class CloudThreatAggregator(
             detectedFamily = bazaar.signature ?: "MalwareBazaar.Malware"
         }
 
-        // Collect VirusTotal
+        // Await VirusTotal
         val vt = vtDeferred.await()
         if (vt != null && vt.totalEngines > 0) {
             sources.add("VirusTotal (${vt.maliciousCount}/${vt.totalEngines})")
@@ -69,7 +81,7 @@ class CloudThreatAggregator(
             }
         }
 
-        // Collect Hybrid Analysis
+        // Await Hybrid Analysis
         val ha = haDeferred.await()
         if (ha != null) {
             sources.add("Hybrid Analysis (Score ${ha.threatScore}/100)")
@@ -81,7 +93,7 @@ class CloudThreatAggregator(
             }
         }
 
-        // Collect Kaspersky
+        // Await Kaspersky
         val kas = kasperskyDeferred.await()
         if (kas != null) {
             sources.add("Kaspersky OpenTIP (${kas.zone})")
@@ -96,6 +108,31 @@ class CloudThreatAggregator(
             if (detectedFamily == null && !kas.threatFamily.isNullOrBlank()) {
                 detectedFamily = kas.threatFamily
             }
+        }
+
+        // Await MetaDefender Cloud
+        val md = metaDefenderDeferred.await()
+        if (md != null && md.totalEngines > 0) {
+            sources.add("MetaDefender (${md.enginesFlagged}/${md.totalEngines})")
+            flaggedCount += md.enginesFlagged
+            totalCount += md.totalEngines
+            if (md.enginesFlagged >= 3) {
+                highestScore = maxOf(highestScore, 95)
+            } else if (md.threatFound) {
+                highestScore = maxOf(highestScore, 45)
+            }
+            if (detectedFamily == null && !md.threatName.isNullOrBlank()) {
+                detectedFamily = md.threatName
+            }
+        }
+
+        // Await Filescan.io
+        val fs = filescanDeferred.await()
+        if (fs != null) {
+            sources.add("Filescan.io (${fs.verdict})")
+            highestScore = maxOf(highestScore, fs.threatScore)
+            if (fs.threatScore >= 50) flaggedCount += 1
+            totalCount += 1
         }
 
         CloudAggregatedVerdict(

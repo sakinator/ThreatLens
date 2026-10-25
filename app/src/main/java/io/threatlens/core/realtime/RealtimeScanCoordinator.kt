@@ -22,10 +22,12 @@ object RealtimeScanCoordinator {
     private val _scanReports = MutableSharedFlow<ThreatReport>(replay = 50)
     val scanReports = _scanReports.asSharedFlow()
 
-    // Configurable API keys (synced from SharedPreferences / DataStore)
+    // Configurable API keys
     var virusTotalKey: String? = null
     var hybridAnalysisKey: String? = null
     var kasperskyKey: String? = null
+    var metaDefenderKey: String? = null
+    var filescanKey: String? = null
     var geminiKey: String? = null
     var groqKey: String? = null
 
@@ -41,7 +43,6 @@ object RealtimeScanCoordinator {
             val report = performScan(context, file)
             _scanReports.emit(report)
 
-            // If threat score exceeds threshold, trigger immediate high-priority alert
             if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
                 ThreatNotificationManager.showThreatAlert(context, report)
             }
@@ -68,11 +69,13 @@ object RealtimeScanCoordinator {
             ManifestHeuristicEngine.analyzeApk(context, file)
         } else null
 
-        // 5. Cloud Intelligence Aggregation (Bazaar + VT + HA + Kaspersky)
+        // 5. Cloud Intelligence Aggregation (MalwareBazaar + VT + HA + Kaspersky + MetaDefender + Filescan)
         val cloudAggregator = CloudThreatAggregator(
             vtApiKey = virusTotalKey,
             haApiKey = hybridAnalysisKey,
-            kasperskyKey = kasperskyKey
+            kasperskyKey = kasperskyKey,
+            metaDefenderKey = metaDefenderKey,
+            filescanKey = filescanKey
         )
         val cloudVerdict = cloudAggregator.inspectHash(sha256)
 
@@ -118,9 +121,7 @@ object RealtimeScanCoordinator {
             aiExplanation = aiExplanation
         )
 
-        // Cache result in LRU cache
         ScanThrottleManager.cacheReport(finalReport)
-
         finalReport
     }
 }

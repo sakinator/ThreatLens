@@ -9,13 +9,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +32,8 @@ fun SettingsScreen(
     var vtInput by remember { mutableStateOf(viewModel.vtKey.value) }
     var haInput by remember { mutableStateOf(viewModel.haKey.value) }
     var kasperskyInput by remember { mutableStateOf(viewModel.kasperskyKey.value) }
+    var metaDefenderInput by remember { mutableStateOf(viewModel.metaDefenderKey.value) }
+    var filescanInput by remember { mutableStateOf(viewModel.filescanKey.value) }
     var savedSnackbar by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -128,9 +128,19 @@ fun SettingsScreen(
             ApiKeyField(
                 label = "VirusTotal API Key (v3)",
                 placeholder = "64-character hex key",
-                hint = "Free tier gives 4 req/min & 500/day at virustotal.com",
+                hint = "Free tier: 4 req/min & 500/day at virustotal.com",
                 value = vtInput,
                 onValueChange = { vtInput = it }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            ApiKeyField(
+                label = "MetaDefender Cloud Key (OPSWAT)",
+                placeholder = "Free API key",
+                hint = "Checks ~30 engines at metadefender.com",
+                value = metaDefenderInput,
+                onValueChange = { metaDefenderInput = it }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -153,12 +163,25 @@ fun SettingsScreen(
                 onValueChange = { kasperskyInput = it }
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            ApiKeyField(
+                label = "Filescan.io API Key",
+                placeholder = "Bearer token",
+                hint = "Free IOCs & report lookup at filescan.io",
+                value = filescanInput,
+                onValueChange = { filescanInput = it }
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Save Button
             Button(
                 onClick = {
-                    viewModel.saveApiKeys(geminiInput, groqInput, vtInput, haInput, kasperskyInput)
+                    viewModel.saveApiKeys(
+                        geminiInput, groqInput, vtInput, haInput,
+                        kasperskyInput, metaDefenderInput, filescanInput
+                    )
                     savedSnackbar = true
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
@@ -184,37 +207,5 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(30.dp))
         }
-    }
-}
-
-@Composable
-fun ApiKeyField(
-    label: String,
-    placeholder: String,
-    hint: String,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    Column {
-        Text(text = label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(4.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = TextMuted, fontSize = 13.sp) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = NeonCyan,
-                unfocusedBorderColor = CyberCardBorder,
-                focusedContainerColor = CyberCardSurface,
-                unfocusedContainerColor = CyberCardSurface,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
-            )
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(text = hint, color = TextSecondary, fontSize = 11.sp)
     }
 }
