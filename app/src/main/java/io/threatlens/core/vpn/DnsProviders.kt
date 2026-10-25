@@ -12,7 +12,8 @@ data class DnsProvider(
     val features: List<String>,
     val primaryColor: Color,
     val accentColor: Color,
-    val website: String
+    val website: String,
+    val recommendationBadge: String? = null
 )
 
 object DnsProviders {
@@ -26,7 +27,8 @@ object DnsProviders {
         features = listOf("Ad Blocking", "Tracker Shield", "Phishing Filter", "No Logs"),
         primaryColor = Color(0xFF23A867), // Official AdGuard Emerald
         accentColor = Color(0xFF68D391),
-        website = "https://adguard-dns.io"
+        website = "https://adguard-dns.io",
+        recommendationBadge = "RECOMMENDED DEFAULT (BALANCED)"
     )
 
     val CLOUDFLARE_SECURITY = DnsProvider(
@@ -39,7 +41,8 @@ object DnsProviders {
         features = listOf("Malware Defense", "Ultra Low Latency", "Global Anycast", "Zero Logs"),
         primaryColor = Color(0xFFF6821F), // Official Cloudflare Orange
         accentColor = Color(0xFFFFA94D),
-        website = "https://1.1.1.1"
+        website = "https://1.1.1.1",
+        recommendationBadge = "SUGGESTED FOR ESSENTIAL SHIELD"
     )
 
     val CLOUDFLARE_STANDARD = DnsProvider(
@@ -52,7 +55,8 @@ object DnsProviders {
         features = listOf("World's Fastest", "Strict Privacy", "Anycast CDN", "DNSSEC"),
         primaryColor = Color(0xFFF6821F),
         accentColor = Color(0xFFFFA94D),
-        website = "https://1.1.1.1"
+        website = "https://1.1.1.1",
+        recommendationBadge = "FASTEST RAW RESOLUTION"
     )
 
     val QUAD9 = DnsProvider(
@@ -65,7 +69,8 @@ object DnsProviders {
         features = listOf("18+ Threat Feeds", "Swiss Privacy Laws", "Phishing Blocker", "GDPR Compliant"),
         primaryColor = Color(0xFF0A4D8C), // Official Quad9 Navy
         accentColor = Color(0xFF38BDF8),
-        website = "https://quad9.net"
+        website = "https://quad9.net",
+        recommendationBadge = "BEST SWISS THREAT INTEL"
     )
 
     val CONTROL_D = DnsProvider(
@@ -78,7 +83,8 @@ object DnsProviders {
         features = listOf("AI Threat Engine", "Malware Blocker", "Ad Filter", "Telemetry Shield"),
         primaryColor = Color(0xFF19B394), // Control D Teal
         accentColor = Color(0xFF2DD4BF),
-        website = "https://controld.com"
+        website = "https://controld.com",
+        recommendationBadge = "AI-POWERED DEFENSE"
     )
 
     val NEXTDNS = DnsProvider(
@@ -91,7 +97,8 @@ object DnsProviders {
         features = listOf("Cloud Firewall", "Tracker Blocker", "Phishing Guard", "DNS-over-HTTPS"),
         primaryColor = Color(0xFF1084FF), // NextDNS Blue
         accentColor = Color(0xFF60A5FA),
-        website = "https://nextdns.io"
+        website = "https://nextdns.io",
+        recommendationBadge = "CLOUD FIREWALL SHIELD"
     )
 
     val MULLVAD = DnsProvider(
@@ -104,7 +111,8 @@ object DnsProviders {
         features = listOf("Swedish Privacy", "Strict Zero Logs", "Ad & Tracker Shield", "Audited"),
         primaryColor = Color(0xFFE5B324), // Mullvad Yellow
         accentColor = Color(0xFFFDE047),
-        website = "https://mullvad.net"
+        website = "https://mullvad.net",
+        recommendationBadge = "SUGGESTED FOR ZERO-TRUST FORTRESS"
     )
 
     val GOOGLE = DnsProvider(
@@ -117,7 +125,8 @@ object DnsProviders {
         features = listOf("Global Anycast", "High Reliability", "DDoS Hardened", "DNSSEC Validation"),
         primaryColor = Color(0xFF4285F4), // Google Blue
         accentColor = Color(0xFF8AB4F8),
-        website = "https://developers.google.com/speed/public-dns"
+        website = "https://developers.google.com/speed/public-dns",
+        recommendationBadge = "GLOBAL ANYCAST RELIABILITY"
     )
 
     val ALL_PROVIDERS: List<DnsProvider> = listOf(

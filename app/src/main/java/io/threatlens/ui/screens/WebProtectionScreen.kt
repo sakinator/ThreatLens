@@ -221,7 +221,7 @@ fun WebProtectionScreen(
                 }
             }
 
-            // Security Level / Filter Intensity (Safest, Medium, Hardest)
+            // Security Level / Filter Intensity (Essential Shield, Balanced Sentinel, Zero-Trust Fortress)
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -257,18 +257,15 @@ fun WebProtectionScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = intensity.name,
+                                        text = intensity.title,
                                         color = if (isSelected) color else TextSecondary,
                                         fontWeight = FontWeight.Black,
-                                        fontSize = 12.sp
+                                        fontSize = 11.sp,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = when (intensity) {
-                                            FilterIntensity.SAFEST -> "Zero Break"
-                                            FilterIntensity.MEDIUM -> "Balanced"
-                                            FilterIntensity.HARDEST -> "Fortress"
-                                        },
+                                        text = intensity.subtitle,
                                         color = TextMuted,
                                         fontSize = 10.sp
                                     )
@@ -283,6 +280,74 @@ fun WebProtectionScreen(
                         fontSize = 11.sp,
                         lineHeight = 16.sp
                     )
+
+                    // Suggested DNS Recommendation Bar for Active Level
+                    val suggestedProvider = DnsProviders.getById(filterIntensity.suggestedDnsId)
+                    val isSuggestedAlreadySelected = activeDns.id == suggestedProvider.id
+
+                    Surface(
+                        color = if (isSuggestedAlreadySelected) CyberDarkSurface else NeonCyan.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSuggestedAlreadySelected) CyberCardBorder else NeonCyan.copy(alpha = 0.6f)
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (!isSuggestedAlreadySelected) {
+                                    ThreatLensVpnService.setDnsProvider(suggestedProvider)
+                                }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSuggestedAlreadySelected) Icons.Default.CheckCircle else Icons.Default.Recommend,
+                                    contentDescription = null,
+                                    tint = if (isSuggestedAlreadySelected) NeonGreen else NeonCyan,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = if (isSuggestedAlreadySelected) "Active DNS matches recommendation:" else "Suggested DNS for ${filterIntensity.title}:",
+                                        color = TextMuted,
+                                        fontSize = 10.sp
+                                    )
+                                    Text(
+                                        text = "${suggestedProvider.name} (${suggestedProvider.primaryIp})",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            if (!isSuggestedAlreadySelected) {
+                                Button(
+                                    onClick = { ThreatLensVpnService.setDnsProvider(suggestedProvider) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(28.dp)
+                                ) {
+                                    Text(
+                                        text = "Apply Suggested",
+                                        color = CyberBlack,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -374,13 +439,15 @@ fun WebProtectionScreen(
                     ) {
                         items(DnsProviders.ALL_PROVIDERS) { provider ->
                             val isSelected = activeDns.id == provider.id
+                            val isSuggestedForCurrentLevel = provider.id == filterIntensity.suggestedDnsId
+
                             Surface(
                                 modifier = Modifier
-                                    .width(160.dp)
+                                    .width(175.dp)
                                     .clickable { ThreatLensVpnService.setDnsProvider(provider) }
                                     .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) provider.primaryColor else CyberCardBorder,
+                                        width = if (isSelected) 2.dp else if (isSuggestedForCurrentLevel) 1.5.dp else 1.dp,
+                                        color = if (isSelected) provider.primaryColor else if (isSuggestedForCurrentLevel) NeonCyan else CyberCardBorder,
                                         shape = RoundedCornerShape(12.dp)
                                     ),
                                 color = if (isSelected) provider.primaryColor.copy(alpha = 0.15f) else CyberDarkSurface,
@@ -390,6 +457,21 @@ fun WebProtectionScreen(
                                     modifier = Modifier.padding(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
+                                    if (isSuggestedForCurrentLevel) {
+                                        Surface(
+                                            color = NeonCyan.copy(alpha = 0.2f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "⭐ SUGGESTED FOR YOU",
+                                                color = NeonCyan,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Black,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -434,10 +516,11 @@ fun WebProtectionScreen(
                                     )
 
                                     Text(
-                                        text = provider.features.firstOrNull() ?: "Fast Resolver",
+                                        text = provider.recommendationBadge ?: provider.features.firstOrNull() ?: "Fast Resolver",
                                         color = provider.accentColor,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
                                     )
                                 }
                             }

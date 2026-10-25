@@ -11,37 +11,37 @@ class DomainFilterRegressionTest {
     fun setup() {
         DomainFilterEngine.clearHistory()
         DomainFilterEngine.setFilterMode(FilterMode.BOTH)
-        DomainFilterEngine.setFilterIntensity(FilterIntensity.MEDIUM)
+        DomainFilterEngine.setFilterIntensity(FilterIntensity.BALANCED)
     }
 
     @Test
-    fun testConfirmedMalwareBlockedInMedium() {
+    fun testConfirmedMalwareBlockedInBalanced() {
         val decision = DomainFilterEngine.evaluateDomain(
             "anatsa-c2-drop.top",
             FilterMode.BOTH,
-            FilterIntensity.MEDIUM
+            FilterIntensity.BALANCED
         )
         assertEquals(FilterAction.BLOCK_MALWARE, decision.action)
         assertTrue(decision.sources.isNotEmpty())
     }
 
     @Test
-    fun testConfirmedAdsBlockedInMedium() {
+    fun testConfirmedAdsBlockedInBalanced() {
         val decision = DomainFilterEngine.evaluateDomain(
             "doubleclick.net",
             FilterMode.BOTH,
-            FilterIntensity.MEDIUM
+            FilterIntensity.BALANCED
         )
         assertEquals(FilterAction.BLOCK_AD, decision.action)
     }
 
     @Test
-    fun testSafestModeAllowsAds() {
-        // In SAFEST mode, ads are permitted so that users experience zero breakage on regular browsing
+    fun testEssentialShieldAllowsAdsForZeroBreakage() {
+        // In ESSENTIAL mode, ads are permitted so that users experience zero breakage on regular browsing
         val decision = DomainFilterEngine.evaluateDomain(
             "doubleclick.net",
             FilterMode.BOTH,
-            FilterIntensity.SAFEST
+            FilterIntensity.ESSENTIAL
         )
         assertEquals(FilterAction.ALLOW, decision.action)
 
@@ -49,24 +49,24 @@ class DomainFilterRegressionTest {
         val malwareDecision = DomainFilterEngine.evaluateDomain(
             "chase-update-bank-security.com",
             FilterMode.BOTH,
-            FilterIntensity.SAFEST
+            FilterIntensity.ESSENTIAL
         )
         assertEquals(FilterAction.BLOCK_MALWARE, malwareDecision.action)
     }
 
     @Test
-    fun testHardestModeBlocksTelemetryAndEntropy() {
+    fun testZeroTrustFortressBlocksTelemetryAndEntropy() {
         val telemetryDecision = DomainFilterEngine.evaluateDomain(
             "telemetry.samsung.com",
             FilterMode.BOTH,
-            FilterIntensity.HARDEST
+            FilterIntensity.ZERO_TRUST
         )
         assertEquals(FilterAction.BLOCK_AD, telemetryDecision.action)
 
         val entropyDecision = DomainFilterEngine.evaluateDomain(
             "suspicious-auth-98324.top",
             FilterMode.BOTH,
-            FilterIntensity.HARDEST
+            FilterIntensity.ZERO_TRUST
         )
         assertEquals(FilterAction.BLOCK_MALWARE, entropyDecision.action)
     }
@@ -77,9 +77,25 @@ class DomainFilterRegressionTest {
         val decision = DomainFilterEngine.evaluateDomain(
             "anatsa-c2-drop.top",
             FilterMode.BOTH,
-            FilterIntensity.HARDEST
+            FilterIntensity.ZERO_TRUST
         )
         assertEquals(FilterAction.ALLOW, decision.action)
+    }
+
+    @Test
+    fun testIntensitySuggestedDnsMapping() {
+        assertEquals("cloudflare_sec", FilterIntensity.ESSENTIAL.suggestedDnsId)
+        assertEquals("adguard", FilterIntensity.BALANCED.suggestedDnsId)
+        assertEquals("mullvad", FilterIntensity.ZERO_TRUST.suggestedDnsId)
+
+        // Verify that suggested DNS IDs resolve to real providers
+        val essentialDns = DnsProviders.getById(FilterIntensity.ESSENTIAL.suggestedDnsId)
+        val balancedDns = DnsProviders.getById(FilterIntensity.BALANCED.suggestedDnsId)
+        val zeroTrustDns = DnsProviders.getById(FilterIntensity.ZERO_TRUST.suggestedDnsId)
+
+        assertEquals("Cloudflare 1.1.1.2", essentialDns.name)
+        assertEquals("AdGuard DNS", balancedDns.name)
+        assertEquals("Mullvad DNS", zeroTrustDns.name)
     }
 
     @Test
@@ -90,6 +106,7 @@ class DomainFilterRegressionTest {
             assertTrue(provider.primaryIp.isNotBlank())
             assertTrue(provider.name.isNotBlank())
             assertTrue(provider.features.isNotEmpty())
+            assertTrue(!provider.recommendationBadge.isNullOrBlank())
         }
     }
 }

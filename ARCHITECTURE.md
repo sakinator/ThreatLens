@@ -75,10 +75,13 @@ Write reply to TUN               No Latency          ThreatBlockedActivity
 * All user TCP/UDP payload traffic (browsing, video streaming, downloads, gaming) bypasses the VPN completely.
 * Result: Zero proxy bottlenecks, full Wi-Fi/5G wire speeds, and no remote server required.
 
-### 3-Level Protection Intensity:
-1. **Safest (Relaxed)**: Confirmed malware and phishing domains blocked. Ads allowed to guarantee zero breakage on e-commerce, banking, or streaming platforms.
-2. **Medium (Balanced - Recommended)**: Blocks malware, phishing, aggressive ad networks, scam popups, and user-tracking analytics.
-3. **Hardest (Ultra Strict Fortress)**: Blocks all ads, trackers, OEM telemetry (Samsung, Xiaomi, Oppo), newly registered domains, and untrusted TLDs with high-entropy subdomains.
+### 3-Level Protection Intensity & DNS Pairings:
+1. **Essential Shield (Zero Breakage)**: Confirmed malware and phishing domains blocked. General ads and affiliate redirects are allowed to guarantee 0% breakage on e-commerce, banking, or streaming platforms.
+   * *Suggested DNS Pairing*: **Cloudflare 1.1.1.2 (Security)** — Low latency, malware blocking.
+2. **Balanced Sentinel (Recommended)**: Intercepts malware, phishing, aggressive ad networks, scam popups, and user-tracking analytics.
+   * *Suggested DNS Pairing*: **AdGuard DNS** (`94.140.14.14`) — Comprehensive ad & malware defense.
+3. **Zero-Trust Fortress (Maximum Paranoia)**: Blocks all ads, trackers, OEM telemetry (Samsung, Xiaomi, Oppo), newly registered domains, and untrusted TLDs with high-entropy subdomains.
+   * *Suggested DNS Pairing*: **Mullvad Privacy DNS** (`194.242.2.4`) — Swedish privacy law zero-logging.
 
 ---
 

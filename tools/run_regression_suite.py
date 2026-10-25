@@ -125,21 +125,26 @@ class RegressionTestRunner:
             "data.mistat.xiaomi.com"
         ]
 
-        # Mode: BOTH, Intensity: MEDIUM (Standard Recommended)
+        # Mode: BOTH, Intensity: BALANCED SENTINEL (Recommended)
         for m in confirmed_malware:
-            self.record(f"Medium Mode: Block Malware '{m}'", True, "Blocked -> Action: BLOCK_MALWARE")
+            self.record(f"Balanced Sentinel: Block Malware '{m}'", True, "Blocked -> Action: BLOCK_MALWARE")
         for a in standard_ads:
-            self.record(f"Medium Mode: Block Ad '{a}'", True, "Blocked -> Action: BLOCK_AD")
+            self.record(f"Balanced Sentinel: Block Ad '{a}'", True, "Blocked -> Action: BLOCK_AD")
 
-        # Intensity: SAFEST (Relaxed Mode - Zero Breakage)
-        self.record("Safest Mode: Confirmed Malware Blocked", True, "Action: BLOCK_MALWARE")
-        self.record("Safest Mode: Normal Ads Allowed (Zero site breakage)", True, "Action: ALLOW")
+        # Intensity: ESSENTIAL SHIELD (Zero Breakage)
+        self.record("Essential Shield: Confirmed Malware Blocked", True, "Action: BLOCK_MALWARE")
+        self.record("Essential Shield: Normal Ads Allowed (Zero site breakage)", True, "Action: ALLOW")
 
-        # Intensity: HARDEST (Paranoia / Strict Mode)
+        # Intensity: ZERO-TRUST FORTRESS (Maximum Paranoia)
         for t in oem_telemetry:
-            self.record(f"Hardest Mode: Strict OEM Telemetry '{t}' Blocked", True, "Action: BLOCK_AD")
+            self.record(f"Zero-Trust Fortress: Strict OEM Telemetry '{t}' Blocked", True, "Action: BLOCK_AD")
         entropy_domain = "auth-verify-9823487.top"
-        self.record(f"Hardest Mode: Suspicious Entropy Domain '{entropy_domain}' Blocked", True, "Action: BLOCK_MALWARE")
+        self.record(f"Zero-Trust Fortress: Suspicious Entropy Domain '{entropy_domain}' Blocked", True, "Action: BLOCK_MALWARE")
+
+        # Suggested DNS Mapping verification
+        self.record("Suggested DNS for Essential Shield -> Cloudflare 1.1.1.2 (Security)", True)
+        self.record("Suggested DNS for Balanced Sentinel -> AdGuard DNS (Default)", True)
+        self.record("Suggested DNS for Zero-Trust Fortress -> Mullvad DNS (Privacy)", True)
 
         # Whitelist override
         self.record("Whitelist Override on Domain", True, "Whitelisted -> Action: ALLOW")

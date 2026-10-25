@@ -30,10 +30,13 @@
 * **Zero-Day Phishing Heuristics**: Dynamically flags newly registered credential harvesting domains targeting banking and tech credentials on untrusted TLDs (`.top`, `.xyz`, `.buzz`).
 * **Multi-Source Threat Feeds**: Integrated domain intelligence derived from **Phishing Army**, **HaGeZi (Multi / Threat)**, **URLhaus (Abuse.ch)**, **StevenBlack Hosts**, and **OISD**.
 
-### ⚖️ 2. Protection Intensity (Balance Security & Usability)
-* 🟢 **Safest (High Usability)**: Blocks verified malware, trojans, and credential stealers only. Permissive on general advertising and affiliate links to guarantee zero website or shopping breakage.
-* 🔵 **Medium (Balanced — Recommended)**: Default defense mode. Intercepts malware, phishing links, intrusive video/banner ads, scam popups, and aggressive mobile telemetry.
-* 🔴 **Hardest (Ultra Strict Fortress)**: Maximum paranoia mode. Blocks all ads, trackers, OEM telemetry (Samsung, Xiaomi, Oppo), suspicious numeric entropy subdomains, and high-risk generic TLDs.
+### ⚖️ 2. Protection Intensity & Suggested DNS (Security vs. Usability Balance)
+* 🟢 **Essential Shield** *(Zero Breakage)*: Blocks verified malware, trojans, and credential stealers only. Permissive on general advertising and affiliate links to guarantee zero website or shopping breakage.
+  * **Suggested DNS**: **Cloudflare 1.1.1.2 (Security)** — Zero ad blocking, upstream malware protection with the world's lowest Anycast latency.
+* 🔵 **Balanced Sentinel** *(Recommended — Default)*: Optimal defense tier. Intercepts malware, phishing links, intrusive video/banner ads, scam popups, and aggressive mobile telemetry.
+  * **Suggested DNS**: **AdGuard DNS** (`94.140.14.14`) — Industry gold standard for balanced ad, tracker, and malware sinkholing.
+* 🔴 **Zero-Trust Fortress** *(Maximum Paranoia)*: Zero-tolerance lockdown. Blocks all ads, trackers, OEM telemetry (Samsung, Xiaomi, Oppo), high-entropy subdomains, and untrusted TLDs (`.top`, `.xyz`).
+  * **Suggested DNS**: **Mullvad Privacy DNS** (`194.242.2.4`) — Strict Swedish zero-logging privacy laws + audited tracker shield.
 
 ### 🛡️ 3. Selectable Secure DNS Providers (with Official Logos)
 | Provider | Emblems | Primary / Secondary IP | Highlights |

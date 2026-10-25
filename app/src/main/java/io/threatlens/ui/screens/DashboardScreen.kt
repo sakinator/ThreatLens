@@ -245,7 +245,7 @@ fun DashboardScreen(
                                     shape = RoundedCornerShape(4.dp)
                                 ) {
                                     Text(
-                                        text = filterIntensity.name,
+                                        text = filterIntensity.title,
                                         color = Color(filterIntensity.badgeColorHex),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,

@@ -13,25 +13,46 @@ enum class FilterMode {
 }
 
 enum class FilterIntensity(
-    val label: String,
+    val title: String,
+    val subtitle: String,
     val description: String,
+    val suggestedDnsId: String,
+    val suggestedDnsName: String,
     val badgeColorHex: Long
 ) {
-    SAFEST(
-        label = "Safest (High Usability)",
-        description = "Blocks confirmed malware and credential phishing only. Guarantees zero site breakage or shopping redirect issues.",
+    ESSENTIAL(
+        title = "Essential Shield",
+        subtitle = "Zero Breakage",
+        description = "Blocks confirmed malware, banking trojans, and credential phishing only. General ads and affiliate links are permitted to guarantee zero website or shopping breakage.",
+        suggestedDnsId = "cloudflare_sec",
+        suggestedDnsName = "Cloudflare 1.1.1.2 (Security)",
         badgeColorHex = 0xFF00E676 // Emerald Green
     ),
-    MEDIUM(
-        label = "Medium (Balanced)",
-        description = "Blocks malware, phishing, intrusive ads, popups, and aggressive trackers. The sweet spot between security and usability.",
+    BALANCED(
+        title = "Balanced Sentinel",
+        subtitle = "Recommended",
+        description = "The ideal balance of security and usability. Intercepts malware, phishing, intrusive video/banner ads, scam popups, and aggressive mobile trackers.",
+        suggestedDnsId = "adguard",
+        suggestedDnsName = "AdGuard DNS",
         badgeColorHex = 0xFF00E5FF // Neon Cyan (Recommended)
     ),
-    HARDEST(
-        label = "Hardest (Ultra Strict)",
-        description = "Maximum paranoia fortress. Blocks all ads, trackers, OEM telemetry, newly registered domains, and untrusted TLDs (.top, .xyz).",
+    ZERO_TRUST(
+        title = "Zero-Trust Fortress",
+        subtitle = "Maximum Paranoia",
+        description = "Maximum lockdown. Zero-tolerance block on all ads, telemetry harvesters, OEM vendor metrics (Samsung, Xiaomi, Oppo), and untrusted TLDs (.top, .xyz).",
+        suggestedDnsId = "mullvad",
+        suggestedDnsName = "Mullvad Privacy DNS",
         badgeColorHex = 0xFFFF0055 // Neon Red
-    )
+    );
+
+    val label: String get() = title
+
+    companion object {
+        // Backward-compatibility aliases
+        val SAFEST get() = ESSENTIAL
+        val MEDIUM get() = BALANCED
+        val HARDEST get() = ZERO_TRUST
+    }
 }
 
 enum class ThreatCategory(val label: String, val badgeColorHex: Long) {
@@ -238,8 +259,8 @@ object DomainFilterEngine {
                 return decision
             }
 
-            // Heuristic Zero-Day Phishing Interceptor (Enabled in MEDIUM and HARDEST modes)
-            if (intensity != FilterIntensity.SAFEST) {
+            // Heuristic Zero-Day Phishing Interceptor (Enabled in BALANCED and ZERO_TRUST modes)
+            if (intensity != FilterIntensity.ESSENTIAL) {
                 val matchesKeyword = suspiciousPhishKeywords.any { domain.contains(it) }
                 val hasHighRiskTld = highRiskPhishingTlds.any { domain.endsWith(it) }
                 if (matchesKeyword && hasHighRiskTld) {
@@ -255,8 +276,8 @@ object DomainFilterEngine {
                 }
             }
 
-            // HARDEST Mode: Zero Tolerance for any suspicious TLD or newly registered domain pattern
-            if (intensity == FilterIntensity.HARDEST) {
+            // ZERO_TRUST Mode: Zero Tolerance for any suspicious TLD or newly registered domain pattern
+            if (intensity == FilterIntensity.ZERO_TRUST) {
                 val isSuspiciousTldOnly = highRiskPhishingTlds.any { domain.endsWith(it) }
                 val hasNumericSubdomains = domain.matches(Regex(".*[0-9]{5,}.*"))
                 if (isSuspiciousTldOnly && hasNumericSubdomains) {
@@ -264,7 +285,7 @@ object DomainFilterEngine {
                         action = FilterAction.BLOCK_MALWARE,
                         category = ThreatCategory.STRICT_SUSPICIOUS,
                         sources = listOf("⚡ ThreatLens Strict Hardened Shield", "🛡️ HaGeZi Ultimate"),
-                        reason = "Blocked by Hardest Security Level: Domain utilizes an untrusted TLD with algorithmic entropy, typically used in fast-flux botnets.",
+                        reason = "Blocked by Zero-Trust Security Level: Domain utilizes an untrusted TLD with algorithmic entropy, typically used in fast-flux botnets.",
                         threatFamily = "Strict.EntropyHost"
                     )
                     recordBlockedMalware(domain, decision)
@@ -275,8 +296,8 @@ object DomainFilterEngine {
 
         // 2. Check Ad & Telemetry Database
         if (mode == FilterMode.BOTH || mode == FilterMode.ADS_ONLY) {
-            // In SAFEST mode, ads are permitted unless it's an aggressive redirect/popup
-            if (intensity != FilterIntensity.SAFEST) {
+            // In ESSENTIAL mode, ads are permitted unless it's an aggressive redirect/popup
+            if (intensity != FilterIntensity.ESSENTIAL) {
                 val isStandardAd = standardAdDomains.contains(domain) || standardAdDomains.any { domain.endsWith(".$it") }
                 if (isStandardAd) {
                     val isTracker = domain.contains("adjust") || domain.contains("appsflyer") || domain.contains("branch")
@@ -293,8 +314,8 @@ object DomainFilterEngine {
                 }
             }
 
-            // In HARDEST mode, also block OEM telemetry and aggressive mobile metrics
-            if (intensity == FilterIntensity.HARDEST) {
+            // In ZERO_TRUST mode, also block OEM telemetry and aggressive mobile metrics
+            if (intensity == FilterIntensity.ZERO_TRUST) {
                 val isStrictTelemetry = strictTelemetryDomains.contains(domain) || strictTelemetryDomains.any { domain.endsWith(".$it") }
                 if (isStrictTelemetry) {
                     val decision = FilterDecision(
