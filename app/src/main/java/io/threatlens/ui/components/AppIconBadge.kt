@@ -63,17 +63,18 @@ fun AppIconBadge(
             }
 
             // Convert to Bitmap
-            if (drawable != null) {
+            val targetDrawable = drawable
+            if (targetDrawable != null) {
                 try {
-                    if (drawable is BitmapDrawable && drawable.bitmap != null) {
-                        iconBitmap = drawable.bitmap
+                    if (targetDrawable is BitmapDrawable && targetDrawable.bitmap != null) {
+                        iconBitmap = targetDrawable.bitmap
                     } else {
-                        val w = if (drawable!!.intrinsicWidth > 0) drawable!!.intrinsicWidth else 96
-                        val h = if (drawable!!.intrinsicHeight > 0) drawable!!.intrinsicHeight else 96
+                        val w = if (targetDrawable.intrinsicWidth > 0) targetDrawable.intrinsicWidth else 96
+                        val h = if (targetDrawable.intrinsicHeight > 0) targetDrawable.intrinsicHeight else 96
                         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                         val canvas = Canvas(bmp)
-                        drawable!!.setBounds(0, 0, canvas.width, canvas.height)
-                        drawable!!.draw(canvas)
+                        targetDrawable.setBounds(0, 0, canvas.width, canvas.height)
+                        targetDrawable.draw(canvas)
                         iconBitmap = bmp
                     }
                 } catch (_: Exception) {}

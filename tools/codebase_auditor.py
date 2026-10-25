@@ -62,6 +62,16 @@ def audit_codebase():
             if "import kotlinx.coroutines.launch" not in text and "import kotlinx.coroutines.*" not in text:
                 issues.append(f"[{rel}] Missing import: kotlinx.coroutines.launch")
 
+        # Check FontFamily import
+        if "FontFamily." in text or "fontFamily = FontFamily" in text:
+            if "import androidx.compose.ui.text.font.FontFamily" not in text and "import androidx.compose.ui.text.font.*" not in text:
+                issues.append(f"[{rel}] Missing import: androidx.compose.ui.text.font.FontFamily")
+
+        # Check FontWeight import
+        if "FontWeight." in text or "fontWeight = FontWeight" in text:
+            if "import androidx.compose.ui.text.font.FontWeight" not in text and "import androidx.compose.ui.text.font.*" not in text:
+                issues.append(f"[{rel}] Missing import: androidx.compose.ui.text.font.FontWeight")
+
         # Check Icons.Default.* imports
         icon_matches = re.findall(r'Icons\.Default\.([A-Za-z0-9_]+)', text)
         if icon_matches:
