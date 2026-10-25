@@ -1,7 +1,7 @@
 # 🛡️ ThreatLens — Hybrid Android Antivirus, Real-Time Shield & Web Blocker
 
 <p align="center">
-  <img src="assets/threatlens_logo.svg" width="160" height="160" alt="ThreatLens Cyber Tactical Logo"/>
+  <img src="https://raw.githubusercontent.com/sakinator/ThreatLens/main/assets/threatlens_logo.png" width="160" height="160" alt="ThreatLens Cyber Shield Logo"/>
 </p>
 
 <p align="center">
