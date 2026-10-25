@@ -121,5 +121,33 @@ Download the official signed release directly from GitHub:
 
 ---
 
+## ✨ Vibe Coded Philosophy & Manifesto
+
+> *"Code at the speed of thought. Guided by vibes, verified by automated test suites."*
+
+ThreatLens — spanning on-device packet filtering, zero-battery Linux kernel `inotify` download interception, heuristic manifest decompilation, multi-cloud scanner aggregation, and real-time MITM detection — is **100% Vibe Coded**.
+
+### What does "Vibe Coded" mean here?
+- **AI-Native Architecture**: Conceived, architected, debugged, and refined through symbiotic interaction between human vision and autonomous AI coding agents (DeepMind Antigravity / Gemini / Claude).
+- **Rapid Self-Healing**: Automated regression audit suites (`tools/run_regression_suite.py`), static Kotlin syntax verification across all 52 source files, zero-battery `inotify` benchmark verification, and memory safety checks catch edge cases before deployment.
+- **Vibe Velocity**: Shipped iteratively at extreme velocity without bureaucratic enterprise lag — continuously evolving as threat landscapes, malicious APK evasion techniques, and DNS protocols evolve.
+- **As-Is Provision**: As with all vibe-coded software, it is offered purely as open-source defensive research and experimental tooling. Enjoy the vibes responsibly!
+
+---
+
+## ⚖️ Cybersecurity, Antivirus & Privacy Disclaimer
+
+> [!IMPORTANT]
+> **Defensive Security & Privacy Policy:**
+> 1. **Defensive & Research Purpose Only:** ThreatLens is an open-source cybersecurity utility created strictly for personal device hardening, defensive malware analysis, telemetry reduction, and educational research. It contains zero offensive exploits, payloads, or unauthorized penetration tooling.
+> 2. **100% On-Device Privacy & Zero Telemetry:** ThreatLens does not collect, log, track, or transmit your personal data, web browsing activity, or DNS queries to remote servers. The local virtual TUN interface (`VpnService`) operates strictly on-device (`10.111.222.1/32`) with zero remote server routing.
+> 3. **Heuristic & Threat Intelligence Limitations:** While ThreatLens aggregates intelligence from trusted threat feeds (URLhaus, HaGeZi, Phishing Army, StevenBlack) and multi-cloud scanners, cybersecurity is an asymmetric domain. No security tool can guarantee 100% detection of all zero-day threats, polymorphic malware, or novel evasion techniques. Occasional false positives or false negatives may occur.
+> 4. **Independent & Unaffiliated:** ThreatLens is an independent open-source project and is NOT affiliated with, sponsored by, or endorsed by Google, Android, VirusTotal, AdGuard, Cloudflare, Mullvad, Quad9, Control D, NextDNS, Kaspersky, or any of the third-party security authorities indexed. All trademarks belong to their respective owners.
+> 5. **Network & Certificate Inspection Responsibility:** Users are solely responsible for ensuring that their use of ThreatLens's MITM auditing, root CA checks, and DNS filtering complies with all applicable organizational policies, terms of service, and local cybersecurity regulations.
+> 6. **Limitation of Liability:** Provided "as is" under the MIT License without warranty of any kind. The authors and contributors assume no liability for device misconfigurations, network interruptions, or security incidents.
+
+---
+
 ## 📄 License
 ThreatLens is licensed under the [MIT License](LICENSE).
+
