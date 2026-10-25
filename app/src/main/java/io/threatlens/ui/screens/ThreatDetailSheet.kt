@@ -264,7 +264,28 @@ fun ThreatDetailSheet(
             ) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete / Quarantine File", fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Delete / Quarantine File Immediately", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Add to Exclusions / Whitelist Button
+            OutlinedButton(
+                onClick = {
+                    io.threatlens.core.exclusions.ExclusionManager.addAvPath(report.targetPath)
+                    io.threatlens.core.exclusions.ExclusionManager.addAvHash(report.sha256, report.targetName)
+                    onDismiss()
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+            ) {
+                Icon(Icons.Default.Shield, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add to Whitelist (Exclude from Future Scans)", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(24.dp))

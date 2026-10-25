@@ -11,7 +11,8 @@ object HybridThreatScorer {
         val finalScore: Int,
         val severity: ThreatSeverity,
         val primaryFamily: String,
-        val reasons: List<String>
+        val reasons: List<String>,
+        val isOfflineAutonomousVerdict: Boolean = false
     )
 
     fun calculate(
@@ -27,23 +28,47 @@ object HybridThreatScorer {
         if (localSig != null) {
             reasons.add("Exact match in Local Known Malware Database: ${localSig.threatFamily}")
             primaryFamily = localSig.threatFamily
-            return ScoreBreakdown(100, ThreatSeverity.MALICIOUS, primaryFamily, reasons)
+            return ScoreBreakdown(100, ThreatSeverity.MALICIOUS, primaryFamily, reasons, isOfflineAutonomousVerdict = true)
         }
+
+        val localScore = heuristic?.score ?: 0
+        val isOffline = cloudVerdict.successfulEngines.isEmpty()
 
         // 2. High Cloud Override: If confirmed by Cloud Engine (e.g. MalwareBazaar or 4+ VT engines)
         if (cloudVerdict.cloudScore >= 90) {
             reasons.add("Cloud Threat Intelligence confirmed malicious: ${cloudVerdict.detectedFamily ?: "Identified Malware"}")
             reasons.addAll(cloudVerdict.sources)
             primaryFamily = cloudVerdict.detectedFamily ?: "Cloud.Malware"
-            return ScoreBreakdown(100, ThreatSeverity.MALICIOUS, primaryFamily, reasons)
+            return ScoreBreakdown(100, ThreatSeverity.MALICIOUS, primaryFamily, reasons, isOfflineAutonomousVerdict = false)
         }
 
-        // 3. Hybrid Weighted Calculation
-        // Weights: Local Heuristics 45%, Cloud Signals 55%
-        val localScore = heuristic?.score ?: 0
-        val cloudScore = cloudVerdict.cloudScore
-
-        val weightedScore = ((localScore * 0.45) + (cloudScore * 0.55)).toInt().coerceIn(0, 100)
+        // 3. Adaptive Score Calculation & API Failure Mitigation:
+        val finalScore = if (isOffline) {
+            // AUTONOMOUS LOCAL AUTHORITY:
+            // When all cloud APIs fail (network offline, rate limits, 503s):
+            // The local engine score is 100% authoritative and is NEVER penalized or diluted!
+            if (cloudVerdict.failedEngines.isNotEmpty()) {
+                reasons.add("Cloud APIs unreachable (${cloudVerdict.failedEngines.joinToString()}) • Protected by On-Device Local Engine")
+            } else {
+                reasons.add("Verified autonomously by ThreatLens 100% Offline Local Engine")
+            }
+            localScore
+        } else {
+            // Cloud engines successfully responded:
+            val cloudScore = cloudVerdict.cloudScore
+            if (cloudVerdict.totalEngines >= 30 && cloudVerdict.enginesFlagged == 0 && localScore < 60) {
+                // False Positive Mitigation: 30+ reputable cloud AV engines confirmed clean.
+                // Mitigates mild local heuristic noise safely down.
+                reasons.add("Verified Clean across ${cloudVerdict.totalEngines} cloud threat engines")
+                (localScore * 0.30).toInt()
+            } else if (localScore >= 75) {
+                // Severe on-device finding (e.g. Banking Overlay abuse): never crushed down
+                maxOf(localScore, cloudScore)
+            } else {
+                // Balanced hybrid fusion between local heuristics and successful cloud signals
+                maxOf(localScore, ((localScore * 0.40) + (cloudScore * 0.60)).toInt())
+            }
+        }.coerceIn(0, 100)
 
         if (heuristic != null && heuristic.suspiciousBehaviors.isNotEmpty()) {
             reasons.addAll(heuristic.suspiciousBehaviors)
@@ -64,17 +89,18 @@ object HybridThreatScorer {
         }
 
         val severity = when {
-            weightedScore >= 75 -> ThreatSeverity.MALICIOUS
-            weightedScore >= 50 -> ThreatSeverity.HIGH_RISK
-            weightedScore >= 25 -> ThreatSeverity.SUSPICIOUS
+            finalScore >= 75 -> ThreatSeverity.MALICIOUS
+            finalScore >= 50 -> ThreatSeverity.HIGH_RISK
+            finalScore >= 25 -> ThreatSeverity.SUSPICIOUS
             else -> ThreatSeverity.SAFE
         }
 
         return ScoreBreakdown(
-            finalScore = weightedScore,
+            finalScore = finalScore,
             severity = severity,
             primaryFamily = primaryFamily,
-            reasons = reasons
+            reasons = reasons,
+            isOfflineAutonomousVerdict = isOffline
         )
     }
 }

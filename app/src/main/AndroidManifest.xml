@@ -25,9 +25,9 @@
     <application
         android:name=".ThreatLensApplication"
         android:allowBackup="false"
-        android:icon="@android:drawable/ic_dialog_alert"
+        android:icon="@drawable/ic_threatlens_logo"
         android:label="ThreatLens"
-        android:roundIcon="@android:drawable/ic_dialog_alert"
+        android:roundIcon="@drawable/ic_threatlens_logo"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
@@ -88,6 +88,12 @@
             android:exported="false"
             android:launchMode="singleTask"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <!-- Nightly Auto-Update JobService (Scheduled on Wi-Fi + Charging) -->
+        <service
+            android:name=".core.update.SignatureUpdateJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
 
     </application>
 

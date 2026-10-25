@@ -2,6 +2,7 @@ package io.threatlens
 
 import android.app.Application
 import io.threatlens.core.realtime.ThreatNotificationManager
+import io.threatlens.core.update.SignatureUpdateService
 
 class ThreatLensApplication : Application() {
 
@@ -9,5 +10,9 @@ class ThreatLensApplication : Application() {
         super.onCreate()
         // Initialize notification channels for silent shield status and high-priority alerts
         ThreatNotificationManager.createChannels(this)
+        // Initialize exclusion filters for both Antivirus and VPN
+        io.threatlens.core.exclusions.ExclusionManager.init(this)
+        // Initialize local signature database and load persisted updates
+        SignatureUpdateService.init(this)
     }
 }

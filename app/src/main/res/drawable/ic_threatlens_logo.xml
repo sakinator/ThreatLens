@@ -35,95 +35,128 @@
         android:strokeColor="#FF0055"
         android:strokeWidth="4"
         android:strokeLineCap="round"
-        android:pathData="M 216,170 C 204,146 186,142 176,148 M 244,170 C 256,146 274,142 284,148" />
+        android:pathData="M 234,166 C 222,142 204,138 194,144 M 262,166 C 274,142 292,138 302,144" />
+
+    <!-- Antennae Nodes -->
+    <path
+        android:fillColor="#FF0055"
+        android:pathData="M 194,144 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0 M 302,144 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0" />
 
     <!-- 6 Smooth Curved Beetle Legs -->
     <path
         android:strokeColor="#FF0055"
         android:strokeWidth="4.5"
         android:strokeLineCap="round"
-        android:pathData="M 198,198 C 172,185 152,185 140,198 M 262,198 C 288,185 308,185 320,198" />
+        android:pathData="M 216,194 C 190,181 170,181 158,194 M 280,194 C 306,181 326,181 338,194" />
     <path
         android:strokeColor="#FF0055"
         android:strokeWidth="4.5"
         android:strokeLineCap="round"
-        android:pathData="M 192,234 C 160,234 144,242 134,258 M 268,234 C 300,234 316,242 326,258" />
+        android:pathData="M 210,230 C 178,230 162,238 152,254 M 286,230 C 318,230 334,238 344,254" />
     <path
         android:strokeColor="#FF0055"
         android:strokeWidth="4.5"
         android:strokeLineCap="round"
-        android:pathData="M 198,270 C 168,288 155,302 148,318 M 262,270 C 292,288 305,302 312,318" />
+        android:pathData="M 216,266 C 186,284 173,298 166,314 M 280,266 C 310,284 323,298 330,314" />
 
     <!-- Bug Head -->
     <path
         android:fillColor="#FF0055"
-        android:pathData="M 230,166 m-18,0 a18,14 0,1,0 36,0 a18,14 0,1,0 -36,0" />
+        android:pathData="M 248,166 m-18,0 a18,14 0,1,0 36,0 a18,14 0,1,0 -36,0" />
 
     <!-- Bug Thorax -->
     <path
         android:fillColor="#FF2A6D"
-        android:pathData="M 212,198 L 248,198 A 6,6 0,0,1 254,204 L 254,222 A 6,6 0,0,1 248,228 L 212,228 A 6,6 0,0,1 206,222 L 206,204 A 6,6 0,0,1 212,198 Z" />
+        android:pathData="M 224,194 L 272,194 A 6,6 0,0,1 278,200 L 278,218 A 6,6 0,0,1 272,224 L 224,224 A 6,6 0,0,1 218,218 L 218,200 A 6,6 0,0,1 224,194 Z" />
 
     <!-- Bug Segmented Abdomen -->
     <path
         android:fillColor="#FF0055"
-        android:pathData="M 202,234 C 202,234 230,230 258,234 C 268,256 266,288 230,308 C 194,288 192,256 202,234 Z" />
+        android:pathData="M 220,230 C 220,230 248,226 276,230 C 286,252 284,284 248,304 C 212,284 210,252 220,230 Z" />
 
     <!-- Shell Center Seam -->
     <path
         android:strokeColor="#0A111E"
         android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M 230,232 L 230,306" />
+        android:pathData="M 248,228 L 248,302" />
 
     <!-- Bug Glowing Core Node -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M 230,256 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0" />
+        android:pathData="M 248,252 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0" />
 
-    <!-- 3. MAGNIFYING GLASS / LENS TARGETING THE BUG -->
-    <!-- Magnifier Cyber Handle (Angled bottom-right) -->
+    <!-- 3. MAGNIFYING GLASS & UNIFIED HARMONIOUS HANDLE -->
+    <!-- Handle Outer Bezel Stem (Matches Bezel Diameter & Cyan Glow) -->
     <path
         android:strokeColor="#00E5FF"
-        android:strokeWidth="20"
+        android:strokeWidth="18"
         android:strokeLineCap="round"
-        android:pathData="M 316,316 L 416,416" />
+        android:pathData="M 315,291 L 372,348" />
+
+    <!-- Handle Polished Inner Core -->
     <path
-        android:strokeColor="#0A111E"
-        android:strokeWidth="10"
+        android:strokeColor="#0C1626"
+        android:strokeWidth="12"
         android:strokeLineCap="round"
-        android:pathData="M 316,316 L 416,416" />
+        android:pathData="M 315,291 L 372,348" />
+
+    <!-- Handle Optical Glass Light-Pipe Core -->
     <path
         android:strokeColor="#00E5FF"
         android:strokeWidth="4"
         android:strokeLineCap="round"
-        android:pathData="M 354,354 L 408,408" />
+        android:pathData="M 319,295 L 368,344" />
 
-    <!-- Magnifier Lens Heavy Rim -->
+    <!-- Handle Specular Highlight (Matches Glass Highlights) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 323,293 L 365,335" />
+
+    <!-- Terminal Crystal Pommel (Harmoniously Inside Shield Lower-Right Corner) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M 372,348 m-9,0 a9,9 0,1,1 18,0 a9,9 0,1,1 -18,0" />
+    <path
+        android:fillColor="#0C1626"
+        android:pathData="M 372,348 m-5,0 a5,5 0,1,1 10,0 a5,5 0,1,1 -10,0" />
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M 372,348 m-2,0 a2,2 0,1,1 4,0 a2,2 0,1,1 -4,0" />
+
+    <!-- Circular Glass Bezel Rim -->
     <path
         android:strokeColor="#00E5FF"
-        android:strokeWidth="14"
-        android:pathData="M 230,230 m-105,0 a105,105 0,1,1 210,0 a105,105 0,1,1 -210,0" />
+        android:strokeWidth="16"
+        android:pathData="M 248,224 m-96,0 a96,96 0,1,1 192,0 a96,96 0,1,1 -192,0" />
 
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
-        android:pathData="M 230,230 m-113,0 a113,113 0,1,1 226,0 a113,113 0,1,1 -226,0" />
+        android:pathData="M 248,224 m-104,0 a104,104 0,1,1 208,0 a104,104 0,1,1 -208,0" />
 
     <!-- Lens Glass Reflection Arc -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="5"
         android:strokeLineCap="round"
-        android:pathData="M 165,160 C 185,145 220,140 255,145" />
+        android:pathData="M 183,154 C 203,139 238,134 273,139" />
+
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M 170,179 C 180,169 196,162 213,159" />
 
     <!-- 4. TACTICAL RETICLE & CROSSHAIRS -->
-    <!-- Precision Crosshairs -->
+    <!-- Precision Crosshair Ticks -->
     <path
         android:strokeColor="#00E5FF"
         android:strokeWidth="4"
         android:strokeLineCap="round"
-        android:pathData="M 230,135 L 230,155 M 230,305 L 230,325 M 135,230 L 155,230 M 305,230 L 325,230" />
+        android:pathData="M 248,138 L 248,154 M 248,294 L 248,310 M 162,224 L 178,224 M 318,224 L 334,224" />
 
     <!-- Green Tactical Focus Brackets [ ] -->
     <path
@@ -131,5 +164,5 @@
         android:strokeWidth="3"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 185,195 L 185,185 L 195,185 M 275,195 L 275,185 L 265,185 M 185,265 L 185,275 L 195,275 M 275,265 L 275,275 L 265,275" />
+        android:pathData="M 203,189 L 203,179 L 213,179 M 293,189 L 293,179 L 283,179 M 203,259 L 203,269 L 213,269 M 293,259 L 293,269 L 283,269" />
 </vector>

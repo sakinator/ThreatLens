@@ -23,7 +23,8 @@ data class DnsProvider(
     val primaryColor: Color,
     val accentColor: Color,
     val website: String,
-    val recommendationBadge: String? = null
+    val recommendationBadge: String? = null,
+    val dohUrl: String? = null
 )
 
 object DnsProviders {
@@ -41,7 +42,8 @@ object DnsProviders {
         primaryColor = Color(0xFF23A867), // Official AdGuard Emerald
         accentColor = Color(0xFF68D391),
         website = "https://adguard-dns.io",
-        recommendationBadge = "RECOMMENDED DEFAULT (BALANCED)"
+        recommendationBadge = "RECOMMENDED DEFAULT (BALANCED)",
+        dohUrl = "https://dns.adguard-dns.com/dns-query"
     )
 
     // 2. CLOUDFLARE 1.1.1.2 (Security / Malware Blocking)
@@ -57,7 +59,8 @@ object DnsProviders {
         primaryColor = Color(0xFFF6821F), // Official Cloudflare Orange
         accentColor = Color(0xFFFFA94D),
         website = "https://1.1.1.1",
-        recommendationBadge = "SUGGESTED FOR ESSENTIAL SHIELD"
+        recommendationBadge = "SUGGESTED FOR ESSENTIAL SHIELD",
+        dohUrl = "https://security.cloudflare-dns.com/dns-query"
     )
 
     // 3. CLOUDFLARE 1.1.1.1 (Standard Raw Speed)
@@ -73,7 +76,8 @@ object DnsProviders {
         primaryColor = Color(0xFFF6821F),
         accentColor = Color(0xFFFFA94D),
         website = "https://1.1.1.1",
-        recommendationBadge = "FASTEST RAW RESOLUTION"
+        recommendationBadge = "FASTEST RAW RESOLUTION",
+        dohUrl = "https://cloudflare-dns.com/dns-query"
     )
 
     // 4. CLOUDFLARE 1.1.1.3 (Family & Adult Filter)
@@ -89,7 +93,8 @@ object DnsProviders {
         primaryColor = Color(0xFFF6821F),
         accentColor = Color(0xFF38BDF8),
         website = "https://1.1.1.1/family",
-        recommendationBadge = "FAMILY & ADULT CONTENT SHIELD"
+        recommendationBadge = "FAMILY & ADULT CONTENT SHIELD",
+        dohUrl = "https://family.cloudflare-dns.com/dns-query"
     )
 
     // 5. QUAD9 SECURITY (Swiss Threat Intel)
@@ -105,7 +110,8 @@ object DnsProviders {
         primaryColor = Color(0xFF0A4D8C), // Official Quad9 Navy
         accentColor = Color(0xFF38BDF8),
         website = "https://quad9.net",
-        recommendationBadge = "BEST SWISS THREAT INTEL"
+        recommendationBadge = "BEST SWISS THREAT INTEL",
+        dohUrl = "https://dns.quad9.net/dns-query"
     )
 
     // 6. CONTROL D (AI Threat Filter)
@@ -121,7 +127,8 @@ object DnsProviders {
         primaryColor = Color(0xFF19B394), // Control D Teal
         accentColor = Color(0xFF2DD4BF),
         website = "https://controld.com",
-        recommendationBadge = "AI-POWERED DEFENSE"
+        recommendationBadge = "AI-POWERED DEFENSE",
+        dohUrl = "https://freedns.controld.com/p1"
     )
 
     // 7. NEXTDNS (Cloud Firewall)
@@ -137,7 +144,8 @@ object DnsProviders {
         primaryColor = Color(0xFF1084FF), // NextDNS Blue
         accentColor = Color(0xFF60A5FA),
         website = "https://nextdns.io",
-        recommendationBadge = "CLOUD FIREWALL SHIELD"
+        recommendationBadge = "CLOUD FIREWALL SHIELD",
+        dohUrl = "https://dns.nextdns.io/dns-query"
     )
 
     // 8. MULLVAD DNS (Swedish Zero-Log Privacy)
@@ -153,7 +161,8 @@ object DnsProviders {
         primaryColor = Color(0xFFE5B324), // Mullvad Yellow
         accentColor = Color(0xFFFDE047),
         website = "https://mullvad.net",
-        recommendationBadge = "SUGGESTED FOR ZERO-TRUST FORTRESS"
+        recommendationBadge = "SUGGESTED FOR ZERO-TRUST FORTRESS",
+        dohUrl = "https://dns.mullvad.net/dns-query"
     )
 
     // 9. CISCO OPENDNS (Enterprise Phishing & Botnet Shield)
@@ -169,7 +178,8 @@ object DnsProviders {
         primaryColor = Color(0xFF049FD9), // Cisco Blue
         accentColor = Color(0xFF67D8EF),
         website = "https://www.opendns.com",
-        recommendationBadge = "CISCO UMBRELLA THREAT DEFENSE"
+        recommendationBadge = "CISCO UMBRELLA THREAT DEFENSE",
+        dohUrl = "https://doh.opendns.com/dns-query"
     )
 
     // 10. RETHINKDNS (Open-Source Android Project)
@@ -185,7 +195,8 @@ object DnsProviders {
         primaryColor = Color(0xFF7C3AED), // Rethink Purple
         accentColor = Color(0xFFA78BFA),
         website = "https://rethinkdns.com",
-        recommendationBadge = "OPEN-SOURCE PRIVACY CHAMPION"
+        recommendationBadge = "OPEN-SOURCE PRIVACY CHAMPION",
+        dohUrl = "https://max.rethinkdns.com/dns-query"
     )
 
     // 11. CLEANBROWSING SECURITY (Security & Phishing Filter)
@@ -201,7 +212,8 @@ object DnsProviders {
         primaryColor = Color(0xFF2563EB), // CleanBrowsing Blue
         accentColor = Color(0xFF93C5FD),
         website = "https://cleanbrowsing.org",
-        recommendationBadge = "DEDICATED SECURITY SINKHOLE"
+        recommendationBadge = "DEDICATED SECURITY SINKHOLE",
+        dohUrl = "https://doh.cleanbrowsing.org/doh/security-filter/"
     )
 
     // 12. DNS.SB (Non-Profit Zero-Log European Anycast)
@@ -217,7 +229,8 @@ object DnsProviders {
         primaryColor = Color(0xFF059669), // SB Forest Green
         accentColor = Color(0xFF34D399),
         website = "https://dns.sb",
-        recommendationBadge = "EU INDEPENDENT NON-PROFIT"
+        recommendationBadge = "EU INDEPENDENT NON-PROFIT",
+        dohUrl = "https://doh.dns.sb/dns-query"
     )
 
     // 13. COMODO SECURE DNS (Enterprise Threat Sinkhole)
@@ -233,7 +246,8 @@ object DnsProviders {
         primaryColor = Color(0xFFDC2626), // Comodo Red
         accentColor = Color(0xFFF87171),
         website = "https://www.comodo.com/secure-dns",
-        recommendationBadge = "ENTERPRISE THREAT INTELLIGENCE"
+        recommendationBadge = "ENTERPRISE THREAT INTELLIGENCE",
+        dohUrl = null
     )
 
     // 14. LIBREDNS (German Privacy Activist DNS)
@@ -249,7 +263,8 @@ object DnsProviders {
         primaryColor = Color(0xFFD97706), // Libre Amber
         accentColor = Color(0xFFFBBF24),
         website = "https://libredns.gr",
-        recommendationBadge = "PRIVACY ACTIVIST RESOLVER"
+        recommendationBadge = "PRIVACY ACTIVIST RESOLVER",
+        dohUrl = "https://doh.libredns.gr/dns-query"
     )
 
     // 15. GOOGLE PUBLIC DNS (Global Anycast)
@@ -265,7 +280,8 @@ object DnsProviders {
         primaryColor = Color(0xFF4285F4), // Google Blue
         accentColor = Color(0xFF8AB4F8),
         website = "https://developers.google.com/speed/public-dns",
-        recommendationBadge = "GLOBAL ANYCAST RELIABILITY"
+        recommendationBadge = "GLOBAL ANYCAST RELIABILITY",
+        dohUrl = "https://dns.google/dns-query"
     )
 
     val ALL_PROVIDERS: List<DnsProvider> = listOf(

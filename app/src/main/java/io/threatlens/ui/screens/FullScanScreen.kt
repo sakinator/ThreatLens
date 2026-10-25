@@ -35,6 +35,9 @@ fun FullScanScreen(
     val scanState by viewModel.fullScanState.collectAsState()
     val isScanning = scanState.status == FullScanStatus.SCANNING
     val isCompleted = scanState.status == FullScanStatus.COMPLETED
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val isUpdatingSignatures by io.threatlens.core.update.SignatureUpdateService.isUpdating.collectAsState()
 
     Scaffold(
         containerColor = CyberBlack,
@@ -161,6 +164,55 @@ fun FullScanScreen(
                 }
             }
 
+            // Offline Virus Signatures & Definition Status Bar
+            item {
+                Surface(
+                    color = CyberDarkSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Security, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "Offline Signatures: ${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} Active",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = "Sources: MalwareBazaar, CIRCL, ATT&CK, VX-Underground",
+                                    color = TextMuted,
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+
+                        TextButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    io.threatlens.core.update.SignatureUpdateService.updateSignaturesNow(context)
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            if (isUpdatingSignatures) {
+                                CircularProgressIndicator(modifier = Modifier.size(12.dp), color = NeonCyan, strokeWidth = 1.5.dp)
+                            } else {
+                                Text("Update", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
             // Primary Action Button (Start Scan / Cancel)
             item {
                 if (isScanning) {
@@ -184,6 +236,42 @@ fun FullScanScreen(
                         Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = CyberBlack)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("START FULL DEVICE SCAN", color = CyberBlack, fontWeight = FontWeight.Black)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Custom File Picker Scan
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val coroutineScope = rememberCoroutineScope()
+                    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+                    ) { uri ->
+                        if (uri != null) {
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                try {
+                                    val tempFile = java.io.File(context.cacheDir, "manual_scan_target.apk")
+                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                                    }
+                                    if (tempFile.exists()) {
+                                        val report = io.threatlens.core.realtime.RealtimeScanCoordinator.streamScan(context, tempFile)
+                                        viewModel.selectReport(report)
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { filePickerLauncher.launch("*/*") },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("CUSTOM SCAN (SELECT FILE / APK)", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -225,14 +313,42 @@ fun FullScanScreen(
             // Threats Found List
             if (scanState.threatsFound.isNotEmpty()) {
                 item {
-                    Text(
-                        text = "THREATS REQUIRING ATTENTION",
-                        color = NeonCrimson,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "THREATS REQUIRING ATTENTION (${scanState.threatsFound.size})",
+                            color = NeonCrimson,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
+
+                item {
+                    Button(
+                        onClick = {
+                            scanState.threatsFound.forEach { threat ->
+                                viewModel.deleteFile(threat.targetPath)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS",
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
                 items(scanState.threatsFound) { report ->
                     ThreatItemRow(report = report) {
                         viewModel.selectReport(report)

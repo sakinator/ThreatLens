@@ -114,8 +114,11 @@ object FullSystemScanner {
                 val isUpdatedSystem = (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
 
                 if (!isSystem || isUpdatedSystem) {
+                    if (io.threatlens.core.exclusions.ExclusionManager.isPackageExcluded(app.packageName)) {
+                        continue
+                    }
                     val apkFile = File(app.publicSourceDir)
-                    if (apkFile.exists()) {
+                    if (apkFile.exists() && !io.threatlens.core.exclusions.ExclusionManager.isPathExcluded(apkFile.absolutePath)) {
                         val appName = pm.getApplicationLabel(app).toString()
                         list.add(ScanItem(appName, apkFile))
                     }

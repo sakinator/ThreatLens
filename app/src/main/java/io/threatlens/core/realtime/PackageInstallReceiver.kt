@@ -13,8 +13,9 @@ class PackageInstallReceiver : BroadcastReceiver() {
         if (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED) {
             val packageName = intent.data?.schemeSpecificPart ?: return
             
-            // Do not scan ourselves
+            // Do not scan ourselves or excluded packages
             if (packageName == context.packageName) return
+            if (io.threatlens.core.exclusions.ExclusionManager.isPackageExcluded(packageName)) return
 
             try {
                 val pm = context.packageManager

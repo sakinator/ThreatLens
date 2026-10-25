@@ -124,7 +124,9 @@ object DomainFilterEngine {
 
     fun isWhitelisted(domain: String): Boolean {
         val norm = normalize(domain)
-        return whitelist.contains(norm) || whitelist.any { norm.endsWith(".$it") }
+        return whitelist.contains(norm) ||
+               whitelist.any { norm.endsWith(".$it") } ||
+               io.threatlens.core.exclusions.ExclusionManager.isDomainWhitelisted(norm)
     }
 
     // High-risk verified phishing & malware domains (Phishing Army, HaGeZi Threat, URLhaus, OISD)

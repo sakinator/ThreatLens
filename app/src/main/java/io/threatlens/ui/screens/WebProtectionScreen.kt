@@ -41,13 +41,15 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WebProtectionScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateExclusions: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     val isVpnActive by ThreatLensVpnService.isVpnActive.collectAsState()
     val activeDns by ThreatLensVpnService.activeDnsProvider.collectAsState()
+    val isDohEnabled by DohResolver.isDohEnabled.collectAsState()
     val filterMode by DomainFilterEngine.filterMode.collectAsState()
     val filterIntensity by DomainFilterEngine.filterIntensity.collectAsState()
     val blockedEvents by DomainFilterEngine.blockedEvents.collectAsState()
@@ -585,6 +587,162 @@ fun WebProtectionScreen(
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // Encrypted DNS-over-HTTPS (DoH RFC 8484) Card
+            item {
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            1.dp,
+                            if (isDohEnabled) NeonCyan.copy(alpha = 0.6f) else CyberCardBorder,
+                            RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(
+                                            if (isDohEnabled) NeonCyan.copy(alpha = 0.2f) else CyberDarkSurface,
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = null,
+                                        tint = if (isDohEnabled) NeonCyan else TextMuted,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "DNS-over-HTTPS (DoH)",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = if (isDohEnabled) "Encrypted TLS Tunneling Active" else "Plaintext UDP 53 Mode",
+                                        color = if (isDohEnabled) NeonGreen else TextMuted,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = isDohEnabled,
+                                onCheckedChange = { DohResolver.setDohEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = CyberBlack,
+                                    checkedTrackColor = NeonCyan,
+                                    uncheckedThumbColor = TextMuted,
+                                    uncheckedTrackColor = CyberDarkSurface
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = "Wraps standard DNS queries in encrypted RFC 8484 TLS HTTPS packets. Shields your browsing history from ISP snooping, airport Wi-Fi interception, and government DNS tampering.",
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp
+                        )
+
+                        Surface(
+                            color = CyberDarkSurface,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Target DoH URL: ",
+                                    color = TextMuted,
+                                    fontSize = 10.sp
+                                )
+                                Text(
+                                    text = activeDns.dohUrl ?: "UDP Port 53 fallback",
+                                    color = if (activeDns.dohUrl != null) NeonCyan else CyberAmber,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Whitelist & Split Tunneling Exclusions Card
+            item {
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateExclusions() }
+                        .border(1.dp, CyberCardBorder, RoundedCornerShape(16.dp))
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(NeonCyan.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Exclusions & Split Tunneling",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "Bypass VPN for banking apps • Whitelist safe domains",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Manage",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }

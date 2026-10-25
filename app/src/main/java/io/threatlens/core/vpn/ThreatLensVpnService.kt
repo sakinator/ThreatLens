@@ -79,6 +79,14 @@ class ThreatLensVpnService : VpnService() {
                 .setMtu(1500)
                 .setBlocking(true)
 
+            // Apply VPN Exclusions (Apps that completely bypass the VPN interface)
+            val bypassedPackages = io.threatlens.core.exclusions.ExclusionManager.getVpnBypassedApps()
+            for (pkg in bypassedPackages) {
+                try {
+                    builder.addDisallowedApplication(pkg)
+                } catch (_: Exception) {}
+            }
+
             vpnInterface = builder.establish()
             if (vpnInterface == null) {
                 stopSelf()
@@ -135,23 +143,34 @@ class ThreatLensVpnService : VpnService() {
                         )
                     }
                     FilterAction.ALLOW -> {
-                        // Forward query to selected upstream DNS server
+                        // Forward query via Encrypted DoH or Protected Fast UDP
                         try {
-                            val upstreamIp = _activeDnsProvider.value.primaryIp
-                            val upstreamAddr = InetAddress.getByName(upstreamIp)
-                            val sendPacket = DatagramPacket(
-                                query.rawDnsPayload,
-                                query.rawDnsPayload.size,
-                                upstreamAddr,
-                                53
-                            )
-                            upstreamSocket.send(sendPacket)
+                            var dnsResponse: ByteArray? = null
 
-                            val recvBuffer = ByteArray(4096)
-                            val recvPacket = DatagramPacket(recvBuffer, recvBuffer.size)
-                            upstreamSocket.receive(recvPacket)
+                            // 1. Try Encrypted DNS-over-HTTPS (DoH) if enabled and supported
+                            val dohUrl = _activeDnsProvider.value.dohUrl
+                            if (DohResolver.isDohEnabled.value && !dohUrl.isNullOrBlank()) {
+                                dnsResponse = DohResolver.resolveQuery(dohUrl, query.rawDnsPayload)
+                            }
 
-                            val dnsResponse = recvPacket.data.copyOfRange(0, recvPacket.length)
+                            // 2. Fall back to standard protected UDP Port 53 Anycast
+                            if (dnsResponse == null) {
+                                val upstreamIp = _activeDnsProvider.value.primaryIp
+                                val upstreamAddr = InetAddress.getByName(upstreamIp)
+                                val sendPacket = DatagramPacket(
+                                    query.rawDnsPayload,
+                                    query.rawDnsPayload.size,
+                                    upstreamAddr,
+                                    53
+                                )
+                                upstreamSocket.send(sendPacket)
+
+                                val recvBuffer = ByteArray(4096)
+                                val recvPacket = DatagramPacket(recvBuffer, recvBuffer.size)
+                                upstreamSocket.receive(recvPacket)
+                                dnsResponse = recvPacket.data.copyOfRange(0, recvPacket.length)
+                            }
+
                             val returnPacket = DnsPacketParser.wrapInIpUdpPacket(
                                 dnsPayload = dnsResponse,
                                 srcIp = query.dstIp,

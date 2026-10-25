@@ -128,7 +128,8 @@ class MainActivity : ComponentActivity() {
                             }
                             "web_protection" -> {
                                 io.threatlens.ui.screens.WebProtectionScreen(
-                                    onBack = { currentTab = "dashboard" }
+                                    onBack = { currentTab = "dashboard" },
+                                    onNavigateExclusions = { currentTab = "exclusions" }
                                 )
                             }
                             "scan" -> {
@@ -142,7 +143,13 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onBack = { currentTab = "dashboard" },
                                     onNavigateAbout = { currentTab = "about" },
-                                    onNavigateWebProtection = { currentTab = "web_protection" }
+                                    onNavigateWebProtection = { currentTab = "web_protection" },
+                                    onNavigateExclusions = { currentTab = "exclusions" }
+                                )
+                            }
+                            "exclusions" -> {
+                                io.threatlens.ui.screens.ExclusionsScreen(
+                                    onBack = { currentTab = "settings" }
                                 )
                             }
                             "about" -> {
