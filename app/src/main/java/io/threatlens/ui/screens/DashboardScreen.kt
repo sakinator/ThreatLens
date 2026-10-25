@@ -1,5 +1,6 @@
 package io.threatlens.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.threatlens.R
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.ui.components.CyberRadarShield
 import io.threatlens.ui.components.GlassCard
@@ -44,6 +47,14 @@ fun DashboardScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // ThreatLens Cyber Logo
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_threatlens_logo),
+                            contentDescription = "ThreatLens Logo",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "THREAT",
                             color = TextPrimary,
@@ -97,7 +108,7 @@ fun DashboardScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isShieldActive) "Monitoring downloads with zero-idle kernel inotify" else "Downloads are unmonitored",
+                            text = if (isShieldActive) "Passive Linux kernel inotify • 0.0% idle load" else "Downloads are unmonitored",
                             color = TextSecondary,
                             fontSize = 12.sp
                         )
@@ -194,7 +205,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "REAL-TIME INTERCEPTION LOG",
+                        text = "REAL-TIME INTERCEPTION STREAM",
                         color = TextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,

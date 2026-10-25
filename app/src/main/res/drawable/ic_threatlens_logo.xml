@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <!-- Outer Shield -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2.5"
+        android:fillColor="#0E1626"
+        android:pathData="M48,10 C65,10 80,18 80,36 C80,60 62,78 48,86 C34,78 16,60 16,36 C16,18 31,10 48,10 Z" />
+    
+    <!-- Concentric Lens Circle -->
+    <path
+        android:strokeColor="#00E676"
+        android:strokeWidth="1.8"
+        android:fillColor="#080D17"
+        android:pathData="M48,46m-18,0a18,18 0,1,1 36,0a18,18 0,1,1 -36,0" />
+    
+    <!-- Iris Center Target -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M48,46m-7,0a7,7 0,1,1 14,0a7,7 0,1,1 -14,0" />
+
+    <!-- Crosshair Ticks -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2"
+        android:pathData="M48,22 L48,27 M48,65 L48,70 M24,46 L29,46 M67,46 L72,46" />
+</vector>

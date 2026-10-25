@@ -8,7 +8,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.threatlens.core.model.ThreatReport
+import io.threatlens.ui.components.EngineLogoIcon
+import io.threatlens.ui.components.EngineStatusBadge
 import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ScoreBadge
 import io.threatlens.ui.theme.*
@@ -66,7 +67,7 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Dynamic Scanning Progress Banner (if still analyzing)
+            // Dynamic Scanning Progress Banner
             if (!report.isFinal) {
                 Card(
                     modifier = Modifier
@@ -83,7 +84,7 @@ fun ThreatDetailSheet(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Dynamic Scan in Progress",
+                                text = "Dynamic Multi-Engine Scan in Progress",
                                 color = NeonCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
@@ -96,20 +97,12 @@ fun ThreatDetailSheet(
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace
                         )
-                        if (report.pendingEngines.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Awaiting response from: ${report.pendingEngines.joinToString(", ")}",
-                                color = CyberAmber,
-                                fontSize = 11.sp
-                            )
-                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // AI Explanation Card
+            // AI Explanation Card with Gemini/Groq branding
             if (!report.aiExplanation.isNullOrBlank()) {
                 Card(
                     modifier = Modifier
@@ -119,15 +112,10 @@ fun ThreatDetailSheet(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "AI Explainer",
-                                tint = NeonCyan,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            EngineLogoIcon("Google Gemini", modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "ThreatLens AI Threat Brief",
+                                text = "ThreatLens AI Threat Brief (Gemini 1.5 Flash)",
                                 color = NeonCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
@@ -145,27 +133,50 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Cloud Sources Breakdown
-            if (report.cloudSources.isNotEmpty()) {
-                GlassCard {
-                    Text(
-                        text = "Cloud Detections & Sources",
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    report.cloudSources.forEach { src ->
+            // Visual Cloud Engines Section
+            GlassCard {
+                Text(
+                    text = "Cloud Engines & Threat Intelligence",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Show completed engines with logos
+                    report.cloudSources.forEach { source ->
+                        EngineStatusBadge(
+                            engineName = source,
+                            detailText = source,
+                            isFlagged = true,
+                            isPending = false
+                        )
+                    }
+
+                    // Show pending engines with live logos and spinners
+                    report.pendingEngines.forEach { pendingEngine ->
+                        EngineStatusBadge(
+                            engineName = pendingEngine,
+                            isPending = true
+                        )
+                    }
+
+                    if (report.cloudSources.isEmpty() && report.pendingEngines.isEmpty()) {
                         Text(
-                            text = "✓ $src",
+                            text = "All cloud engines reported negative (Clean).",
                             color = NeonEmerald,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(vertical = 2.dp)
+                            fontSize = 12.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Observed Heuristics
             if (report.detectedBehaviors.isNotEmpty()) {
