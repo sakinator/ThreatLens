@@ -3,14 +3,19 @@ package io.threatlens.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.os.Environment
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
+import io.threatlens.core.news.CyberNewsArticle
+import io.threatlens.core.news.CyberNewsFeedService
+import io.threatlens.core.news.GeoLocationService
+import io.threatlens.core.news.UserLocation
 import io.threatlens.core.realtime.RealtimeDownloadShieldService
 import io.threatlens.core.realtime.RealtimeScanCoordinator
+import io.threatlens.core.scanner.FullScanState
+import io.threatlens.core.scanner.FullSystemScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,16 +36,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedReport = MutableStateFlow<ThreatReport?>(null)
     val selectedReport: StateFlow<ThreatReport?> = _selectedReport.asStateFlow()
 
-    private val _isScanning = MutableStateFlow(false)
-    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+    // Full On-Demand Scan State (Bitdefender-style)
+    val fullScanState: StateFlow<FullScanState> = FullSystemScanner.scanState
 
-    // AI API Keys
+    // News Feed State
+    private val _userLocation = MutableStateFlow(UserLocation())
+    val userLocation: StateFlow<UserLocation> = _userLocation.asStateFlow()
+
+    private val _newsArticles = MutableStateFlow<List<CyberNewsArticle>>(emptyList())
+    val newsArticles: StateFlow<List<CyberNewsArticle>> = _newsArticles.asStateFlow()
+
+    private val _isNewsLoading = MutableStateFlow(false)
+    val isNewsLoading: StateFlow<Boolean> = _isNewsLoading.asStateFlow()
+
+    // API Keys state
     val openAiKey = MutableStateFlow(prefs.getString("openai_key", "") ?: "")
     val claudeKey = MutableStateFlow(prefs.getString("claude_key", "") ?: "")
     val geminiKey = MutableStateFlow(prefs.getString("gemini_key", "") ?: "")
     val groqKey = MutableStateFlow(prefs.getString("groq_key", "") ?: "")
-
-    // Cloud Scanner Keys
     val vtKey = MutableStateFlow(prefs.getString("vt_key", "") ?: "")
     val haKey = MutableStateFlow(prefs.getString("ha_key", "") ?: "")
     val kasperskyKey = MutableStateFlow(prefs.getString("kaspersky_key", "") ?: "")
@@ -60,6 +73,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         startShieldService()
+        loadCyberNews()
     }
 
     fun startShieldService() {
@@ -84,58 +98,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedReport.value = report
     }
 
-    fun scanDownloadFolder() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isScanning.value = true
-            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (downloads.exists() && downloads.isDirectory) {
-                val files = downloads.listFiles { f ->
-                    val ext = f.extension.lowercase()
-                    ext in listOf("apk", "dex", "jar", "bin")
-                } ?: emptyArray()
-
-                for (file in files) {
-                    RealtimeScanCoordinator.scanFileAsync(getApplication(), file)
-                }
-            }
-            _isScanning.value = false
-        }
+    fun startFullOnDemandScan() {
+        FullSystemScanner.startFullScan(getApplication())
     }
 
-    fun simulateMalwareIntercept() {
+    fun cancelFullScan() {
+        FullSystemScanner.cancelScan()
+    }
+
+    fun loadCyberNews() {
         viewModelScope.launch(Dispatchers.IO) {
-            val dummyReport = ThreatReport(
-                targetName = "Free_Crypto_Miner_Mod.apk",
-                targetPath = "/sdcard/Download/Free_Crypto_Miner_Mod.apk",
-                sha256 = "3a6f44d8c6b75f9227181c009bdc8c1873130d2105aa0a6c085fc5794a37b089",
-                fileSize = 14200000L,
-                localScore = 85,
-                cloudScore = 100,
-                currentScore = 95,
-                isFinal = true,
-                severity = ThreatSeverity.MALICIOUS,
-                threatFamily = "Trojan-Banker.AndroidOS.Cerberus",
-                detectedBehaviors = listOf(
-                    "Injects malicious overlay screens over banking & wallet apps",
-                    "Monitors and steals 2-Factor Authentication SMS codes",
-                    "Requests Accessibility Service to capture screen touches & keystrokes"
-                ),
-                dangerousPermissions = listOf(
-                    "BIND_ACCESSIBILITY_SERVICE",
-                    "SYSTEM_ALERT_WINDOW",
-                    "RECEIVE_SMS",
-                    "INTERNET"
-                ),
-                cloudEnginesFlagged = 42,
-                cloudEnginesTotal = 71,
-                cloudSources = listOf("MalwareBazaar (Abuse.ch)", "VirusTotal (42/71)", "MetaDefender (26/32)"),
-                statusMessage = "✓ Scan Complete • Final Score: 95/100",
-                aiExplanation = "🚨 **What is this?** This is Cerberus, a notorious Android banking trojan that disguises itself as a legit utility.\n\n⚠️ **What can it cause?**\n• Steals bank login credentials and credit card numbers.\n• Intercepts one-time SMS verification passwords (OTPs).\n• Can remotely control your screen.\n\n🛡️ **What to do:** Delete and uninstall this application immediately!"
-            )
-            val current = _scansList.value.toMutableList()
-            current.add(0, dummyReport)
-            _scansList.value = current
-            _selectedReport.value = dummyReport
+            _isNewsLoading.value = true
+            val loc = GeoLocationService.detectLocation()
+            _userLocation.value = loc
+            val articles = CyberNewsFeedService.fetchDailyMalwareNews(loc)
+            _newsArticles.value = articles
+            _isNewsLoading.value = false
         }
     }
 

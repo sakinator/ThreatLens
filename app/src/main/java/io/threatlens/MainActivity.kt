@@ -12,13 +12,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.Radar
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import io.threatlens.ui.screens.DashboardScreen
+import io.threatlens.ui.screens.FullScanScreen
+import io.threatlens.ui.screens.NewsScreen
 import io.threatlens.ui.screens.SettingsScreen
-import io.threatlens.ui.theme.CyberBlack
-import io.threatlens.ui.theme.ThreatLensTheme
+import io.threatlens.ui.theme.*
 import io.threatlens.ui.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -36,24 +43,100 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ThreatLensTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = CyberBlack
-                ) {
-                    var currentScreen by remember { mutableStateOf("dashboard") }
+                var currentTab by remember { mutableStateOf("dashboard") }
 
-                    when (currentScreen) {
-                        "dashboard" -> {
-                            DashboardScreen(
-                                viewModel = viewModel,
-                                onNavigateSettings = { currentScreen = "settings" }
+                Scaffold(
+                    containerColor = CyberBlack,
+                    bottomBar = {
+                        NavigationBar(
+                            containerColor = CyberDarkSurface,
+                            contentColor = TextPrimary
+                        ) {
+                            NavigationBarItem(
+                                selected = currentTab == "dashboard",
+                                onClick = { currentTab = "dashboard" },
+                                icon = { Icon(Icons.Default.Security, contentDescription = "Shield") },
+                                label = { Text("Shield") },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = CyberBlack,
+                                    selectedTextColor = NeonCyan,
+                                    indicatorColor = NeonCyan,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted
+                                )
+                            )
+
+                            NavigationBarItem(
+                                selected = currentTab == "scan",
+                                onClick = { currentTab = "scan" },
+                                icon = { Icon(Icons.Default.Radar, contentDescription = "Full Scan") },
+                                label = { Text("Scanner") },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = CyberBlack,
+                                    selectedTextColor = NeonCyan,
+                                    indicatorColor = NeonCyan,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted
+                                )
+                            )
+
+                            NavigationBarItem(
+                                selected = currentTab == "news",
+                                onClick = { currentTab = "news" },
+                                icon = { Icon(Icons.Default.Article, contentDescription = "Threat Pulse") },
+                                label = { Text("News") },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = CyberBlack,
+                                    selectedTextColor = NeonCyan,
+                                    indicatorColor = NeonCyan,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted
+                                )
+                            )
+
+                            NavigationBarItem(
+                                selected = currentTab == "settings",
+                                onClick = { currentTab = "settings" },
+                                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                label = { Text("Settings") },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = CyberBlack,
+                                    selectedTextColor = NeonCyan,
+                                    indicatorColor = NeonCyan,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted
+                                )
                             )
                         }
-                        "settings" -> {
-                            SettingsScreen(
-                                viewModel = viewModel,
-                                onBack = { currentScreen = "dashboard" }
-                            )
+                    }
+                ) { innerPadding ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        color = CyberBlack
+                    ) {
+                        when (currentTab) {
+                            "dashboard" -> {
+                                DashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigateScan = { currentTab = "scan" },
+                                    onNavigateNews = { currentTab = "news" },
+                                    onNavigateSettings = { currentTab = "settings" }
+                                )
+                            }
+                            "scan" -> {
+                                FullScanScreen(viewModel = viewModel)
+                            }
+                            "news" -> {
+                                NewsScreen(viewModel = viewModel)
+                            }
+                            "settings" -> {
+                                SettingsScreen(
+                                    viewModel = viewModel,
+                                    onBack = { currentTab = "dashboard" }
+                                )
+                            }
                         }
                     }
                 }
@@ -62,12 +145,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        // Notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        // All Files Access for real-time file monitoring on Android 11+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
                 try {

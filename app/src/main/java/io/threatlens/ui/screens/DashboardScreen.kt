@@ -1,19 +1,19 @@
 package io.threatlens.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +31,8 @@ import io.threatlens.ui.viewmodel.MainViewModel
 @Composable
 fun DashboardScreen(
     viewModel: MainViewModel,
+    onNavigateScan: () -> Unit,
+    onNavigateNews: () -> Unit,
     onNavigateSettings: () -> Unit
 ) {
     val isShieldActive by viewModel.isShieldActive.collectAsState()
@@ -40,6 +42,7 @@ fun DashboardScreen(
 
     val maliciousCount = scans.count { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK }
     val cleanCount = scans.count { it.severity == ThreatSeverity.SAFE }
+    val isDeviceSafe = maliciousCount == 0
 
     Scaffold(
         containerColor = CyberBlack,
@@ -47,7 +50,6 @@ fun DashboardScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // ThreatLens Cyber Logo
                         Icon(
                             painter = painterResource(id = R.drawable.ic_threatlens_logo),
                             contentDescription = "ThreatLens Logo",
@@ -90,56 +92,48 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                // Central Shield & Status Card
+                Spacer(modifier = Modifier.height(4.dp))
+                // Bitdefender Mobile Security Signature Hero Status Ring
                 GlassCard {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        CyberRadarShield(isProtected = isShieldActive)
+                        CyberRadarShield(isProtected = isShieldActive && isDeviceSafe)
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = if (isShieldActive) "REALTIME INTERCEPT ACTIVE" else "SHIELD DISABLED",
-                            color = if (isShieldActive) NeonCyan else CyberAmber,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
+                            text = if (!isDeviceSafe) "YOUR DEVICE IS AT RISK" else if (isShieldActive) "YOU ARE PROTECTED" else "SHIELD IS OFF",
+                            color = if (!isDeviceSafe) NeonCrimson else if (isShieldActive) NeonEmerald else CyberAmber,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 17.sp,
                             letterSpacing = 0.5.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isShieldActive) "Passive Linux kernel inotify • 0.0% idle load" else "Downloads are unmonitored",
+                            text = if (!isDeviceSafe) "$maliciousCount security threats require immediate attention" else "Real-time download intercept active • 0% idle load",
                             color = TextSecondary,
                             fontSize = 12.sp
                         )
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Bitdefender-style Primary Scan Button
+                        Button(
+                            onClick = onNavigateScan,
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
                         ) {
-                            Text(
-                                text = "Active Defense",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Switch(
-                                checked = isShieldActive,
-                                onCheckedChange = { viewModel.toggleShield() },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = NeonCyan,
-                                    checkedTrackColor = CyberDarkSurface,
-                                    uncheckedThumbColor = TextMuted,
-                                    uncheckedTrackColor = CyberCardBorder
-                                )
-                            )
+                            Icon(Icons.Default.Security, contentDescription = null, tint = CyberBlack)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("SCAN NOW (ON-DEMAND)", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 13.sp)
                         }
                     }
                 }
             }
 
-            // Stats row
+            // Quick Stats Row
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -159,45 +153,14 @@ fun DashboardScreen(
                     )
                     MetricBox(
                         modifier = Modifier.weight(1f),
-                        title = "IDLE CPU",
-                        value = "0.0%",
+                        title = "BATTERY DRAIN",
+                        value = "< 0.5%",
                         valueColor = NeonCyan
                     )
                 }
             }
 
-            // Quick Actions
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = { viewModel.scanDownloadFolder() },
-                        enabled = !isScanning,
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberCardSurface),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Scan Folder", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    Button(
-                        onClick = { viewModel.simulateMalwareIntercept() },
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberCardSurface),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.BugReport, contentDescription = null, tint = CyberAmber, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Test AI Alert", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-
-            // Activity Log Header
+            // Real-Time Interception Stream Header
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -222,11 +185,11 @@ fun DashboardScreen(
                 item {
                     GlassCard {
                         Box(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            modifier = Modifier.fillMaxWidth().padding(20.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No downloads intercepted yet.\nDownload an APK or tap 'Test AI Alert' above.",
+                                text = "Zero threats detected in downloads.\nTap 'SCAN NOW' to run a deep device audit.",
                                 color = TextMuted,
                                 fontSize = 13.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
