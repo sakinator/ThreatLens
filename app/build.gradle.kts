@@ -20,9 +20,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("${rootProject.projectDir}/keystore/release.jks")
+            storePassword = "threatlens_keystore_secure"
+            keyAlias = "threatlens"
+            keyPassword = "threatlens_keystore_secure"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -30,8 +40,11 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            // Use identical signing config so debug & release update over each other seamlessly with no signature conflict
+            signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

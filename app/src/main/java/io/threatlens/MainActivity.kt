@@ -134,7 +134,13 @@ class MainActivity : ComponentActivity() {
                             "settings" -> {
                                 SettingsScreen(
                                     viewModel = viewModel,
-                                    onBack = { currentTab = "dashboard" }
+                                    onBack = { currentTab = "dashboard" },
+                                    onNavigateAbout = { currentTab = "about" }
+                                )
+                            }
+                            "about" -> {
+                                io.threatlens.ui.screens.AboutScreen(
+                                    onBack = { currentTab = "settings" }
                                 )
                             }
                         }

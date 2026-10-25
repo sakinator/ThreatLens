@@ -24,7 +24,8 @@ import io.threatlens.ui.viewmodel.MainViewModel
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateAbout: () -> Unit = {}
 ) {
     var openaiInput by remember { mutableStateOf(viewModel.openAiKey.value) }
     var claudeInput by remember { mutableStateOf(viewModel.claudeKey.value) }
@@ -59,6 +60,29 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Navigation to About & Software Updates Screen
+            GlassCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateAbout() },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("About ThreatLens & Credits", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Version 1.0.0 • Check for updates & links", color = TextSecondary, fontSize = 11.sp)
+                        }
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextMuted)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Battery & Performance Info Card
             GlassCard {

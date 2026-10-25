@@ -48,14 +48,14 @@ object RealtimeScanCoordinator {
         }
     }
 
-    suspend fun streamScan(context: Context, file: File) = withContext(Dispatchers.IO) {
+    suspend fun streamScan(context: Context, file: File): ThreatReport = withContext(Dispatchers.IO) {
         // 1. Calculate SHA-256
         val sha256 = HashUtil.sha256(file)
 
         // 2. Check LRU Cache (Instant 0ms hit)
         ScanThrottleManager.getCachedReport(sha256)?.let { cached ->
             _scanReports.emit(cached)
-            return@withContext
+            return@withContext cached
         }
 
         val isApk = file.extension.equals("apk", ignoreCase = true)
