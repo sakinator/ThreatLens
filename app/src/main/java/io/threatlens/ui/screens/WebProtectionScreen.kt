@@ -56,6 +56,7 @@ fun WebProtectionScreen(
     val mitmReport by MitmDetector.lastReport.collectAsState()
 
     var isScanningMitm by remember { mutableStateOf(false) }
+    var selectedDnsCategory by remember { mutableStateOf<DnsCategory?>(null) }
 
     val vpnPrepareLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -418,7 +419,7 @@ fun WebProtectionScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "SECURE UPSTREAM DNS PROVIDER",
+                            text = "SECURE UPSTREAM DNS PROVIDERS (${DnsProviders.ALL_PROVIDERS.size})",
                             color = NeonCyan,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -433,11 +434,70 @@ fun WebProtectionScreen(
                         )
                     }
 
+                    // Category Filter Pills
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
+                            val isAllSelected = selectedDnsCategory == null
+                            Surface(
+                                modifier = Modifier
+                                    .clickable { selectedDnsCategory = null }
+                                    .border(
+                                        1.dp,
+                                        if (isAllSelected) NeonCyan else CyberCardBorder,
+                                        RoundedCornerShape(8.dp)
+                                    ),
+                                color = if (isAllSelected) NeonCyan.copy(alpha = 0.15f) else CyberDarkSurface,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "All (${DnsProviders.ALL_PROVIDERS.size})",
+                                    color = if (isAllSelected) NeonCyan else TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+
+                        items(DnsCategory.values()) { category ->
+                            val isCatSelected = selectedDnsCategory == category
+                            val count = DnsProviders.ALL_PROVIDERS.count { it.category == category }
+                            Surface(
+                                modifier = Modifier
+                                    .clickable { selectedDnsCategory = category }
+                                    .border(
+                                        1.dp,
+                                        if (isCatSelected) NeonCyan else CyberCardBorder,
+                                        RoundedCornerShape(8.dp)
+                                    ),
+                                color = if (isCatSelected) NeonCyan.copy(alpha = 0.15f) else CyberDarkSurface,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "${category.label} ($count)",
+                                    color = if (isCatSelected) NeonCyan else TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    val filteredProviders = if (selectedDnsCategory == null) {
+                        DnsProviders.ALL_PROVIDERS
+                    } else {
+                        DnsProviders.ALL_PROVIDERS.filter { it.category == selectedDnsCategory }
+                    }
+
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(DnsProviders.ALL_PROVIDERS) { provider ->
+                        items(filteredProviders) { provider ->
                             val isSelected = activeDns.id == provider.id
                             val isSuggestedForCurrentLevel = provider.id == filterIntensity.suggestedDnsId
 
