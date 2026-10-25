@@ -54,7 +54,48 @@ object RealtimeScanCoordinator {
         }
     }
 
-    suspend fun streamScan(context: Context, file: File): ThreatReport = withContext(Dispatchers.IO) {
+    suspend fun streamScan(
+        context: Context,
+        file: File,
+        customAppName: String? = null,
+        customPackageName: String? = null
+    ): ThreatReport = withContext(Dispatchers.IO) {
+        // Resolve application name and package identity
+        var appName = customAppName
+        var packageName = customPackageName
+
+        if (appName.isNullOrBlank() || packageName.isNullOrBlank()) {
+            if (file.extension.equals("apk", ignoreCase = true)) {
+                try {
+                    val pkgInfo = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
+                    if (pkgInfo != null) {
+                        if (packageName.isNullOrBlank()) {
+                            packageName = pkgInfo.packageName
+                        }
+                        pkgInfo.applicationInfo.sourceDir = file.absolutePath
+                        pkgInfo.applicationInfo.publicSourceDir = file.absolutePath
+                        val label = context.packageManager.getApplicationLabel(pkgInfo.applicationInfo).toString()
+                        if (appName.isNullOrBlank() && label.isNotBlank()) {
+                            appName = label
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        if ((appName.isNullOrBlank() || packageName.isNullOrBlank()) && file.name.equals("base.apk", ignoreCase = true)) {
+            try {
+                val installed = context.packageManager.getInstalledApplications(0)
+                val match = installed.firstOrNull { it.publicSourceDir == file.absolutePath || it.sourceDir == file.absolutePath }
+                if (match != null) {
+                    if (packageName.isNullOrBlank()) packageName = match.packageName
+                    if (appName.isNullOrBlank()) appName = context.packageManager.getApplicationLabel(match).toString()
+                }
+            } catch (_: Exception) {}
+        }
+
+        val resolvedAppName = if (!appName.isNullOrBlank()) appName else if (!packageName.isNullOrBlank()) packageName else file.name
+
         // 1. Calculate SHA-256
         val sha256 = HashUtil.sha256(file)
 
@@ -63,6 +104,8 @@ object RealtimeScanCoordinator {
             val safeReport = ThreatReport(
                 targetName = file.name,
                 targetPath = file.absolutePath,
+                appName = resolvedAppName,
+                packageName = packageName,
                 sha256 = sha256,
                 severity = ThreatSeverity.SAFE,
                 currentScore = 0,
@@ -114,6 +157,8 @@ object RealtimeScanCoordinator {
         var currentReport = ThreatReport(
             targetName = file.name,
             targetPath = file.absolutePath,
+            appName = resolvedAppName,
+            packageName = packageName,
             sha256 = sha256,
             fileSize = file.length(),
             isApk = isApk,
@@ -460,7 +505,12 @@ object RealtimeScanCoordinator {
         return@withContext finalReport
     }
 
-    suspend fun performScan(context: Context, file: File): ThreatReport {
-        return streamScan(context, file)
+    suspend fun performScan(
+        context: Context,
+        file: File,
+        customAppName: String? = null,
+        customPackageName: String? = null
+    ): ThreatReport {
+        return streamScan(context, file, customAppName, customPackageName)
     }
 }

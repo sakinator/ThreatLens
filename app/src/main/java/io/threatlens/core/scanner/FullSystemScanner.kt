@@ -16,6 +16,7 @@ import java.io.File
 enum class FullScanStatus {
     IDLE,
     SCANNING,
+    PAUSED,
     COMPLETED,
     CANCELLED
 }
@@ -59,6 +60,15 @@ object FullSystemScanner {
                     return@launch
                 }
 
+                // Check and handle paused state
+                while (_scanState.value.status == FullScanStatus.PAUSED) {
+                    if (!isActive) {
+                        _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
+                        return@launch
+                    }
+                    delay(150)
+                }
+
                 _scanState.value = _scanState.value.copy(
                     progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
                     scannedCount = scanned,
@@ -69,7 +79,12 @@ object FullSystemScanner {
                 )
 
                 try {
-                    val report = RealtimeScanCoordinator.performScan(context, target.file)
+                    val report = RealtimeScanCoordinator.performScan(
+                        context = context,
+                        file = target.file,
+                        customAppName = target.name,
+                        customPackageName = target.packageName
+                    )
                     if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
                         threats.add(report)
                     } else {
@@ -96,9 +111,25 @@ object FullSystemScanner {
         }
     }
 
-    fun cancelScan() {
+    fun pauseScan() {
+        if (_scanState.value.status == FullScanStatus.SCANNING) {
+            _scanState.value = _scanState.value.copy(status = FullScanStatus.PAUSED)
+        }
+    }
+
+    fun resumeScan() {
+        if (_scanState.value.status == FullScanStatus.PAUSED) {
+            _scanState.value = _scanState.value.copy(status = FullScanStatus.SCANNING)
+        }
+    }
+
+    fun abortScan() {
         scanJob?.cancel()
         _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
+    }
+
+    fun cancelScan() {
+        abortScan()
     }
 
     private fun collectAllTargets(context: Context): List<ScanItem> {
@@ -120,7 +151,7 @@ object FullSystemScanner {
                     val apkFile = File(app.publicSourceDir)
                     if (apkFile.exists() && !io.threatlens.core.exclusions.ExclusionManager.isPathExcluded(apkFile.absolutePath)) {
                         val appName = pm.getApplicationLabel(app).toString()
-                        list.add(ScanItem(appName, apkFile))
+                        list.add(ScanItem(appName, apkFile, app.packageName))
                     }
                 }
             }
@@ -134,7 +165,21 @@ object FullSystemScanner {
                     val ext = f.extension.lowercase()
                     ext in listOf("apk", "dex", "jar", "bin")
                 }?.forEach { f ->
-                    list.add(ScanItem(f.name, f))
+                    var dlAppName = f.name
+                    var dlPkgName: String? = null
+                    if (f.extension.equals("apk", ignoreCase = true)) {
+                        try {
+                            val pi = pm.getPackageArchiveInfo(f.absolutePath, 0)
+                            if (pi != null) {
+                                dlPkgName = pi.packageName
+                                pi.applicationInfo.sourceDir = f.absolutePath
+                                pi.applicationInfo.publicSourceDir = f.absolutePath
+                                val lbl = pm.getApplicationLabel(pi.applicationInfo).toString()
+                                if (lbl.isNotBlank()) dlAppName = lbl
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    list.add(ScanItem(dlAppName, f, dlPkgName))
                 }
             }
         } catch (_: Exception) {}
@@ -142,5 +187,5 @@ object FullSystemScanner {
         return list.distinctBy { it.file.absolutePath }
     }
 
-    private data class ScanItem(val name: String, val file: File)
+    private data class ScanItem(val name: String, val file: File, val packageName: String? = null)
 }

@@ -48,6 +48,18 @@ fun SettingsScreen(
     var metaDefenderInput by remember { mutableStateOf(viewModel.metaDefenderKey.value) }
     var filescanInput by remember { mutableStateOf(viewModel.filescanKey.value) }
     var savedSnackbar by remember { mutableStateOf(false) }
+    val validationStatusMap = remember { mutableStateMapOf<String, io.threatlens.core.validation.ValidationStatus>() }
+    var isValidatingAll by remember { mutableStateOf(false) }
+
+    fun validateAndSaveSingle(provider: String, key: String) {
+        viewModel.saveSingleApiKey(provider, key)
+        savedSnackbar = true
+        coroutineScope.launch {
+            validationStatusMap[provider] = io.threatlens.core.validation.ValidationStatus.Validating
+            val res = io.threatlens.core.validation.ApiKeyValidator.validate(provider, key)
+            validationStatusMap[provider] = res
+        }
+    }
 
     val isUpdatingSignatures by SignatureUpdateService.isUpdating.collectAsState()
     val signatureStatus by SignatureUpdateService.status.collectAsState()
@@ -507,11 +519,15 @@ fun SettingsScreen(
             // OpenAI ChatGPT
             ApiKeyFieldWithIcon(
                 engineName = "ChatGPT",
+                providerId = "openai",
                 label = "OpenAI ChatGPT API Key",
                 placeholder = "sk-proj-...",
                 hint = "Supports GPT-4o-mini & GPT-4o from platform.openai.com",
+                portalUrl = "https://platform.openai.com/api-keys",
                 value = openaiInput,
-                onValueChange = { openaiInput = it }
+                onValueChange = { openaiInput = it },
+                status = validationStatusMap["openai"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("openai", openaiInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -519,11 +535,15 @@ fun SettingsScreen(
             // Anthropic Claude
             ApiKeyFieldWithIcon(
                 engineName = "Claude",
+                providerId = "claude",
                 label = "Anthropic Claude API Key",
                 placeholder = "sk-ant-...",
                 hint = "Supports Claude 3.5 Haiku from console.anthropic.com",
+                portalUrl = "https://console.anthropic.com/settings/keys",
                 value = claudeInput,
-                onValueChange = { claudeInput = it }
+                onValueChange = { claudeInput = it },
+                status = validationStatusMap["claude"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("claude", claudeInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -531,11 +551,15 @@ fun SettingsScreen(
             // Google Gemini
             ApiKeyFieldWithIcon(
                 engineName = "Google Gemini",
+                providerId = "gemini",
                 label = "Google Gemini API Key (Free)",
                 placeholder = "AIzaSy...",
                 hint = "Free 15 RPM tier via aistudio.google.com",
+                portalUrl = "https://aistudio.google.com/app/apikey",
                 value = geminiInput,
-                onValueChange = { geminiInput = it }
+                onValueChange = { geminiInput = it },
+                status = validationStatusMap["gemini"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("gemini", geminiInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -543,11 +567,15 @@ fun SettingsScreen(
             // Groq Cloud
             ApiKeyFieldWithIcon(
                 engineName = "Groq Cloud",
+                providerId = "groq",
                 label = "Groq Cloud API Key (Free)",
                 placeholder = "gsk_...",
                 hint = "Ultra-fast Llama-3 inference via console.groq.com",
+                portalUrl = "https://console.groq.com/keys",
                 value = groqInput,
-                onValueChange = { groqInput = it }
+                onValueChange = { groqInput = it },
+                status = validationStatusMap["groq"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("groq", groqInput) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -563,60 +591,80 @@ fun SettingsScreen(
 
             ApiKeyFieldWithIcon(
                 engineName = "VirusTotal",
+                providerId = "vt",
                 label = "VirusTotal API Key (v3)",
                 placeholder = "64-character hex key",
                 hint = "Free tier: 4 req/min & 500/day at virustotal.com",
+                portalUrl = "https://www.virustotal.com/gui/my-apikey",
                 value = vtInput,
-                onValueChange = { vtInput = it }
+                onValueChange = { vtInput = it },
+                status = validationStatusMap["vt"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("vt", vtInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             ApiKeyFieldWithIcon(
                 engineName = "MetaDefender",
+                providerId = "metadefender",
                 label = "MetaDefender Cloud Key (OPSWAT)",
                 placeholder = "Free API key",
                 hint = "Multi-scans across ~30 engines at metadefender.com",
+                portalUrl = "https://metadefender.opswat.com/account",
                 value = metaDefenderInput,
-                onValueChange = { metaDefenderInput = it }
+                onValueChange = { metaDefenderInput = it },
+                status = validationStatusMap["metadefender"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("metadefender", metaDefenderInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             ApiKeyFieldWithIcon(
                 engineName = "Hybrid Analysis",
+                providerId = "ha",
                 label = "Hybrid Analysis API Key",
                 placeholder = "Secret API key",
                 hint = "Falcon Sandbox behavioral analysis at hybrid-analysis.com",
+                portalUrl = "https://www.hybrid-analysis.com/apikeys",
                 value = haInput,
-                onValueChange = { haInput = it }
+                onValueChange = { haInput = it },
+                status = validationStatusMap["ha"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("ha", haInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             ApiKeyFieldWithIcon(
                 engineName = "Kaspersky OpenTIP",
+                providerId = "kaspersky",
                 label = "Kaspersky OpenTIP API Key",
                 placeholder = "Private token",
                 hint = "Enterprise hash intelligence at opentip.kaspersky.com",
+                portalUrl = "https://opentip.kaspersky.com/token",
                 value = kasperskyInput,
-                onValueChange = { kasperskyInput = it }
+                onValueChange = { kasperskyInput = it },
+                status = validationStatusMap["kaspersky"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("kaspersky", kasperskyInput) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             ApiKeyFieldWithIcon(
                 engineName = "Filescan.io",
+                providerId = "filescan",
                 label = "Filescan.io API Key",
                 placeholder = "Bearer token",
                 hint = "Free IOCs & report lookup at filescan.io",
+                portalUrl = "https://www.filescan.io/profile",
                 value = filescanInput,
-                onValueChange = { filescanInput = it }
+                onValueChange = { filescanInput = it },
+                status = validationStatusMap["filescan"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("filescan", filescanInput) }
             )
 
             Spacer(modifier = Modifier.height(26.dp))
 
-            // Save Button
+            // Primary Bulk Action: Save & Validate All Keys
             Button(
                 onClick = {
                     viewModel.saveApiKeys(
@@ -624,22 +672,81 @@ fun SettingsScreen(
                         vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput
                     )
                     savedSnackbar = true
+                    isValidatingAll = true
+                    coroutineScope.launch {
+                        val keyMap = mapOf(
+                            "openai" to openaiInput,
+                            "claude" to claudeInput,
+                            "gemini" to geminiInput,
+                            "groq" to groqInput,
+                            "vt" to vtInput,
+                            "metadefender" to metaDefenderInput,
+                            "ha" to haInput,
+                            "kaspersky" to kasperskyInput,
+                            "filescan" to filescanInput
+                        )
+                        keyMap.forEach { (prov, k) ->
+                            if (k.isNotBlank()) {
+                                validationStatusMap[prov] = io.threatlens.core.validation.ValidationStatus.Validating
+                            }
+                        }
+                        val jobs = keyMap.map { (prov, k) ->
+                            launch {
+                                if (k.isNotBlank()) {
+                                    val res = io.threatlens.core.validation.ApiKeyValidator.validate(prov, k)
+                                    validationStatusMap[prov] = res
+                                }
+                            }
+                        }
+                        jobs.forEach { it.join() }
+                        isValidatingAll = false
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(50.dp),
+                enabled = !isValidatingAll
             ) {
-                Icon(Icons.Default.Save, contentDescription = "Save", tint = CyberBlack)
+                if (isValidatingAll) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = CyberBlack, strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("VALIDATING ALL KEYS...", color = CyberBlack, fontWeight = FontWeight.Black)
+                } else {
+                    Icon(Icons.Default.CloudDone, contentDescription = "Validate All", tint = CyberBlack)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("SAVE & VALIDATE ALL KEYS", color = CyberBlack, fontWeight = FontWeight.Black)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Secondary Quick Save Button (Save All Without Validating)
+            OutlinedButton(
+                onClick = {
+                    viewModel.saveApiKeys(
+                        openaiInput, claudeInput, geminiInput, groqInput,
+                        vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput
+                    )
+                    savedSnackbar = true
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+            ) {
+                Icon(Icons.Default.Save, contentDescription = "Save", tint = NeonCyan, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Save Configuration", color = CyberBlack, fontWeight = FontWeight.Bold)
+                Text("SAVE ALL (INSTANT)", color = NeonCyan, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
 
             if (savedSnackbar) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "✓ Configuration saved & applied to Real-time Shield",
+                    text = "✓ Configuration saved & active in Real-time Shield",
                     color = NeonEmerald,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
@@ -654,17 +761,39 @@ fun SettingsScreen(
 @Composable
 fun ApiKeyFieldWithIcon(
     engineName: String,
+    providerId: String,
     label: String,
     placeholder: String,
     hint: String,
+    portalUrl: String,
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    status: io.threatlens.core.validation.ValidationStatus,
+    onSaveAndValidate: () -> Unit
 ) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            EngineLogoIcon(engineName = engineName, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                EngineLogoIcon(engineName = engineName, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+            // Hyperlink to get API key
+            Text(
+                text = "Get key here ↗",
+                color = NeonCyan,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clickable { uriHandler.openUri(portalUrl) }
+                    .padding(start = 6.dp)
+            )
         }
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
@@ -683,7 +812,63 @@ fun ApiKeyFieldWithIcon(
                 unfocusedTextColor = TextPrimary
             )
         )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(text = hint, color = TextSecondary, fontSize = 11.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = hint,
+                color = TextSecondary,
+                fontSize = 11.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onSaveAndValidate,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                modifier = Modifier.height(30.dp),
+                enabled = status !is io.threatlens.core.validation.ValidationStatus.Validating
+            ) {
+                if (status is io.threatlens.core.validation.ValidationStatus.Validating) {
+                    CircularProgressIndicator(modifier = Modifier.size(12.dp), color = NeonCyan, strokeWidth = 1.5.dp)
+                } else {
+                    Text("Validate & Save", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // Status Feedback line
+        when (status) {
+            is io.threatlens.core.validation.ValidationStatus.Validating -> {
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(10.dp), color = NeonCyan, strokeWidth = 1.5.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Validating with server...", color = NeonCyan, fontSize = 11.sp)
+                }
+            }
+            is io.threatlens.core.validation.ValidationStatus.Valid -> {
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(status.message, color = NeonEmerald, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            is io.threatlens.core.validation.ValidationStatus.Invalid -> {
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Error, contentDescription = null, tint = NeonCrimson, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(status.error, color = NeonCrimson, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            else -> {}
+        }
     }
 }

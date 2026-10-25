@@ -157,57 +157,89 @@ fun ThreatItemRow(
         colors = CardDefaults.cardColors(containerColor = CyberCardSurface),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // App Logo / APK Icon
+                AppIconBadge(
+                    packageName = report.packageName,
+                    apkPath = report.targetPath,
+                    isApk = report.isApk,
+                    size = 46.dp
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
+                    // App Name (Prominent)
                     Text(
-                        text = report.targetName,
+                        text = report.appName ?: report.targetName,
                         color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(2.dp))
+
+                    // Detected APK Name & Package Name
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = CyberDarkSurface,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = report.targetName,
+                                color = NeonCyan,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                        if (!report.packageName.isNullOrBlank() && report.packageName != report.appName) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = report.packageName,
+                                color = TextMuted,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = report.threatFamily,
-                        color = if (report.threatFamily != "Clean") NeonCyan else TextSecondary,
-                        fontSize = 12.sp,
+                        color = if (report.threatFamily != "Clean") NeonCrimson else NeonEmerald,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
                 }
+
                 Spacer(modifier = Modifier.width(8.dp))
                 ScoreBadge(report.currentScore, report.severity, report.isFinal)
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = "Details",
                     tint = TextMuted,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
             // Live status message or pending engines line
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!report.isFinal) {
-                    Text(
-                        text = "⚡ ${report.statusMessage}",
-                        color = NeonCyan,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1
-                    )
-                } else {
-                    Text(
-                        text = report.statusMessage,
-                        color = TextSecondary,
-                        fontSize = 11.sp,
-                        maxLines = 1
-                    )
-                }
+            if (!report.isFinal || report.statusMessage.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = if (!report.isFinal) "⚡ ${report.statusMessage}" else report.statusMessage,
+                    color = if (!report.isFinal) NeonCyan else TextSecondary,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1
+                )
             }
         }
     }

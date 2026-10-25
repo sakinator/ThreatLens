@@ -1,204 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Canvas Gradient -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#050813" />
-      <stop offset="100%" stop-color="#0A1020" />
-    </linearGradient>
-
-    <!-- Shield Face Gradient -->
-    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#111B2E" />
-      <stop offset="60%" stop-color="#0C1322" />
-      <stop offset="100%" stop-color="#040812" />
-    </linearGradient>
-
-    <!-- Shield Neon Border Gradient -->
-    <linearGradient id="shieldStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00E5FF" />
-      <stop offset="100%" stop-color="#0066FF" />
-    </linearGradient>
-
-    <!-- Bug Gradient -->
-    <linearGradient id="bugGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FF3366" />
-      <stop offset="100%" stop-color="#FF0044" />
-    </linearGradient>
-
-    <!-- Magnifier Lens Rim and Handle Gradient (Unified Chrome and Neon Cyan) -->
-    <linearGradient id="lensRim" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="28%" stop-color="#00E5FF" />
-      <stop offset="72%" stop-color="#0088FF" />
-      <stop offset="100%" stop-color="#0052FF" />
-    </linearGradient>
-
-    <!-- Lens Glass Gradient -->
-    <radialGradient id="lensGlass" cx="42%" cy="42%" r="58%">
-      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.36" />
-      <stop offset="55%" stop-color="#0088FF" stop-opacity="0.14" />
-      <stop offset="100%" stop-color="#0033AA" stop-opacity="0.04" />
+    <!-- Deep Cyber Black Background Gradient to match app internals -->
+    <radialGradient id="bgGrad" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#0B1322"/>
+      <stop offset="60%" stop-color="#070B14"/>
+      <stop offset="100%" stop-color="#04060B"/>
     </radialGradient>
 
-    <!-- Handle Glass Light-Pipe Core Gradient -->
-    <linearGradient id="handleGlass" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.7" />
-      <stop offset="50%" stop-color="#0088FF" stop-opacity="0.3" />
-      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0.8" />
+    <!-- Vibrant Electric Blue Shield Border Gradient -->
+    <linearGradient id="blueBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="40%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#0284C7"/>
     </linearGradient>
 
-    <filter id="cyanGlow" x="-25%" y="-25%" width="150%" height="150%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
+    <!-- Inner Shield Left Shading -->
+    <linearGradient id="leftFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E243A"/>
+      <stop offset="100%" stop-color="#071320"/>
+    </linearGradient>
 
-    <filter id="bugGlow" x="-25%" y="-25%" width="150%" height="150%">
-      <feGaussianBlur stdDeviation="7" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    <!-- Inner Shield Right Shading -->
+    <linearGradient id="rightFacet" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0A1B2D"/>
+      <stop offset="100%" stop-color="#050E17"/>
+    </linearGradient>
+
+    <!-- Glowing Cyan Core Accent -->
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#0077B6"/>
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
 
-  <!-- App Rounded Canvas Plate -->
-  <rect width="512" height="512" rx="100" fill="url(#bgGrad)" />
+  <!-- Black Background Matching App Internals (#070B14) -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="512" height="512" rx="112" fill="none" stroke="#1E293B" stroke-width="2" stroke-opacity="0.6"/>
 
-  <!-- ==================== 1. SMOOTH MODERN SHIELD (NO SHARP EDGES) ==================== -->
-  <!-- Outer Shield Outline with Smooth Filleted Curves -->
-  <path d="M 130,82 C 190,70 322,70 382,82 C 418,90 426,112 426,146 L 426,248 C 426,345 345,414 266,442 C 260,444 252,444 246,442 C 167,414 86,345 86,248 L 86,146 C 86,112 94,90 130,82 Z"
-        fill="url(#shieldFill)"
-        stroke="url(#shieldStroke)"
-        stroke-width="10"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        filter="url(#cyanGlow)" />
+  <!-- Ambient Blue Glow -->
+  <path d="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 C 188,402 100,320 100,204 C 100,112 160,76 256,76 Z"
+        fill="none" stroke="#00E5FF" stroke-width="14" opacity="0.18" filter="url(#glow)"/>
 
-  <!-- Inner Soft Bevel Contour -->
-  <path d="M 142,106 C 196,96 316,96 370,106 C 398,112 404,130 404,156 L 404,242 C 404,324 335,385 264,412 C 259,414 253,414 248,412 C 177,385 108,324 108,242 L 108,156 C 108,130 114,112 142,106 Z"
-        fill="none"
-        stroke="#1E293B"
-        stroke-width="3.5"
-        stroke-linecap="round"
-        stroke-linejoin="round" />
+  <!-- Left Facet of Minimalist Shield -->
+  <path d="M 256,76 C 160,76 100,112 100,204 C 100,320 188,402 256,442 L 256,76 Z"
+        fill="url(#leftFacet)"/>
 
-  <!-- Subtle Shield Security Grid Lines -->
-  <path d="M 180,146 C 224,154 288,154 332,146 M 140,220 L 372,220 M 164,295 C 210,318 302,318 348,295 M 256,120 L 256,380"
-        stroke="#0F213A"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        fill="none" />
+  <!-- Right Facet of Minimalist Shield -->
+  <path d="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 L 256,76 Z"
+        fill="url(#rightFacet)"/>
 
-  <!-- ==================== 2. MALWARE BUG IN OPTICAL FOCUS ==================== -->
-  <g id="bug" filter="url(#bugGlow)">
-    <!-- Bug Antennae with Smooth Glowing Nodes -->
-    <path d="M 234,166 C 222,142 204,138 194,144" stroke="#FF0055" stroke-width="4.5" stroke-linecap="round" fill="none" />
-    <path d="M 262,166 C 274,142 292,138 302,144" stroke="#FF0055" stroke-width="4.5" stroke-linecap="round" fill="none" />
-    <circle cx="194" cy="144" r="4.5" fill="#FF0055" />
-    <circle cx="302" cy="144" r="4.5" fill="#FF0055" />
+  <!-- Outer Minimalist Blue Shield Border -->
+  <path d="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 C 188,402 100,320 100,204 C 100,112 160,76 256,76 Z"
+        fill="none" stroke="url(#blueBorder)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
 
-    <!-- 6 Smooth Cyber Beetle Legs -->
-    <path d="M 216,194 C 190,181 170,181 158,194" stroke="#FF0055" stroke-width="5" stroke-linecap="round" fill="none" />
-    <path d="M 280,194 C 306,181 326,181 338,194" stroke="#FF0055" stroke-width="5" stroke-linecap="round" fill="none" />
-    <path d="M 210,230 C 178,230 162,238 152,254" stroke="#FF0055" stroke-width="5" stroke-linecap="round" fill="none" />
-    <path d="M 286,230 C 318,230 334,238 344,254" stroke="#FF0055" stroke-width="5" stroke-linecap="round" fill="none" />
-    <path d="M 216,266 C 186,284 173,298 166,314" stroke="#FF0055" stroke-width="5" stroke-linecap="round" fill="none" />
-    <path d="M 280,266 C 310,284 323,298 330,314" stroke="#FF0055" stroke-width="5" stroke-linecap="round" fill="none" />
+  <!-- Vertical Shield Spine -->
+  <path d="M 256,90 L 256,426"
+        stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" opacity="0.65"/>
 
-    <!-- Bug Head -->
-    <ellipse cx="248" cy="176" rx="18" ry="14" fill="#FF0055" />
+  <!-- Minimalist Inner Shield Aperture -->
+  <path d="M 256,150 C 310,150 346,172 346,226 C 346,298 296,350 256,378 C 216,350 166,298 166,226 C 166,172 202,150 256,150 Z"
+        fill="#08101C" stroke="url(#cyanGlow)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
 
-    <!-- Bug Thorax -->
-    <rect x="224" y="194" width="48" height="30" rx="8" fill="url(#bugGrad)" />
+  <!-- Center Minimalist Cyber Eye/Aperture -->
+  <circle cx="256" cy="242" r="28" fill="none" stroke="#00E5FF" stroke-width="4.5"/>
+  <circle cx="256" cy="242" r="11" fill="#00E5FF"/>
 
-    <!-- Bug Abdomen (Segmented Cyber Shell) -->
-    <path d="M 220,230 C 220,230 248,226 276,230 C 286,252 284,284 248,304 C 212,284 210,252 220,230 Z" fill="url(#bugGrad)" />
-
-    <!-- Exoskeleton Wing Split Lines -->
-    <line x1="248" y1="228" x2="248" y2="302" stroke="#0C1322" stroke-width="3" stroke-linecap="round" />
-    <line x1="226" y1="260" x2="270" y2="260" stroke="#0C1322" stroke-width="2.5" />
-
-    <!-- Bug Glowing Infection Core -->
-    <circle cx="248" cy="252" r="6" fill="#FFFFFF" />
-    <circle cx="248" cy="252" r="3" fill="#FF0055" />
-  </g>
-
-  <!-- ==================== 3. MAGNIFYING GLASS AND HARMONIOUS HANDLE ==================== -->
-  <g id="magnifier">
-    <!-- --- HANDLE: MATCHES GLASS BORDER AND NESTLES HARMONIOUSLY INSIDE SHIELD --- -->
-    <!-- Handle Outer Bezel Stem (Matches Bezel Width, Chrome/Cyan Gradient and Glow) -->
-    <line x1="315" y1="291" x2="372" y2="348"
-          stroke="url(#lensRim)"
-          stroke-width="18"
-          stroke-linecap="round"
-          filter="url(#cyanGlow)" />
-
-    <!-- Handle Polished Cyber Inner Chassis -->
-    <line x1="315" y1="291" x2="372" y2="348"
-          stroke="#0C1626"
-          stroke-width="12"
-          stroke-linecap="round" />
-
-    <!-- Handle Optical Glass Light-Pipe Core (Matches Glass Shader) -->
-    <line x1="319" y1="295" x2="368" y2="344"
-          stroke="url(#handleGlass)"
-          stroke-width="5"
-          stroke-linecap="round" />
-
-    <!-- Handle Chrome Specular Reflection Line (Matches Glass Lens Reflection Arc) -->
-    <line x1="323" y1="293" x2="365" y2="335"
-          stroke="#FFFFFF"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-opacity="0.85" />
-
-    <!-- Integrated Ferrule Collar Transition (Seamless Joint with Circular Bezel) -->
-    <circle cx="315" cy="291" r="11" fill="url(#lensRim)" />
-    <circle cx="315" cy="291" r="7" fill="#0C1626" />
-    <circle cx="315" cy="291" r="3.5" fill="#00E5FF" />
-
-    <!-- Ergonomic Terminal Crystal Pommel (Harmonizes Inside Shield Lower-Right Corner) -->
-    <circle cx="372" cy="348" r="10" fill="url(#lensRim)" filter="url(#cyanGlow)" />
-    <circle cx="372" cy="348" r="6" fill="#0C1626" />
-    <circle cx="372" cy="348" r="3" fill="#00E5FF" />
-
-    <!-- --- LENS: CIRCULAR GLASS BEZEL AND OPTICAL COATING --- -->
-    <!-- Lens Rim Outer Bezel (Glowing Futuristic Rim) -->
-    <circle cx="248" cy="224" r="96"
-            fill="none"
-            stroke="url(#lensRim)"
-            stroke-width="16"
-            filter="url(#cyanGlow)" />
-    <circle cx="248" cy="224" r="104"
-            fill="none"
-            stroke="#00E5FF"
-            stroke-width="2" />
-
-    <!-- Lens Glass Surface -->
-    <circle cx="248" cy="224" r="88" fill="url(#lensGlass)" />
-
-    <!-- Glass Curved Specular Highlights (Optical Curved Reflection) -->
-    <path d="M 183,154 C 203,139 238,134 273,139"
-          stroke="#FFFFFF"
-          stroke-width="6"
-          stroke-linecap="round"
-          stroke-opacity="0.85"
-          fill="none" />
-    <path d="M 170,179 C 180,169 196,162 213,159"
-          stroke="#FFFFFF"
-          stroke-width="3.5"
-          stroke-linecap="round"
-          stroke-opacity="0.55"
-          fill="none" />
-
-    <!-- ==================== 4. PRECISION FOCUS LOCK RETICLE ==================== -->
-    <circle cx="248" cy="224" r="68"
-            fill="none"
-            stroke="#00E5FF"
-            stroke-width="2"
-            stroke-dasharray="12 8"
-            stroke-opacity="0.8" />
-    <!-- Tactical Reticle Ticks -->
-    <line x1="248" y1="138" x2="248" y2="154" stroke="#00E5FF" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
-    <line x1="248" y1="294" x2="248" y2="310" stroke="#00E5FF" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
-    <line x1="162" y1="224" x2="178" y2="224" stroke="#00E5FF" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
-    <line x1="318" y1="224" x2="334" y2="224" stroke="#00E5FF" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
-  </g>
+  <!-- Precision Cyber Ticks -->
+  <path d="M 256,196 L 256,206 M 256,278 L 256,288 M 210,242 L 220,242 M 292,242 L 302,242"
+        stroke="#38BDF8" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
 </svg>

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.threatlens.core.model.ThreatReport
+import io.threatlens.ui.components.AppIconBadge
 import io.threatlens.ui.components.EngineLogoIcon
 import io.threatlens.ui.components.EngineStatusBadge
 import io.threatlens.ui.components.GlassCard
@@ -46,18 +47,52 @@ fun ThreatDetailSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // App Logo / APK Icon
+                AppIconBadge(
+                    packageName = report.packageName,
+                    apkPath = report.targetPath,
+                    isApk = report.isApk,
+                    size = 54.dp
+                )
+
+                Spacer(modifier = Modifier.width(14.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = report.targetName,
+                        text = report.appName ?: report.targetName,
                         color = TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = CyberCardSurface,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "APK: ${report.targetName}",
+                                color = NeonCyan,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        if (!report.packageName.isNullOrBlank() && report.packageName != report.appName) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = report.packageName,
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = report.threatFamily,
-                        color = NeonCyan,
-                        fontSize = 14.sp,
+                        color = if (report.threatFamily != "Clean") NeonCrimson else NeonEmerald,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -234,20 +269,60 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Technical Checksum
+            // Technical App & Binary Details
             GlassCard {
                 Text(
-                    text = "SHA-256 Checksum",
-                    color = TextMuted,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = report.sha256,
+                    text = "Technical File & Identity Details",
                     color = TextPrimary,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
                 )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Application Name:", color = TextMuted, fontSize = 12.sp)
+                    Text(report.appName ?: "Unknown", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Detected APK File:", color = TextMuted, fontSize = 12.sp)
+                    Text(report.targetName, color = NeonCyan, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+
+                if (!report.packageName.isNullOrBlank()) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Package Name:", color = TextMuted, fontSize = 12.sp)
+                        Text(report.packageName, color = TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Path:", color = TextMuted, fontSize = 12.sp)
+                    Text(
+                        report.targetPath,
+                        color = TextSecondary,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("File Size:", color = TextMuted, fontSize = 12.sp)
+                    Text("${report.fileSize / 1024} KB", color = TextPrimary, fontSize = 12.sp)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Column {
+                    Text("SHA-256 Checksum:", color = TextMuted, fontSize = 11.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(report.sha256, color = TextSecondary, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))

@@ -35,7 +35,10 @@ fun FullScanScreen(
 ) {
     val scanState by viewModel.fullScanState.collectAsState()
     val isScanning = scanState.status == FullScanStatus.SCANNING
+    val isPaused = scanState.status == FullScanStatus.PAUSED
     val isCompleted = scanState.status == FullScanStatus.COMPLETED
+    val selectedReport by viewModel.selectedReport.collectAsState()
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val isUpdatingSignatures by io.threatlens.core.update.SignatureUpdateService.isUpdating.collectAsState()
@@ -59,6 +62,7 @@ fun FullScanScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(12.dp))
+
                 // Central Bitdefender-style Circular Progress Gauge
                 Box(
                     contentAlignment = Alignment.Center,
@@ -68,15 +72,21 @@ fun FullScanScreen(
                         .background(CyberCardSurface)
                         .border(
                             2.dp,
-                            if (isScanning) NeonCyan else if (isCompleted && scanState.threatsFound.isEmpty()) NeonEmerald else CyberCardBorder,
+                            when {
+                                isScanning -> NeonCyan
+                                isPaused -> CyberAmber
+                                isCompleted && scanState.threatsFound.isEmpty() -> NeonEmerald
+                                isCompleted && scanState.threatsFound.isNotEmpty() -> NeonCrimson
+                                else -> CyberCardBorder
+                            },
                             CircleShape
                         )
                 ) {
-                    if (isScanning) {
+                    if (isScanning || isPaused) {
                         CircularProgressIndicator(
                             progress = { scanState.progress },
                             modifier = Modifier.size(185.dp),
-                            color = NeonCyan,
+                            color = if (isScanning) NeonCyan else CyberAmber,
                             strokeWidth = 8.dp,
                             trackColor = CyberDarkSurface
                         )
@@ -99,19 +109,20 @@ fun FullScanScreen(
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
-                            FullScanStatus.SCANNING -> {
+                            FullScanStatus.SCANNING, FullScanStatus.PAUSED -> {
                                 Text(
                                     text = "${(scanState.progress * 100).toInt()}%",
-                                    color = NeonCyan,
+                                    color = if (isScanning) NeonCyan else CyberAmber,
                                     fontSize = 36.sp,
                                     fontWeight = FontWeight.Black,
                                     fontFamily = FontFamily.Monospace
                                 )
                                 Text(
-                                    text = "${scanState.scannedCount}/${scanState.totalCount}",
-                                    color = TextMuted,
+                                    text = if (isPaused) "SCAN PAUSED" else "${scanState.scannedCount}/${scanState.totalCount}",
+                                    color = if (isPaused) CyberAmber else TextMuted,
                                     fontSize = 12.sp,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = if (isPaused) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                             FullScanStatus.COMPLETED -> {
@@ -124,7 +135,7 @@ fun FullScanScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = if (hasThreats) "Threats Found!" else "Device Clean",
+                                    text = if (hasThreats) "Device at Risk!" else "Device Clean",
                                     color = if (hasThreats) NeonCrimson else NeonEmerald,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
@@ -137,7 +148,40 @@ fun FullScanScreen(
                                     tint = CyberAmber,
                                     modifier = Modifier.size(50.dp)
                                 )
-                                Text("Scan Cancelled", color = CyberAmber, fontSize = 13.sp)
+                                Text("Scan Aborted", color = CyberAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // IN-PROGRESS WARNING MESSAGE UNDER PROGRESS GAUGE (only when scan not yet complete)
+            if ((isScanning || isPaused) && scanState.threatsFound.isNotEmpty()) {
+                item {
+                    Surface(
+                        color = NeonCrimson.copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCrimson.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = NeonCrimson, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "DEVICE AT RISK (${scanState.threatsFound.size} Threat${if (scanState.threatsFound.size > 1) "s" else ""} Detected)",
+                                    color = NeonCrimson,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "Scan in progress • Full risk analysis will expand once scan completes",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
                             }
                         }
                     }
@@ -145,18 +189,18 @@ fun FullScanScreen(
             }
 
             // Current scanning file info
-            if (isScanning) {
+            if (isScanning || isPaused) {
                 item {
                     GlassCard {
                         Text(
-                            text = "Analyzing Application:",
+                            text = if (isPaused) "Currently Paused At:" else "Analyzing Application:",
                             color = TextMuted,
                             fontSize = 11.sp
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = scanState.currentItemName,
-                            color = NeonCyan,
+                            color = if (isScanning) NeonCyan else CyberAmber,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1
@@ -214,18 +258,63 @@ fun FullScanScreen(
                 }
             }
 
-            // Primary Action Button (Start Scan / Cancel)
+            // Primary Action Buttons: Start / Pause / Resume / Abort
             item {
                 if (isScanning) {
-                    OutlinedButton(
-                        onClick = { viewModel.cancelFullScan() },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CyberAmber),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(Icons.Default.Stop, contentDescription = "Cancel")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cancel Scan", fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { viewModel.pauseFullScan() },
+                            colors = ButtonDefaults.buttonColors(containerColor = CyberAmber),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Icon(Icons.Default.Pause, contentDescription = "Pause", tint = CyberBlack)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("PAUSE", color = CyberBlack, fontWeight = FontWeight.Black)
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.abortFullScan() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCrimson),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCrimson),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Icon(Icons.Default.Stop, contentDescription = "Abort")
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("ABORT", color = NeonCrimson, fontWeight = FontWeight.Black)
+                        }
+                    }
+                } else if (isPaused) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.resumeFullScan() },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Resume", tint = CyberBlack)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("RESUME", color = CyberBlack, fontWeight = FontWeight.Black)
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.abortFullScan() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCrimson),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCrimson),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp)
+                        ) {
+                            Icon(Icons.Default.Stop, contentDescription = "Abort")
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("ABORT", color = NeonCrimson, fontWeight = FontWeight.Black)
+                        }
                     }
                 } else {
                     Button(
@@ -242,8 +331,6 @@ fun FullScanScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Custom File Picker Scan
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    val coroutineScope = rememberCoroutineScope()
                     val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
                     ) { uri ->
@@ -277,35 +364,66 @@ fun FullScanScreen(
                 }
             }
 
-            // Scan Results Summary Card
+            // FULL SPACE SCAN RESULTS SUMMARY (Takes full space once full scan is complete)
             if (isCompleted) {
                 item {
-                    GlassCard {
-                        Text(
-                            text = "Full Scan Summary",
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Total Scanned:", color = TextSecondary, fontSize = 13.sp)
-                            Text("${scanState.totalCount} items", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Verified Safe:", color = TextSecondary, fontSize = 13.sp)
-                            Text("${scanState.cleanCount}", color = NeonEmerald, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Threats Detected:", color = TextSecondary, fontSize = 13.sp)
-                            Text("${scanState.threatsFound.size}", color = if (scanState.threatsFound.isNotEmpty()) NeonCrimson else NeonEmerald, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Duration:", color = TextSecondary, fontSize = 13.sp)
-                            Text("${scanState.durationMs / 1000}s", color = TextPrimary, fontSize = 13.sp)
+                    val hasThreats = scanState.threatsFound.isNotEmpty()
+                    Surface(
+                        color = if (hasThreats) NeonCrimson.copy(alpha = 0.12f) else NeonEmerald.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (hasThreats) NeonCrimson.copy(alpha = 0.7f) else NeonEmerald.copy(alpha = 0.7f)
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (hasThreats) Icons.Default.Warning else Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = if (hasThreats) NeonCrimson else NeonEmerald,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = if (hasThreats) "DEVICE AT RISK: ${scanState.threatsFound.size} THREATS FOUND" else "DEVICE SECURE & PROTECTED",
+                                        color = if (hasThreats) NeonCrimson else NeonEmerald,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = if (hasThreats) "Immediate cleanup required to ensure device safety" else "All installed applications and downloads verified safe",
+                                        color = TextSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Total Items Scanned:", color = TextSecondary, fontSize = 13.sp)
+                                Text("${scanState.totalCount} items", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Verified Safe:", color = TextSecondary, fontSize = 13.sp)
+                                Text("${scanState.cleanCount}", color = NeonEmerald, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Threats Flagged:", color = TextSecondary, fontSize = 13.sp)
+                                Text("${scanState.threatsFound.size}", color = if (hasThreats) NeonCrimson else NeonEmerald, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Total Scan Duration:", color = TextSecondary, fontSize = 13.sp)
+                                Text("${scanState.durationMs / 1000}s", color = TextPrimary, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
@@ -361,5 +479,14 @@ fun FullScanScreen(
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
+    }
+
+    // Modal Bottom Sheet for Threat Detail View
+    selectedReport?.let { report ->
+        ThreatDetailSheet(
+            report = report,
+            onDismiss = { viewModel.selectReport(null) },
+            onDelete = { path -> viewModel.deleteFile(path) }
+        )
     }
 }

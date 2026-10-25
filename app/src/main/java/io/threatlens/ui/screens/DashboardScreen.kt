@@ -40,6 +40,7 @@ fun DashboardScreen(
     val isShieldActive by viewModel.isShieldActive.collectAsState()
     val scans by viewModel.scansList.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
+    val fullScanState by viewModel.fullScanState.collectAsState()
     val selectedReport by viewModel.selectedReport.collectAsState()
 
     val isVpnActive by io.threatlens.core.vpn.ThreatLensVpnService.isVpnActive.collectAsState()
@@ -47,8 +48,9 @@ fun DashboardScreen(
     val filterIntensity by io.threatlens.core.vpn.DomainFilterEngine.filterIntensity.collectAsState()
     val mitmReport by io.threatlens.core.security.MitmDetector.lastReport.collectAsState()
 
-    val maliciousCount = scans.count { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK }
-    val cleanCount = scans.count { it.severity == ThreatSeverity.SAFE }
+    val isFullScanActive = fullScanState.status == io.threatlens.core.scanner.FullScanStatus.SCANNING || fullScanState.status == io.threatlens.core.scanner.FullScanStatus.PAUSED
+    val maliciousCount = scans.count { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK } + fullScanState.threatsFound.size
+    val cleanCount = scans.count { it.severity == ThreatSeverity.SAFE } + fullScanState.cleanCount
     val isDeviceSafe = maliciousCount == 0
 
     Scaffold(
@@ -106,35 +108,116 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        CyberRadarShield(isProtected = isShieldActive && isDeviceSafe)
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Text(
-                            text = if (!isDeviceSafe) "YOUR DEVICE IS AT RISK" else if (isShieldActive) "YOU ARE PROTECTED" else "SHIELD IS OFF",
-                            color = if (!isDeviceSafe) NeonCrimson else if (isShieldActive) NeonEmerald else CyberAmber,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 17.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (!isDeviceSafe) "$maliciousCount security threats require immediate attention" else "Real-time download intercept active • 0% idle load",
-                            color = TextSecondary,
-                            fontSize = 12.sp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        if (isFullScanActive) {
+                            // Active Scan In-Progress Display
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(130.dp)
+                                    .clip(CircleShape)
+                                    .background(CyberDarkSurface)
+                                    .border(2.dp, NeonCyan, CircleShape)
+                            ) {
+                                CircularProgressIndicator(
+                                    progress = { fullScanState.progress },
+                                    modifier = Modifier.size(120.dp),
+                                    color = NeonCyan,
+                                    strokeWidth = 6.dp,
+                                    trackColor = CyberCardBorder
+                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "${(fullScanState.progress * 100).toInt()}%",
+                                        color = NeonCyan,
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Text(
+                                        text = "${fullScanState.scannedCount}/${fullScanState.totalCount}",
+                                        color = TextMuted,
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
 
-                        // Bitdefender-style Primary Scan Button
-                        Button(
-                            onClick = onNavigateScan,
-                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                        ) {
-                            Icon(Icons.Default.Security, contentDescription = null, tint = CyberBlack)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("SCAN NOW (ON-DEMAND)", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "SYSTEM SCAN IN PROGRESS",
+                                color = NeonCyan,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 15.sp
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = fullScanState.currentItemName,
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                maxLines = 1
+                            )
+
+                            // Warning message under progress if threats detected so far
+                            if (fullScanState.threatsFound.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = NeonCrimson.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCrimson.copy(alpha = 0.5f)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "⚠️ Device at risk: ${fullScanState.threatsFound.size} threats detected so far",
+                                        color = NeonCrimson,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Button(
+                                onClick = onNavigateScan,
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(46.dp)
+                            ) {
+                                Icon(Icons.Default.Visibility, contentDescription = null, tint = CyberBlack)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("VIEW ACTIVE SCAN", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            }
+                        } else {
+                            // Takes full space once scan is complete / idle
+                            CyberRadarShield(isProtected = isShieldActive && isDeviceSafe)
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = if (!isDeviceSafe) "YOUR DEVICE IS AT RISK" else if (isShieldActive) "YOU ARE PROTECTED" else "SHIELD IS OFF",
+                                color = if (!isDeviceSafe) NeonCrimson else if (isShieldActive) NeonEmerald else CyberAmber,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 17.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (!isDeviceSafe) "$maliciousCount security threats require immediate attention" else "Real-time download intercept active • 0% idle load",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Bitdefender-style Primary Scan Button
+                            Button(
+                                onClick = onNavigateScan,
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Icon(Icons.Default.Security, contentDescription = null, tint = CyberBlack)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("SCAN NOW (ON-DEMAND)", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            }
                         }
                     }
                 }

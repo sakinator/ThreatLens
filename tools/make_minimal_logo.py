@@ -1,0 +1,144 @@
+import os
+import subprocess
+import shutil
+
+svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Deep Cyber Black Background Gradient to match app internals -->
+    <radialGradient id="bgGrad" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#0B1322"/>
+      <stop offset="60%" stop-color="#070B14"/>
+      <stop offset="100%" stop-color="#04060B"/>
+    </radialGradient>
+
+    <!-- Vibrant Electric Blue Shield Border Gradient -->
+    <linearGradient id="blueBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="40%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+
+    <!-- Inner Shield Left Shading -->
+    <linearGradient id="leftFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E243A"/>
+      <stop offset="100%" stop-color="#071320"/>
+    </linearGradient>
+
+    <!-- Inner Shield Right Shading -->
+    <linearGradient id="rightFacet" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0A1B2D"/>
+      <stop offset="100%" stop-color="#050E17"/>
+    </linearGradient>
+
+    <!-- Glowing Cyan Core Accent -->
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#0077B6"/>
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Black Background Matching App Internals (#070B14) -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="512" height="512" rx="112" fill="none" stroke="#1E293B" stroke-width="2" stroke-opacity="0.6"/>
+
+  <!-- Ambient Blue Glow -->
+  <path d="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 C 188,402 100,320 100,204 C 100,112 160,76 256,76 Z"
+        fill="none" stroke="#00E5FF" stroke-width="14" opacity="0.18" filter="url(#glow)"/>
+
+  <!-- Left Facet of Minimalist Shield -->
+  <path d="M 256,76 C 160,76 100,112 100,204 C 100,320 188,402 256,442 L 256,76 Z"
+        fill="url(#leftFacet)"/>
+
+  <!-- Right Facet of Minimalist Shield -->
+  <path d="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 L 256,76 Z"
+        fill="url(#rightFacet)"/>
+
+  <!-- Outer Minimalist Blue Shield Border -->
+  <path d="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 C 188,402 100,320 100,204 C 100,112 160,76 256,76 Z"
+        fill="none" stroke="url(#blueBorder)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Vertical Shield Spine -->
+  <path d="M 256,90 L 256,426"
+        stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" opacity="0.65"/>
+
+  <!-- Minimalist Inner Shield Aperture -->
+  <path d="M 256,150 C 310,150 346,172 346,226 C 346,298 296,350 256,378 C 216,350 166,298 166,226 C 166,172 202,150 256,150 Z"
+        fill="#08101C" stroke="url(#cyanGlow)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Center Minimalist Cyber Eye/Aperture -->
+  <circle cx="256" cy="242" r="28" fill="none" stroke="#00E5FF" stroke-width="4.5"/>
+  <circle cx="256" cy="242" r="11" fill="#00E5FF"/>
+
+  <!-- Precision Cyber Ticks -->
+  <path d="M 256,196 L 256,206 M 256,278 L 256,288 M 210,242 L 220,242 M 292,242 L 302,242"
+        stroke="#38BDF8" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+</svg>"""
+
+svg_path = 'D:/ThreatLens/assets/threatlens_logo.svg'
+with open(svg_path, 'w', encoding='utf-8') as f:
+    f.write(svg)
+print('Wrote SVG')
+
+# Now render clean PNG using headless Edge
+temp_profile = 'D:/ThreatLens/tools/edge_temp_logo'
+if os.path.exists(temp_profile):
+    shutil.rmtree(temp_profile, ignore_errors=True)
+os.makedirs(temp_profile, exist_ok=True)
+
+html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body {{
+    margin: 0;
+    padding: 0;
+    width: 512px;
+    height: 512px;
+    overflow: hidden;
+    background: transparent;
+  }}
+  svg {{
+    width: 512px;
+    height: 512px;
+    display: block;
+  }}
+</style>
+</head>
+<body>
+{svg}
+</body>
+</html>"""
+
+html_path = 'D:/ThreatLens/tools/minimal_logo_view.html'
+with open(html_path, 'w', encoding='utf-8') as f:
+    f.write(html)
+
+edge = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+png_out = 'D:/ThreatLens/assets/threatlens_logo.png'
+
+cmd = [
+    edge,
+    '--headless=new',
+    '--disable-gpu',
+    f'--user-data-dir={temp_profile}',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--window-size=512,512',
+    '--hide-scrollbars',
+    '--default-background-color=00000000',
+    f'--screenshot={png_out}',
+    html_path
+]
+
+res = subprocess.run(cmd, capture_output=True, text=True)
+print('Render return code:', res.returncode)
+print('PNG size:', os.path.getsize(png_out) if os.path.exists(png_out) else 'Not found')

@@ -4,6 +4,8 @@ data class ThreatReport(
     val id: String = java.util.UUID.randomUUID().toString(),
     val targetName: String,
     val targetPath: String,
+    val appName: String? = null,
+    val packageName: String? = null,
     val sha256: String,
     val fileSize: Long = 0L,
     val isApk: Boolean = true,

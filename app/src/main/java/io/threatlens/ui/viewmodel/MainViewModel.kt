@@ -105,6 +105,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         FullSystemScanner.startFullScan(getApplication())
     }
 
+    fun pauseFullScan() {
+        FullSystemScanner.pauseScan()
+    }
+
+    fun resumeFullScan() {
+        FullSystemScanner.resumeScan()
+    }
+
+    fun abortFullScan() {
+        FullSystemScanner.abortScan()
+    }
+
     fun cancelFullScan() {
         FullSystemScanner.cancelScan()
     }
@@ -167,6 +179,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         filescanKey.value = filescan.trim()
 
         syncKeysToCoordinator()
+    }
+
+    fun saveSingleApiKey(provider: String, key: String) {
+        val trimmed = key.trim()
+        val prefKey = when (provider.lowercase()) {
+            "openai" -> "openai_key"
+            "claude" -> "claude_key"
+            "gemini" -> "gemini_key"
+            "groq" -> "groq_key"
+            "vt", "virustotal" -> "vt_key"
+            "ha", "hybridanalysis" -> "ha_key"
+            "kaspersky" -> "kaspersky_key"
+            "metadefender" -> "metadefender_key"
+            "filescan" -> "filescan_key"
+            else -> return
+        }
+
+        prefs.edit().putString(prefKey, trimmed).apply()
+
+        when (provider.lowercase()) {
+            "openai" -> { openAiKey.value = trimmed; RealtimeScanCoordinator.openAiKey = trimmed }
+            "claude" -> { claudeKey.value = trimmed; RealtimeScanCoordinator.claudeKey = trimmed }
+            "gemini" -> { geminiKey.value = trimmed; RealtimeScanCoordinator.geminiKey = trimmed }
+            "groq" -> { groqKey.value = trimmed; RealtimeScanCoordinator.groqKey = trimmed }
+            "vt", "virustotal" -> { vtKey.value = trimmed; RealtimeScanCoordinator.virusTotalKey = trimmed }
+            "ha", "hybridanalysis" -> { haKey.value = trimmed; RealtimeScanCoordinator.hybridAnalysisKey = trimmed }
+            "kaspersky" -> { kasperskyKey.value = trimmed; RealtimeScanCoordinator.kasperskyKey = trimmed }
+            "metadefender" -> { metaDefenderKey.value = trimmed; RealtimeScanCoordinator.metaDefenderKey = trimmed }
+            "filescan" -> { filescanKey.value = trimmed; RealtimeScanCoordinator.filescanKey = trimmed }
+        }
     }
 
     private fun syncKeysToCoordinator() {

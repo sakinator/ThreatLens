@@ -4,165 +4,67 @@
     android:viewportWidth="512"
     android:viewportHeight="512">
 
-    <!-- 1. SMOOTH MODERN SHIELD (NO SHARP EDGES) -->
-    <!-- Outer Curved Security Crest Shield -->
+    <!-- Black Background Matching App Internals -->
     <path
-        android:fillColor="#0A111E"
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="10"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 130,82 C 190,70 322,70 382,82 C 418,90 426,112 426,146 L 426,248 C 426,345 345,414 266,442 C 260,444 252,444 246,442 C 167,414 86,345 86,248 L 86,146 C 86,112 94,90 130,82 Z" />
+        android:fillColor="#070B14"
+        android:pathData="M 112,0 L 400,0 C 462,0 512,50 512,112 L 512,400 C 512,462 462,512 400,512 L 112,512 C 50,512 0,462 0,400 L 0,112 C 0,50 50,0 112,0 Z" />
 
-    <!-- Inner Soft Bevel Line -->
+    <!-- Subtle Rounded Card Border -->
     <path
         android:strokeColor="#1E293B"
-        android:strokeWidth="3.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 142,106 C 196,96 316,96 370,106 C 398,112 404,130 404,156 L 404,242 C 404,324 335,385 264,412 C 259,414 253,414 248,412 C 177,385 108,324 108,242 L 108,156 C 108,130 114,112 142,106 Z" />
-
-    <!-- Shield Subtle Grid Seams -->
-    <path
-        android:strokeColor="#112238"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:pathData="M 180,146 C 224,154 288,154 332,146 M 140,220 L 372,220 M 164,295 C 210,318 302,318 348,295 M 256,120 L 256,380" />
-
-    <!-- 2. MALWARE BUG ON THE SHIELD (Crimson Red) -->
-    <!-- Antennae -->
-    <path
-        android:strokeColor="#FF0055"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:pathData="M 234,166 C 222,142 204,138 194,144 M 262,166 C 274,142 292,138 302,144" />
-
-    <!-- Antennae Nodes -->
-    <path
-        android:fillColor="#FF0055"
-        android:pathData="M 194,144 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0 M 302,144 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0" />
-
-    <!-- 6 Smooth Curved Beetle Legs -->
-    <path
-        android:strokeColor="#FF0055"
-        android:strokeWidth="4.5"
-        android:strokeLineCap="round"
-        android:pathData="M 216,194 C 190,181 170,181 158,194 M 280,194 C 306,181 326,181 338,194" />
-    <path
-        android:strokeColor="#FF0055"
-        android:strokeWidth="4.5"
-        android:strokeLineCap="round"
-        android:pathData="M 210,230 C 178,230 162,238 152,254 M 286,230 C 318,230 334,238 344,254" />
-    <path
-        android:strokeColor="#FF0055"
-        android:strokeWidth="4.5"
-        android:strokeLineCap="round"
-        android:pathData="M 216,266 C 186,284 173,298 166,314 M 280,266 C 310,284 323,298 330,314" />
-
-    <!-- Bug Head -->
-    <path
-        android:fillColor="#FF0055"
-        android:pathData="M 248,166 m-18,0 a18,14 0,1,0 36,0 a18,14 0,1,0 -36,0" />
-
-    <!-- Bug Thorax -->
-    <path
-        android:fillColor="#FF2A6D"
-        android:pathData="M 224,194 L 272,194 A 6,6 0,0,1 278,200 L 278,218 A 6,6 0,0,1 272,224 L 224,224 A 6,6 0,0,1 218,218 L 218,200 A 6,6 0,0,1 224,194 Z" />
-
-    <!-- Bug Segmented Abdomen -->
-    <path
-        android:fillColor="#FF0055"
-        android:pathData="M 220,230 C 220,230 248,226 276,230 C 286,252 284,284 248,304 C 212,284 210,252 220,230 Z" />
-
-    <!-- Shell Center Seam -->
-    <path
-        android:strokeColor="#0A111E"
-        android:strokeWidth="3"
-        android:strokeLineCap="round"
-        android:pathData="M 248,228 L 248,302" />
-
-    <!-- Bug Glowing Core Node -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 248,252 m-4,0 a4,4 0,1,1 8,0 a4,4 0,1,1 -8,0" />
-
-    <!-- 3. MAGNIFYING GLASS & UNIFIED HARMONIOUS HANDLE -->
-    <!-- Handle Outer Bezel Stem (Matches Bezel Diameter & Cyan Glow) -->
-    <path
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="18"
-        android:strokeLineCap="round"
-        android:pathData="M 315,291 L 372,348" />
-
-    <!-- Handle Polished Inner Core -->
-    <path
-        android:strokeColor="#0C1626"
-        android:strokeWidth="12"
-        android:strokeLineCap="round"
-        android:pathData="M 315,291 L 372,348" />
-
-    <!-- Handle Optical Glass Light-Pipe Core -->
-    <path
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:pathData="M 319,295 L 368,344" />
-
-    <!-- Handle Specular Highlight (Matches Glass Highlights) -->
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:pathData="M 323,293 L 365,335" />
-
-    <!-- Terminal Crystal Pommel (Harmoniously Inside Shield Lower-Right Corner) -->
-    <path
-        android:fillColor="#00E5FF"
-        android:pathData="M 372,348 m-9,0 a9,9 0,1,1 18,0 a9,9 0,1,1 -18,0" />
-    <path
-        android:fillColor="#0C1626"
-        android:pathData="M 372,348 m-5,0 a5,5 0,1,1 10,0 a5,5 0,1,1 -10,0" />
-    <path
-        android:fillColor="#00E5FF"
-        android:pathData="M 372,348 m-2,0 a2,2 0,1,1 4,0 a2,2 0,1,1 -4,0" />
-
-    <!-- Circular Glass Bezel Rim -->
-    <path
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="16"
-        android:pathData="M 248,224 m-96,0 a96,96 0,1,1 192,0 a96,96 0,1,1 -192,0" />
-
-    <path
-        android:strokeColor="#FFFFFF"
         android:strokeWidth="2"
-        android:pathData="M 248,224 m-104,0 a104,104 0,1,1 208,0 a104,104 0,1,1 -208,0" />
+        android:pathData="M 112,0 L 400,0 C 462,0 512,50 512,112 L 512,400 C 512,462 462,512 400,512 L 112,512 C 50,512 0,462 0,400 L 0,112 C 0,50 50,0 112,0 Z" />
 
-    <!-- Lens Glass Reflection Arc -->
+    <!-- Left Facet of Minimalist Blue Shield -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:pathData="M 183,154 C 203,139 238,134 273,139" />
+        android:fillColor="#0E243A"
+        android:pathData="M 256,76 C 160,76 100,112 100,204 C 100,320 188,402 256,442 L 256,76 Z" />
 
+    <!-- Right Facet of Minimalist Blue Shield -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
-        android:strokeLineCap="round"
-        android:pathData="M 170,179 C 180,169 196,162 213,159" />
+        android:fillColor="#0A1B2D"
+        android:pathData="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 L 256,76 Z" />
 
-    <!-- 4. TACTICAL RETICLE & CROSSHAIRS -->
-    <!-- Precision Crosshair Ticks -->
+    <!-- Outer Minimalist Blue Shield Border -->
     <path
         android:strokeColor="#00E5FF"
-        android:strokeWidth="4"
-        android:strokeLineCap="round"
-        android:pathData="M 248,138 L 248,154 M 248,294 L 248,310 M 162,224 L 178,224 M 318,224 L 334,224" />
-
-    <!-- Green Tactical Focus Brackets [ ] -->
-    <path
-        android:strokeColor="#00E676"
-        android:strokeWidth="3"
+        android:strokeWidth="9"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 203,189 L 203,179 L 213,179 M 293,189 L 293,179 L 283,179 M 203,259 L 203,269 L 213,269 M 293,259 L 293,269 L 283,269" />
+        android:pathData="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 C 188,402 100,320 100,204 C 100,112 160,76 256,76 Z" />
+
+    <!-- Vertical Shield Spine -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2.5"
+        android:strokeAlpha="0.7"
+        android:strokeLineCap="round"
+        android:pathData="M 256,90 L 256,426" />
+
+    <!-- Minimalist Inner Shield Aperture -->
+    <path
+        android:fillColor="#08101C"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 256,150 C 310,150 346,172 346,226 C 346,298 296,350 256,378 C 216,350 166,298 166,226 C 166,172 202,150 256,150 Z" />
+
+    <!-- Center Minimalist Cyber Eye / Aperture Ring -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="4.5"
+        android:pathData="M 256,214 A 28,28 0 1,0 256,270 A 28,28 0 1,0 256,214 Z" />
+
+    <!-- Center Cyber Pupil -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M 256,231 A 11,11 0 1,0 256,253 A 11,11 0 1,0 256,231 Z" />
+
+    <!-- Precision Cyber Ticks -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M 256,196 L 256,206 M 256,278 L 256,288 M 210,242 L 220,242 M 292,242 L 302,242" />
 </vector>
