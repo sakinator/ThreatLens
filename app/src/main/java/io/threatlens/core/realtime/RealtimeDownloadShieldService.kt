@@ -2,6 +2,7 @@ package io.threatlens.core.realtime
 
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.*
@@ -20,7 +21,11 @@ class RealtimeDownloadShieldService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = ThreatNotificationManager.buildForegroundShieldNotification(this)
-        startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification)
+        }
 
         startUltraLowPowerWatchers()
         return START_STICKY

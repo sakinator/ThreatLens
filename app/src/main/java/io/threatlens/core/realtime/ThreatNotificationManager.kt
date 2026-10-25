@@ -75,7 +75,7 @@ object ThreatNotificationManager {
         )
 
         val isMalicious = report.severity == ThreatSeverity.MALICIOUS
-        val title = if (isMalicious) "🚨 CRITICAL MALWARE INTERCEPTED" else "⚠️ Suspicious File Detected"
+        val title = if (isMalicious) "CRITICAL MALWARE INTERCEPTED" else "Suspicious File Detected"
         val subtitle = "${report.targetName} (${report.threatFamily})"
         val body = report.aiExplanation ?: "Threat score: ${report.finalScore}/100. Potential risk detected."
 
