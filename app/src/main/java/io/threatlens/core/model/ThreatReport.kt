@@ -10,6 +10,7 @@ data class ThreatReport(
     val localScore: Int = 0,
     val cloudScore: Int = 0,
     val currentScore: Int = 0,
+    val threatScore: Int = currentScore,
     val severity: ThreatSeverity = ThreatSeverity.SAFE,
     val threatFamily: String = "Clean",
     val detectedBehaviors: List<String> = emptyList(),

@@ -65,6 +65,7 @@ object RealtimeScanCoordinator {
                 targetPath = file.absolutePath,
                 sha256 = sha256,
                 severity = ThreatSeverity.SAFE,
+                currentScore = 0,
                 threatScore = 0,
                 threatFamily = "Whitelisted Clean",
                 aiExplanation = "This file is explicitly whitelisted in ThreatLens Antivirus Exclusions.",

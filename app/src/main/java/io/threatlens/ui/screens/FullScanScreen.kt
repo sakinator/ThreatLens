@@ -26,6 +26,7 @@ import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ThreatItemRow
 import io.threatlens.ui.theme.*
 import io.threatlens.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
