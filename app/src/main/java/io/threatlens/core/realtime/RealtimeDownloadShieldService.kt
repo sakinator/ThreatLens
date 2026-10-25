@@ -1,0 +1,92 @@
+package io.threatlens.core.realtime
+
+import android.app.Service
+import android.content.Intent
+import android.database.ContentObserver
+import android.net.Uri
+import android.os.*
+import android.provider.MediaStore
+import java.io.File
+
+class RealtimeDownloadShieldService : Service() {
+
+    private var downloadFolderObserver: FileObserver? = null
+    private var mediaContentObserver: ContentObserver? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        ThreatNotificationManager.createChannels(this)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = ThreatNotificationManager.buildForegroundShieldNotification(this)
+        startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification)
+
+        startUltraLowPowerWatchers()
+        return START_STICKY
+    }
+
+    private fun startUltraLowPowerWatchers() {
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+        // 1. Kernel inotify watcher: Fires ONLY on completed write (CLOSE_WRITE) or rename (MOVED_TO)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && downloadsDir.exists()) {
+            downloadFolderObserver = object : FileObserver(downloadsDir, CLOSE_WRITE or MOVED_TO) {
+                override fun onEvent(event: Int, path: String?) {
+                    if (path.isNullOrBlank()) return
+                    // Fast filter on thread before scheduling any work
+                    val lower = path.lowercase()
+                    if (lower.endsWith(".apk") || lower.endsWith(".dex") || lower.endsWith(".jar")) {
+                        val targetFile = File(downloadsDir, path)
+                        RealtimeScanCoordinator.scanFileAsync(applicationContext, targetFile)
+                    }
+                }
+            }
+            downloadFolderObserver?.startWatching()
+        }
+
+        // 2. MediaStore Downloads event listener for system browser download completions
+        mediaContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean, uri: Uri?) {
+                super.onChange(selfChange, uri)
+                if (uri != null) {
+                    processMediaStoreUri(uri)
+                }
+            }
+        }
+
+        try {
+            contentResolver.registerContentObserver(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                true,
+                mediaContentObserver!!
+            )
+        } catch (_: Exception) {}
+    }
+
+    private fun processMediaStoreUri(uri: Uri) {
+        try {
+            val projection = arrayOf(MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DISPLAY_NAME)
+            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                    if (dataIndex != -1) {
+                        val path = cursor.getString(dataIndex)
+                        if (!path.isNullOrBlank()) {
+                            val file = File(path)
+                            RealtimeScanCoordinator.scanFileAsync(applicationContext, file)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    override fun onDestroy() {
+        downloadFolderObserver?.stopWatching()
+        mediaContentObserver?.let { contentResolver.unregisterContentObserver(it) }
+        super.onDestroy()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+}
