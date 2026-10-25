@@ -122,7 +122,13 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onNavigateScan = { currentTab = "scan" },
                                     onNavigateNews = { currentTab = "news" },
-                                    onNavigateSettings = { currentTab = "settings" }
+                                    onNavigateSettings = { currentTab = "settings" },
+                                    onNavigateWebProtection = { currentTab = "web_protection" }
+                                )
+                            }
+                            "web_protection" -> {
+                                io.threatlens.ui.screens.WebProtectionScreen(
+                                    onBack = { currentTab = "dashboard" }
                                 )
                             }
                             "scan" -> {
@@ -135,7 +141,8 @@ class MainActivity : ComponentActivity() {
                                 SettingsScreen(
                                     viewModel = viewModel,
                                     onBack = { currentTab = "dashboard" },
-                                    onNavigateAbout = { currentTab = "about" }
+                                    onNavigateAbout = { currentTab = "about" },
+                                    onNavigateWebProtection = { currentTab = "web_protection" }
                                 )
                             }
                             "about" -> {

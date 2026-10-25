@@ -1,6 +1,6 @@
 # ThreatLens Architecture Specification
 
-ThreatLens is an open-source, hybrid Android antivirus and real-time threat interceptor designed with **zero-idle battery consumption (< 0.5% drain per 24 hours)**, on-device heuristics, multi-engine cloud reputation, and free AI-driven threat explanations.
+ThreatLens is an open-source, hybrid Android cybersecurity system designed with **zero-idle battery consumption (< 0.5% drain per 24 hours)**, on-device heuristics, multi-engine cloud reputation, local VPN DNS link filtering, MITM network integrity detection, and free AI-driven threat explanations.
 
 ---
 
@@ -40,9 +40,58 @@ Non-Executable (.jpg, .mp4, .pdf)              Payload (.apk, .dex, .jar, .bin)
 
 ---
 
-## 2. Hybrid Threat Scoring Model (0 - 100)
+## 2. On-Device Local VPN & DNS Ad / Malware Filter Engine (`ThreatLensVpnService`)
 
-ThreatLens combines local static analysis with multi-cloud threat intelligence into a weighted composite score:
+ThreatLens incorporates an on-device packet filter utilizing Android's `VpnService` API:
+
+```
+[Browser / App Network Stack]
+              │
+    (DNS Query on port 53)
+              ▼
+   [Local TUN Interface: 10.111.222.1/32]
+              │
+              ▼
+   [DnsPacketParser.parseQuery()]
+              │
+              ▼
+   [DomainFilterEngine.evaluateDomain(domain, mode, intensity)]
+              │
+     ┌────────┴────────────────────────┬────────────────────────┐
+     │                                 │                        │
+[ALLOW]                          [BLOCK_AD]              [BLOCK_MALWARE]
+     │                                 │                        │
+     ▼                                 ▼                        ▼
+Forward via protected UDP      Synthesize DNS A        Synthesize DNS A
+socket to selected Upstream    record (0.0.0.0)        record (0.0.0.0)
+DNS (AdGuard/Cloudflare/Quad9)         │                        │
+     │                                 ▼                        ▼
+     ▼                        Immediate Drop /        Trigger Full-Screen
+Write reply to TUN               No Latency          ThreatBlockedActivity
+```
+
+### Route Isolation & Zero Latency:
+* The VPN routes **only** the virtual DNS server (`10.111.222.1/32`).
+* All user TCP/UDP payload traffic (browsing, video streaming, downloads, gaming) bypasses the VPN completely.
+* Result: Zero proxy bottlenecks, full Wi-Fi/5G wire speeds, and no remote server required.
+
+### 3-Level Protection Intensity:
+1. **Safest (Relaxed)**: Confirmed malware and phishing domains blocked. Ads allowed to guarantee zero breakage on e-commerce, banking, or streaming platforms.
+2. **Medium (Balanced - Recommended)**: Blocks malware, phishing, aggressive ad networks, scam popups, and user-tracking analytics.
+3. **Hardest (Ultra Strict Fortress)**: Blocks all ads, trackers, OEM telemetry (Samsung, Xiaomi, Oppo), newly registered domains, and untrusted TLDs with high-entropy subdomains.
+
+---
+
+## 3. MITM & Network Integrity Detector (`MitmDetector`)
+
+Audits the device security posture against active Man-in-the-Middle attacks:
+1. **Rogue User CA Certificates**: Inspects `AndroidCAStore`. Flags user certificates installed by tools such as Burp Suite, Charles Proxy, Fiddler, or MDM profiles that can decrypt TLS connections.
+2. **System Proxy Interception**: Inspects `http.proxyHost`, `http.proxyPort`, and `ConnectivityManager.defaultProxy` for covert traffic redirection.
+3. **DNS Poisoning & Captive Portal Audits**: Resolves canary domains (`cloudflare-dns.com`, `dns.google`) and alerts if responses resolve to private RFC 1918 subnets.
+
+---
+
+## 4. Hybrid Threat Scoring Model (0 - 100)
 
 $$\text{Final Threat Score} = \min\left(100, W_{\text{local}} \cdot S_{\text{local}} + W_{\text{cloud}} \cdot S_{\text{cloud}}\right)$$
 
@@ -60,6 +109,8 @@ $$\text{Final Threat Score} = \min\left(100, W_{\text{local}} \cdot S_{\text{loc
   * MalwareBazaar (Abuse.ch)
   * Hybrid Analysis (Falcon Sandbox)
   * Kaspersky OpenTIP
+  * MetaDefender Cloud
+  * Filescan.io
 
 ### Verdict Thresholds:
 * **0 – 24**: **SAFE (Clean)**
@@ -69,19 +120,16 @@ $$\text{Final Threat Score} = \min\left(100, W_{\text{local}} \cdot S_{\text{loc
 
 ---
 
-## 3. Free AI Threat Explainer
+## 5. Multi-LLM Threat Explainers
 
-When a file triggers a warning, traditional scanners show cryptic names like `Trojan-Banker.AndroidOS.Anatsa.b`. ThreatLens translates this into clear, non-technical plain English using free AI APIs:
-
-* **Primary AI Engine**: **Google Gemini 1.5 / 2.0 Flash** (Free 15 RPM tier via Google AI Studio).
-* **Secondary AI Engine**: **Groq Cloud** (`llama-3.1-8b-instant` / `llama-3.3-70b-versatile`).
-* **Offline Fallback Engine**: Curated offline rule dictionary mapping known families (`Banker`, `Spyware`, `Dropper`, `Adware`, `Toll Fraud`) into direct, actionable explanations.
+When a threat is detected, ThreatLens translates obscure vendor names into actionable English:
+* **Cloud AI Providers**: Google Gemini 1.5/2.0 Flash, Groq Cloud, OpenAI ChatGPT, Anthropic Claude.
+* **Offline Fallbacks**: Deterministic rulebook for Banking Trojans, Droppers, Spyware, Toll Fraud, and Ransomware.
 
 ---
 
-## 4. Cross-Platform Roadmap: ThreatLens Web
+## 6. Permanent Signature Keystore & Update Continuity
 
-The ThreatLens architecture is designed to expand seamlessly into a browser extension (`ThreatLens Web`):
-* **URL Reputation**: Real-time lookup of URLs against URLhaus, OpenTIP, and VirusTotal before clicking.
-* **Download Pre-Check**: Intercepts `chrome.downloads.onCreated` to check hashes before files are written to disk.
-* **AI Phishing Analysis**: LLM inspects suspicious domain structures, typosquatting, and deceptive landing page forms.
+ThreatLens is signed with a permanent 30-year RSA-4096 keystore (`keystore/release.jks`) configured identically for both `release` and `debug` build types. This guarantees that:
+* Every new version installs directly over existing installations without signature collision (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
+* In-app updates from GitHub Releases execute seamlessly in-place.

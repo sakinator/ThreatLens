@@ -33,12 +33,18 @@ fun DashboardScreen(
     viewModel: MainViewModel,
     onNavigateScan: () -> Unit,
     onNavigateNews: () -> Unit,
-    onNavigateSettings: () -> Unit
+    onNavigateSettings: () -> Unit,
+    onNavigateWebProtection: () -> Unit = {}
 ) {
     val isShieldActive by viewModel.isShieldActive.collectAsState()
     val scans by viewModel.scansList.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
     val selectedReport by viewModel.selectedReport.collectAsState()
+
+    val isVpnActive by io.threatlens.core.vpn.ThreatLensVpnService.isVpnActive.collectAsState()
+    val activeDns by io.threatlens.core.vpn.ThreatLensVpnService.activeDnsProvider.collectAsState()
+    val filterIntensity by io.threatlens.core.vpn.DomainFilterEngine.filterIntensity.collectAsState()
+    val mitmReport by io.threatlens.core.security.MitmDetector.lastReport.collectAsState()
 
     val maliciousCount = scans.count { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK }
     val cleanCount = scans.count { it.severity == ThreatSeverity.SAFE }
@@ -157,6 +163,129 @@ fun DashboardScreen(
                         value = "< 0.5%",
                         valueColor = NeonCyan
                     )
+                }
+            }
+
+            // Web & Link Protection (Local VPN, DNS, MITM Defense)
+            item {
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateWebProtection() }
+                        .border(
+                            1.dp,
+                            if (isVpnActive) NeonCyan.copy(alpha = 0.6f) else CyberCardBorder,
+                            RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(
+                                            if (isVpnActive) NeonCyan.copy(alpha = 0.2f) else CyberDarkSurface,
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.VpnLock,
+                                        contentDescription = null,
+                                        tint = if (isVpnActive) NeonCyan else TextMuted,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "Web & Link Protection",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = if (isVpnActive) "DNS Shield via ${activeDns.name}" else "Tap to configure local VPN & DNS",
+                                        color = TextSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                color = if (isVpnActive) NeonGreen.copy(alpha = 0.2f) else CyberDarkSurface,
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = if (isVpnActive) "ACTIVE" else "OFF",
+                                    color = if (isVpnActive) NeonGreen else TextMuted,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Surface(
+                                    color = CyberDarkSurface,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = filterIntensity.name,
+                                        color = Color(filterIntensity.badgeColorHex),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+
+                                Surface(
+                                    color = CyberDarkSurface,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (mitmReport.status == io.threatlens.core.security.MitmStatus.SECURE) "SSL Clean" else "MITM Alert",
+                                        color = if (mitmReport.status == io.threatlens.core.security.MitmStatus.SECURE) NeonGreen else NeonRed,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { onNavigateWebProtection() }
+                            ) {
+                                Text(
+                                    text = "Configure",
+                                    color = NeonCyan,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

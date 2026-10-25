@@ -28,7 +28,8 @@ import io.threatlens.ui.viewmodel.MainViewModel
 fun SettingsScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit,
-    onNavigateAbout: () -> Unit = {}
+    onNavigateAbout: () -> Unit = {},
+    onNavigateWebProtection: () -> Unit = {}
 ) {
     var openaiInput by remember { mutableStateOf(viewModel.openAiKey.value) }
     var claudeInput by remember { mutableStateOf(viewModel.claudeKey.value) }
@@ -63,6 +64,29 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Navigation to Web Protection & DNS Settings
+            GlassCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateWebProtection() },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.VpnLock, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Web & Link Protection", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Local VPN, DNS selection, ad & malware blocking, MITM defense", color = TextSecondary, fontSize = 11.sp)
+                        }
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextMuted)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Navigation to About & Software Updates Screen
             GlassCard {

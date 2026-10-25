@@ -3,28 +3,56 @@
     android:height="96dp"
     android:viewportWidth="96"
     android:viewportHeight="96">
-    <!-- Outer Shield -->
+    
+    <!-- Outer Cyber Armor Shield (Sharp Angular Tactical Crest) -->
+    <path
+        android:fillColor="#0B132B"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2.8"
+        android:strokeLineJoin="miter"
+        android:pathData="M48,6 L84,18 L84,52 L48,90 L12,52 L12,18 Z" />
+
+    <!-- Inner Shield Inset Rim -->
+    <path
+        android:strokeColor="#1C2E4A"
+        android:strokeWidth="1.2"
+        android:pathData="M48,12 L78,22 L78,50 L48,83 L18,50 L18,22 Z" />
+
+    <!-- Tactical HUD Circular Reticle -->
+    <path
+        android:strokeColor="#0058FF"
+        android:strokeWidth="1.8"
+        android:pathData="M48,46m-26,0a26,26 0,1,1 52,0a26,26 0,1,1 -52,0" />
+
+    <!-- Segmented Lens Aperture Outer Ring -->
     <path
         android:strokeColor="#00E5FF"
-        android:strokeWidth="2.5"
-        android:fillColor="#0E1626"
-        android:pathData="M48,10 C65,10 80,18 80,36 C80,60 62,78 48,86 C34,78 16,60 16,36 C16,18 31,10 48,10 Z" />
-    
-    <!-- Concentric Lens Circle -->
+        android:strokeWidth="2.2"
+        android:pathData="M48,46m-20,0a20,20 0,1,1 40,0a20,20 0,1,1 -40,0" />
+
+    <!-- Optical Lens Aperture Blades (Hexagonal Mechanical Iris) -->
     <path
         android:strokeColor="#00E676"
-        android:strokeWidth="1.8"
-        android:fillColor="#080D17"
-        android:pathData="M48,46m-18,0a18,18 0,1,1 36,0a18,18 0,1,1 -36,0" />
-    
-    <!-- Iris Center Target -->
+        android:strokeWidth="1.6"
+        android:pathData="M38,30 L58,30 L66,46 L54,62 L34,62 L26,46 Z" />
+
+    <path
+        android:strokeColor="#00E676"
+        android:strokeWidth="1.4"
+        android:pathData="M38,30 L54,62 M58,30 L34,62 M26,46 L66,46" />
+
+    <!-- Center Lens Core / Threat Target -->
     <path
         android:fillColor="#00E5FF"
-        android:pathData="M48,46m-7,0a7,7 0,1,1 14,0a7,7 0,1,1 -14,0" />
+        android:pathData="M48,46m-6,0a6,6 0,1,1 12,0a6,6 0,1,1 -12,0" />
 
-    <!-- Crosshair Ticks -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,46m-2.2,0a2.2,2.2 0,1,1 4.4,0a2.2,2.2 0,1,1 -4.4,0" />
+
+    <!-- Crosshair Target Ticks (Tactical Precision Sight) -->
     <path
         android:strokeColor="#00E5FF"
-        android:strokeWidth="2"
-        android:pathData="M48,22 L48,27 M48,65 L48,70 M24,46 L29,46 M67,46 L72,46" />
+        android:strokeWidth="2.2"
+        android:pathData="M48,18 L48,24 M48,68 L48,74 M20,46 L26,46 M70,46 L76,46" />
 </vector>
