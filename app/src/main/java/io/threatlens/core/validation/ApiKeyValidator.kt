@@ -154,6 +154,26 @@ object ApiKeyValidator {
                         }
                     }
                 }
+                "bazaar", "malwarebazaar", "abusech" -> {
+                    val body = okhttp3.FormBody.Builder()
+                        .add("query", "get_info")
+                        .add("hash", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+                        .build()
+                    val request = Request.Builder()
+                        .url("https://mb-api.abuse.ch/api/v1/")
+                        .addHeader("Auth-Key", trimmed)
+                        .post(body)
+                        .build()
+                    client.newCall(request).execute().use { resp ->
+                        if (resp.isSuccessful || resp.code == 200) {
+                            ValidationStatus.Valid("MalwareBazaar Auth-Key Verified (HTTP 200)")
+                        } else if (resp.code == 401) {
+                            ValidationStatus.Invalid("Invalid Auth-Key (HTTP 401 Unauthorized)")
+                        } else {
+                            ValidationStatus.Invalid("HTTP Error ${resp.code}")
+                        }
+                    }
+                }
                 else -> ValidationStatus.Invalid("Unknown provider")
             }
         } catch (e: Exception) {

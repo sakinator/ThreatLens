@@ -65,6 +65,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val kasperskyKey = MutableStateFlow(prefs.getString("kaspersky_key", "") ?: "")
     val metaDefenderKey = MutableStateFlow(prefs.getString("metadefender_key", "") ?: "")
     val filescanKey = MutableStateFlow(prefs.getString("filescan_key", "") ?: "")
+    val bazaarKey = MutableStateFlow(prefs.getString("bazaar_key", "") ?: "")
 
     init {
         syncKeysToCoordinator()
@@ -213,7 +214,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ha: String,
         kaspersky: String,
         metaDefender: String,
-        filescan: String
+        filescan: String,
+        bazaar: String = ""
     ) {
         prefs.edit()
             .putString("openai_key", openai.trim())
@@ -225,6 +227,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .putString("kaspersky_key", kaspersky.trim())
             .putString("metadefender_key", metaDefender.trim())
             .putString("filescan_key", filescan.trim())
+            .putString("bazaar_key", bazaar.trim())
             .apply()
 
         openAiKey.value = openai.trim()
@@ -236,6 +239,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         kasperskyKey.value = kaspersky.trim()
         metaDefenderKey.value = metaDefender.trim()
         filescanKey.value = filescan.trim()
+        bazaarKey.value = bazaar.trim()
 
         syncKeysToCoordinator()
     }
@@ -252,6 +256,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "kaspersky" -> "kaspersky_key"
             "metadefender" -> "metadefender_key"
             "filescan" -> "filescan_key"
+            "bazaar", "malwarebazaar", "abusech" -> "bazaar_key"
             else -> return
         }
 
@@ -267,6 +272,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "kaspersky" -> { kasperskyKey.value = trimmed; RealtimeScanCoordinator.kasperskyKey = trimmed }
             "metadefender" -> { metaDefenderKey.value = trimmed; RealtimeScanCoordinator.metaDefenderKey = trimmed }
             "filescan" -> { filescanKey.value = trimmed; RealtimeScanCoordinator.filescanKey = trimmed }
+            "bazaar", "malwarebazaar", "abusech" -> { bazaarKey.value = trimmed; RealtimeScanCoordinator.bazaarKey = trimmed }
         }
     }
 
@@ -280,5 +286,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         RealtimeScanCoordinator.kasperskyKey = kasperskyKey.value
         RealtimeScanCoordinator.metaDefenderKey = metaDefenderKey.value
         RealtimeScanCoordinator.filescanKey = filescanKey.value
+        RealtimeScanCoordinator.bazaarKey = bazaarKey.value
     }
 }

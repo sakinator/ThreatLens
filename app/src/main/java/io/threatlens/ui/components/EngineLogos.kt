@@ -80,6 +80,30 @@ object EngineRegistry {
         initials = "FS"
     )
 
+    val ALIENVAULT_OTX = EngineBrand(
+        name = "AlienVault OTX",
+        primaryColor = Color(0xFF0284C7),
+        accentColor = Color(0xFF38BDF8),
+        icon = Icons.Default.Public,
+        initials = "OTX"
+    )
+
+    val CIRCL_LU = EngineBrand(
+        name = "CIRCL Hashlookup",
+        primaryColor = Color(0xFF0D9488),
+        accentColor = Color(0xFF14B8A6),
+        icon = Icons.Default.GppGood,
+        initials = "CRC"
+    )
+
+    val THREATLENS_LOCAL = EngineBrand(
+        name = "ThreatLens Local Engine",
+        primaryColor = Color(0xFF00E5FF),
+        accentColor = Color(0xFF0066FF),
+        icon = Icons.Default.Shield,
+        initials = "TL"
+    )
+
     // AI THREAT EXPLAINERS
     val OPENAI_CHATGPT = EngineBrand(
         name = "ChatGPT (OpenAI)",
@@ -124,6 +148,9 @@ object EngineRegistry {
             lower.contains("metadefender") -> METADEFENDER
             lower.contains("bazaar") -> MALWARE_BAZAAR
             lower.contains("filescan") -> FILESCAN
+            lower.contains("alienvault") || lower.contains("otx") -> ALIENVAULT_OTX
+            lower.contains("circl") || lower.contains("hashlookup") -> CIRCL_LU
+            lower.contains("threatlens") || lower.contains("local") -> THREATLENS_LOCAL
             lower.contains("gemini") -> GEMINI_AI
             lower.contains("groq") -> GROQ_AI
             else -> EngineBrand(name, NeonCyan, CyberAmber, Icons.Default.Security, "AV")

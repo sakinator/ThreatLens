@@ -19,7 +19,8 @@ class CloudThreatAggregator(
     private val haApiKey: String? = null,
     private val kasperskyKey: String? = null,
     private val metaDefenderKey: String? = null,
-    private val filescanKey: String? = null
+    private val filescanKey: String? = null,
+    private val abuseChAuthKey: String? = null
 ) {
 
     suspend fun inspectHash(sha256: String): CloudAggregatedVerdict = withContext(Dispatchers.IO) {
@@ -31,44 +32,89 @@ class CloudThreatAggregator(
         var highestScore = 0
         var detectedFamily: String? = null
 
-        // 1. MalwareBazaar (Abuse.ch - Free community lookup, no API key needed)
-        val bazaarDeferred = async { 
-            try { MalwareBazaarProvider.queryHash(sha256) } catch (_: Exception) { null } 
+        // 1. AlienVault OTX (Open Threat Exchange - Free Public Community Intelligence, Zero-Key)
+        val otxDeferred = async {
+            try { AlienVaultOtxProvider.queryHash(sha256) } catch (_: Exception) { null }
         }
 
-        // 2. VirusTotal (v3)
+        // 2. CIRCL Hashlookup (Computer Incident Response Center Luxembourg / MISP / NSRL, Zero-Key)
+        val circlDeferred = async {
+            try { CirclHashlookupProvider.queryHash(sha256) } catch (_: Exception) { null }
+        }
+
+        // 3. MalwareBazaar (Abuse.ch)
+        val bazaarDeferred = async { 
+            try { MalwareBazaarProvider.queryHash(sha256, abuseChAuthKey) } catch (_: Exception) { null } 
+        }
+
+        // 4. VirusTotal (v3)
         val vtDeferred = async {
             if (!vtApiKey.isNullOrBlank()) {
                 try { VirusTotalProvider.queryHash(sha256, vtApiKey) } catch (_: Exception) { null }
             } else null
         }
 
-        // 3. Hybrid Analysis (Falcon Sandbox)
+        // 5. Hybrid Analysis (Falcon Sandbox)
         val haDeferred = async {
             if (!haApiKey.isNullOrBlank()) {
                 try { HybridAnalysisProvider.queryHash(sha256, haApiKey) } catch (_: Exception) { null }
             } else null
         }
 
-        // 4. Kaspersky OpenTIP
+        // 6. Kaspersky OpenTIP
         val kasperskyDeferred = async {
             if (!kasperskyKey.isNullOrBlank()) {
                 try { KasperskyOpenTipProvider.queryHash(sha256, kasperskyKey) } catch (_: Exception) { null }
             } else null
         }
 
-        // 5. MetaDefender Cloud (OPSWAT)
+        // 7. MetaDefender Cloud (OPSWAT)
         val metaDefenderDeferred = async {
             if (!metaDefenderKey.isNullOrBlank()) {
                 try { MetaDefenderProvider.queryHash(sha256, metaDefenderKey) } catch (_: Exception) { null }
             } else null
         }
 
-        // 6. Filescan.io
+        // 8. Filescan.io
         val filescanDeferred = async {
             if (!filescanKey.isNullOrBlank()) {
                 try { FilescanProvider.queryHash(sha256, filescanKey) } catch (_: Exception) { null }
             } else null
+        }
+
+        // Await AlienVault OTX
+        val otx = otxDeferred.await()
+        if (otx != null) {
+            successfulEngines.add("AlienVault OTX")
+            if (otx.isMalicious) {
+                sources.add("AlienVault OTX (${otx.pulseCount} pulses)")
+                highestScore = maxOf(highestScore, 90)
+                flaggedCount += otx.pulseCount
+                totalCount += maxOf(1, otx.pulseCount)
+                if (detectedFamily == null && !otx.threatFamily.isNullOrBlank()) {
+                    detectedFamily = otx.threatFamily
+                }
+            } else {
+                totalCount += 1
+            }
+        } else {
+            failedEngines.add("AlienVault OTX")
+        }
+
+        // Await CIRCL Hashlookup
+        val circl = circlDeferred.await()
+        if (circl != null) {
+            successfulEngines.add("CIRCL Hashlookup")
+            if (circl.isMalicious) {
+                sources.add("CIRCL CERT Threat DB")
+                highestScore = maxOf(highestScore, 90)
+                flaggedCount += 1
+                totalCount += 1
+            } else {
+                totalCount += 1
+            }
+        } else {
+            failedEngines.add("CIRCL Hashlookup")
         }
 
         // Await Bazaar
@@ -80,9 +126,11 @@ class CloudThreatAggregator(
                 highestScore = maxOf(highestScore, 95)
                 flaggedCount += 1
                 totalCount += 1
-                detectedFamily = bazaar.signature ?: "MalwareBazaar.Malware"
+                if (detectedFamily == null) {
+                    detectedFamily = bazaar.signature ?: "MalwareBazaar.Malware"
+                }
             }
-        } else {
+        } else if (!abuseChAuthKey.isNullOrBlank()) {
             failedEngines.add("MalwareBazaar")
         }
 

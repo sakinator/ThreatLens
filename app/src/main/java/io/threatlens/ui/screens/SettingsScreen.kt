@@ -47,6 +47,7 @@ fun SettingsScreen(
     var kasperskyInput by remember { mutableStateOf(viewModel.kasperskyKey.value) }
     var metaDefenderInput by remember { mutableStateOf(viewModel.metaDefenderKey.value) }
     var filescanInput by remember { mutableStateOf(viewModel.filescanKey.value) }
+    var bazaarInput by remember { mutableStateOf(viewModel.bazaarKey.value) }
     var savedSnackbar by remember { mutableStateOf(false) }
     val validationStatusMap = remember { mutableStateMapOf<String, io.threatlens.core.validation.ValidationStatus>() }
     var isValidatingAll by remember { mutableStateOf(false) }
@@ -587,7 +588,28 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                color = CyberDarkSurface,
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CloudQueue, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "AlienVault OTX & CIRCL Hashlookup are active by default (Zero Key Required). The engines below are optional for expanded multi-engine coverage.",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
 
             ApiKeyFieldWithIcon(
                 engineName = "VirusTotal",
@@ -662,6 +684,21 @@ fun SettingsScreen(
                 onSaveAndValidate = { validateAndSaveSingle("filescan", filescanInput) }
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            ApiKeyFieldWithIcon(
+                engineName = "MalwareBazaar",
+                providerId = "bazaar",
+                label = "MalwareBazaar Auth-Key (Abuse.ch)",
+                placeholder = "Free Auth-Key token",
+                hint = "Mandatory for Abuse.ch API queries; free registration at bazaar.abuse.ch",
+                portalUrl = "https://bazaar.abuse.ch/account/",
+                value = bazaarInput,
+                onValueChange = { bazaarInput = it },
+                status = validationStatusMap["bazaar"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
+                onSaveAndValidate = { validateAndSaveSingle("bazaar", bazaarInput) }
+            )
+
             Spacer(modifier = Modifier.height(26.dp))
 
             // Primary Bulk Action: Save & Validate All Keys
@@ -669,7 +706,7 @@ fun SettingsScreen(
                 onClick = {
                     viewModel.saveApiKeys(
                         openaiInput, claudeInput, geminiInput, groqInput,
-                        vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput
+                        vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput, bazaarInput
                     )
                     savedSnackbar = true
                     isValidatingAll = true
@@ -683,7 +720,8 @@ fun SettingsScreen(
                             "metadefender" to metaDefenderInput,
                             "ha" to haInput,
                             "kaspersky" to kasperskyInput,
-                            "filescan" to filescanInput
+                            "filescan" to filescanInput,
+                            "bazaar" to bazaarInput
                         )
                         keyMap.forEach { (prov, k) ->
                             if (k.isNotBlank()) {

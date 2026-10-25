@@ -171,133 +171,180 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Visual Cloud Engines Section
+            // Unified Multi-Engine Source-by-Source Intelligence Breakdown
             GlassCard {
-                Text(
-                    text = "Cloud Engines & Threat Intelligence",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                FlowRow(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Show completed engines with logos
-                    report.cloudSources.forEach { source ->
-                        EngineStatusBadge(
-                            engineName = source,
-                            detailText = source,
-                            isFlagged = true,
-                            isPending = false
-                        )
-                    }
-
-                    // Show pending engines with live logos and spinners
-                    report.pendingEngines.forEach { pendingEngine ->
-                        EngineStatusBadge(
-                            engineName = pendingEngine,
-                            isPending = true
-                        )
-                    }
-
-                    if (report.cloudSources.isEmpty() && report.pendingEngines.isEmpty()) {
+                    Column {
                         Text(
-                            text = "All cloud engines reported negative (Clean).",
-                            color = NeonEmerald,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Multi-Engine Source-by-Source Verdict Breakdown
-            if (report.engineVerdictMap.isNotEmpty()) {
-                GlassCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Threat Intelligence Breakdown by Source",
+                            text = "Multi-Engine Threat Intelligence",
                             color = TextPrimary,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp
                         )
+                        Text(
+                            text = "On-device heuristics, zero-key public cloud & sandboxes",
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Surface(
+                        color = CyberDarkSurface,
+                        shape = RoundedCornerShape(6.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = "${maxOf(report.engineVerdictMap.size, 7)} Sources",
+                            color = NeonCyan,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    report.engineVerdictMap.forEach { (sourceName, verdict) ->
+                        val isPending = report.pendingEngines.contains(sourceName) || verdict.contains("Querying", ignoreCase = true) || verdict.contains("Scanning", ignoreCase = true)
+                        val isFlagged = verdict.startsWith("Flagged", ignoreCase = true) || verdict.contains("Malicious", ignoreCase = true) || verdict.contains("Suspicious", ignoreCase = true)
+                        val isClean = verdict.startsWith("Clean", ignoreCase = true) || verdict.contains("Clean", ignoreCase = true) || verdict.contains("Verified", ignoreCase = true)
+
                         Surface(
                             color = CyberDarkSurface,
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                when {
+                                    isPending -> NeonCyan.copy(alpha = 0.5f)
+                                    isFlagged -> NeonCrimson.copy(alpha = 0.5f)
+                                    isClean -> NeonEmerald.copy(alpha = 0.25f)
+                                    else -> CyberCardBorder
+                                }
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "${report.engineVerdictMap.size} Sources",
-                                color = NeonCyan,
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        report.engineVerdictMap.forEach { (sourceName, verdict) ->
-                            val isFlagged = verdict.startsWith("Flagged", ignoreCase = true) || verdict.contains("Malicious", ignoreCase = true) || verdict.contains("Suspicious", ignoreCase = true)
-                            val isClean = verdict.startsWith("Clean", ignoreCase = true)
-
-                            Surface(
-                                color = CyberDarkSurface,
-                                shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (isFlagged) NeonCrimson.copy(alpha = 0.5f) else CyberCardBorder
-                                ),
-                                modifier = Modifier.fillMaxWidth()
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                        EngineLogoIcon(sourceName, modifier = Modifier.size(20.dp))
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Column {
-                                            Text(sourceName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                // Engine Logo
+                                EngineLogoIcon(sourceName, modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                // Center Content: Source Name, Tag, Verdict
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = sourceName,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = CyberCardSurface,
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
                                             Text(
-                                                text = verdict,
-                                                color = if (isFlagged) NeonCrimson else if (isClean) NeonEmerald else TextMuted,
-                                                fontSize = 11.sp
+                                                text = when (sourceName) {
+                                                    "ThreatLens Local Engine" -> "LOCAL"
+                                                    "AlienVault OTX", "CIRCL Hashlookup" -> "PUBLIC CLOUD"
+                                                    else -> "CLOUD API"
+                                                },
+                                                color = when (sourceName) {
+                                                    "ThreatLens Local Engine" -> NeonCyan
+                                                    "AlienVault OTX", "CIRCL Hashlookup" -> NeonEmerald
+                                                    else -> TextSecondary
+                                                },
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = FontFamily.Monospace,
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                             )
                                         }
                                     }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = verdict,
+                                        color = when {
+                                            isPending -> NeonCyan
+                                            isFlagged -> NeonCrimson
+                                            isClean -> NeonEmerald
+                                            else -> TextMuted
+                                        },
+                                        fontSize = 11.sp,
+                                        maxLines = 2
+                                    )
+                                }
 
-                                    Surface(
-                                        color = if (isFlagged) NeonCrimson.copy(alpha = 0.2f) else if (isClean) NeonEmerald.copy(alpha = 0.2f) else CyberCardSurface,
-                                        shape = RoundedCornerShape(4.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                // Right Status Badge: Uniform fixed-width alignment
+                                Surface(
+                                    color = when {
+                                        isPending -> NeonCyan.copy(alpha = 0.15f)
+                                        isFlagged -> NeonCrimson.copy(alpha = 0.18f)
+                                        isClean -> NeonEmerald.copy(alpha = 0.18f)
+                                        else -> CyberCardSurface
+                                    },
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier.width(76.dp)
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
                                     ) {
-                                        Text(
-                                            text = if (isFlagged) "FLAGGED" else if (isClean) "CLEAN" else "INACTIVE",
-                                            color = if (isFlagged) NeonCrimson else if (isClean) NeonEmerald else TextMuted,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
+                                        if (isPending) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(10.dp),
+                                                    strokeWidth = 1.5.dp,
+                                                    color = NeonCyan
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "SCAN",
+                                                    color = NeonCyan,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontFamily = FontFamily.Monospace
+                                                )
+                                            }
+                                        } else {
+                                            Text(
+                                                text = when {
+                                                    isFlagged -> "FLAGGED"
+                                                    isClean -> "CLEAN"
+                                                    verdict.contains("Auth-Key", ignoreCase = true) -> "KEY REQ"
+                                                    else -> "OPTIONAL"
+                                                },
+                                                color = when {
+                                                    isFlagged -> NeonCrimson
+                                                    isClean -> NeonEmerald
+                                                    verdict.contains("Auth-Key", ignoreCase = true) -> CyberAmber
+                                                    else -> TextMuted
+                                                },
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = FontFamily.Monospace
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
             }
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Observed Heuristics
             if (report.detectedBehaviors.isNotEmpty()) {

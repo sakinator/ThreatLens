@@ -29,6 +29,7 @@ object RealtimeScanCoordinator {
     var kasperskyKey: String? = null
     var metaDefenderKey: String? = null
     var filescanKey: String? = null
+    var bazaarKey: String? = null
     
     // AI Explainer keys
     var openAiKey: String? = null
@@ -144,7 +145,9 @@ object RealtimeScanCoordinator {
         }
 
         // Determine list of pending cloud engines based on configuration
-        val pendingEngines = mutableListOf<String>("MalwareBazaar")
+        // AlienVault OTX and CIRCL Hashlookup are 100% free and work with zero API key!
+        val pendingEngines = mutableListOf<String>("AlienVault OTX", "CIRCL Hashlookup")
+        if (!bazaarKey.isNullOrBlank()) pendingEngines.add("MalwareBazaar")
         if (!virusTotalKey.isNullOrBlank()) pendingEngines.add("VirusTotal")
         if (!metaDefenderKey.isNullOrBlank()) pendingEngines.add("MetaDefender")
         if (!hybridAnalysisKey.isNullOrBlank()) pendingEngines.add("Hybrid Analysis")
@@ -160,6 +163,12 @@ object RealtimeScanCoordinator {
             "Clean: 0 malicious patterns detected"
         }
 
+        engineVerdictMap["AlienVault OTX"] = "Scanning public threat pulses..."
+        engineVerdictMap["CIRCL Hashlookup"] = "Querying NIST NSRL database..."
+
+        if (bazaarKey.isNullOrBlank()) {
+            engineVerdictMap["MalwareBazaar"] = "Auth-Key Required (Free on bazaar.abuse.ch)"
+        }
         if (virusTotalKey.isNullOrBlank()) engineVerdictMap["VirusTotal"] = "Key Not Configured (Optional)"
         if (metaDefenderKey.isNullOrBlank()) engineVerdictMap["MetaDefender"] = "Key Not Configured (Optional)"
         if (hybridAnalysisKey.isNullOrBlank()) engineVerdictMap["Hybrid Analysis"] = "Key Not Configured (Optional)"
@@ -304,37 +313,83 @@ object RealtimeScanCoordinator {
             }
         }
 
-        // Launch MalwareBazaar (Free Abuse.ch lookup)
+        // Launch AlienVault OTX (Zero key required public cloud intelligence)
         engineJobs.add(scanScope.launch {
             try {
-                val bazaar = MalwareBazaarProvider.queryHash(sha256)
-                if (bazaar != null) {
-                    if (bazaar.isMalicious) {
-                        onEngineFinished(
-                            "MalwareBazaar",
-                            score = 95,
-                            flagged = 1,
-                            total = 1,
-                            sourceLabel = "MalwareBazaar (Abuse.ch)",
-                            family = bazaar.signature
-                        )
-                    } else {
-                        onEngineFinished(
-                            "MalwareBazaar",
-                            score = 0,
-                            flagged = 0,
-                            total = 1,
-                            sourceLabel = "MalwareBazaar (Clean)",
-                            family = null
-                        )
-                    }
+                val otx = AlienVaultOtxProvider.queryHash(sha256)
+                if (otx != null) {
+                    val score = if (otx.isMalicious) 90 else 0
+                    onEngineFinished(
+                        "AlienVault OTX",
+                        score = score,
+                        flagged = otx.pulseCount,
+                        total = maxOf(1, otx.pulseCount),
+                        sourceLabel = if (otx.isMalicious) "AlienVault OTX (${otx.pulseCount} pulses)" else "AlienVault OTX (Clean)",
+                        family = otx.threatFamily
+                    )
                 } else {
-                    onEngineFailed("MalwareBazaar")
+                    onEngineFailed("AlienVault OTX")
                 }
             } catch (_: Exception) {
-                onEngineFailed("MalwareBazaar")
+                onEngineFailed("AlienVault OTX")
             }
         })
+
+        // Launch CIRCL Hashlookup (Zero key required public CERT / NIST NSRL database)
+        engineJobs.add(scanScope.launch {
+            try {
+                val circl = CirclHashlookupProvider.queryHash(sha256)
+                if (circl != null) {
+                    val score = if (circl.isMalicious) 90 else 0
+                    onEngineFinished(
+                        "CIRCL Hashlookup",
+                        score = score,
+                        flagged = if (circl.isMalicious) 1 else 0,
+                        total = 1,
+                        sourceLabel = if (circl.isMalicious) "CIRCL Threat DB" else "CIRCL Hashlookup (Clean)",
+                        family = if (circl.isMalicious) "CIRCL.Malware" else null
+                    )
+                } else {
+                    onEngineFailed("CIRCL Hashlookup")
+                }
+            } catch (_: Exception) {
+                onEngineFailed("CIRCL Hashlookup")
+            }
+        })
+
+        // Launch MalwareBazaar (Abuse.ch Auth-Key required by abuse.ch)
+        if (!bazaarKey.isNullOrBlank()) {
+            engineJobs.add(scanScope.launch {
+                try {
+                    val bazaar = MalwareBazaarProvider.queryHash(sha256, bazaarKey)
+                    if (bazaar != null) {
+                        if (bazaar.isMalicious) {
+                            onEngineFinished(
+                                "MalwareBazaar",
+                                score = 95,
+                                flagged = 1,
+                                total = 1,
+                                sourceLabel = "MalwareBazaar (Abuse.ch)",
+                                family = bazaar.signature
+                            )
+                        } else {
+                            onEngineFinished(
+                                "MalwareBazaar",
+                                score = 0,
+                                flagged = 0,
+                                total = 1,
+                                sourceLabel = "MalwareBazaar (Clean)",
+                                family = null
+                            )
+                        }
+                    } else {
+                        onEngineFailed("MalwareBazaar")
+                    }
+                } catch (_: Exception) {
+                    onEngineFailed("MalwareBazaar")
+                }
+            })
+        }
 
         // Launch VirusTotal
         if (!virusTotalKey.isNullOrBlank()) {

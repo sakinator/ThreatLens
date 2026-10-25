@@ -4,67 +4,56 @@
     android:viewportWidth="512"
     android:viewportHeight="512">
 
-    <!-- Black Background Matching App Internals -->
+    <!-- Deep Cyber Black Background matching app internals (#070B14) -->
     <path
         android:fillColor="#070B14"
         android:pathData="M 112,0 L 400,0 C 462,0 512,50 512,112 L 512,400 C 512,462 462,512 400,512 L 112,512 C 50,512 0,462 0,400 L 0,112 C 0,50 50,0 112,0 Z" />
 
-    <!-- Subtle Rounded Card Border -->
+    <!-- Outer Squircle Border Accent -->
     <path
         android:strokeColor="#1E293B"
         android:strokeWidth="2"
+        android:strokeAlpha="0.4"
         android:pathData="M 112,0 L 400,0 C 462,0 512,50 512,112 L 512,400 C 512,462 462,512 400,512 L 112,512 C 50,512 0,462 0,400 L 0,112 C 0,50 50,0 112,0 Z" />
 
-    <!-- Left Facet of Minimalist Blue Shield -->
+    <!-- Left Armor Facet (Flat top, parallel straight vertical wall) -->
     <path
-        android:fillColor="#0E243A"
-        android:pathData="M 256,76 C 160,76 100,112 100,204 C 100,320 188,402 256,442 L 256,76 Z" />
+        android:fillColor="#0F243C"
+        android:pathData="M 112,112 L 256,112 L 256,448 C 202,422 112,362 112,270 Z" />
 
-    <!-- Right Facet of Minimalist Blue Shield -->
+    <!-- Right Armor Facet -->
     <path
-        android:fillColor="#0A1B2D"
-        android:pathData="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 L 256,76 Z" />
+        android:fillColor="#071220"
+        android:pathData="M 256,112 L 400,112 L 400,270 C 400,362 310,422 256,448 Z" />
 
-    <!-- Outer Minimalist Blue Shield Border -->
+    <!-- Outer Solid Shield Beveled Border -->
     <path
         android:strokeColor="#00E5FF"
         android:strokeWidth="9"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 256,76 C 352,76 412,112 412,204 C 412,320 324,402 256,442 C 188,402 100,320 100,204 C 100,112 160,76 256,76 Z" />
+        android:pathData="M 112,112 L 400,112 L 400,270 C 400,362 310,422 256,448 C 202,422 112,362 112,270 Z" />
 
-    <!-- Vertical Shield Spine -->
+    <!-- Central Vertical Spine Line -->
     <path
         android:strokeColor="#00E5FF"
         android:strokeWidth="2.5"
-        android:strokeAlpha="0.7"
+        android:strokeAlpha="0.6"
         android:strokeLineCap="round"
-        android:pathData="M 256,90 L 256,426" />
+        android:pathData="M 256,116 L 256,444" />
 
-    <!-- Minimalist Inner Shield Aperture -->
-    <path
-        android:fillColor="#08101C"
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="5.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 256,150 C 310,150 346,172 346,226 C 346,298 296,350 256,378 C 216,350 166,298 166,226 C 166,172 202,150 256,150 Z" />
-
-    <!-- Center Minimalist Cyber Eye / Aperture Ring -->
-    <path
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="4.5"
-        android:pathData="M 256,214 A 28,28 0 1,0 256,270 A 28,28 0 1,0 256,214 Z" />
-
-    <!-- Center Cyber Pupil -->
-    <path
-        android:fillColor="#00E5FF"
-        android:pathData="M 256,231 A 11,11 0 1,0 256,253 A 11,11 0 1,0 256,231 Z" />
-
-    <!-- Precision Cyber Ticks -->
+    <!-- Chiseled Inset Shield Line -->
     <path
         android:strokeColor="#38BDF8"
-        android:strokeWidth="3"
+        android:strokeWidth="2.5"
+        android:strokeAlpha="0.35"
+        android:pathData="M 144,142 L 368,142 L 368,266 C 368,340 296,394 256,416 C 216,394 144,340 144,266 Z" />
+
+    <!-- Bold Security Checkmark (Iconic Antivirus Protection) -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="22"
         android:strokeLineCap="round"
-        android:pathData="M 256,196 L 256,206 M 256,278 L 256,288 M 210,242 L 220,242 M 292,242 L 302,242" />
+        android:strokeLineJoin="round"
+        android:pathData="M 194,272 L 238,316 L 322,216" />
 </vector>
