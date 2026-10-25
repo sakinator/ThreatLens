@@ -8,7 +8,6 @@ import io.threatlens.core.local.LocalSignatureDatabase
 import io.threatlens.core.local.ManifestHeuristicEngine
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
-import io.threatlens.core.scoring.HybridThreatScorer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -29,6 +28,10 @@ object RealtimeScanCoordinator {
     var kasperskyKey: String? = null
     var metaDefenderKey: String? = null
     var filescanKey: String? = null
+    
+    // AI Explainer keys
+    var openAiKey: String? = null
+    var claudeKey: String? = null
     var geminiKey: String? = null
     var groqKey: String? = null
 
@@ -108,17 +111,14 @@ object RealtimeScanCoordinator {
         // EMIT IMMEDIATE RESULT (UI updates in <20ms!)
         _scanReports.emit(currentReport)
 
-        // If local known signature matches, we can alert immediately while cloud finishes
         if (localSig != null) {
             ThreatNotificationManager.showThreatAlert(context, currentReport)
         }
 
         // 4. Progressive Cloud Engine Querying
         val reportMutex = Mutex()
-
         val engineJobs = mutableListOf<Job>()
 
-        // Helper to update state as an engine finishes
         suspend fun onEngineFinished(
             engineName: String,
             score: Int,
@@ -139,7 +139,6 @@ object RealtimeScanCoordinator {
                     runningFamily = family
                 }
 
-                // Recalculate dynamic hybrid score
                 val weighted = if (localSig != null) 100 else {
                     ((runningLocalScore * 0.45) + (runningCloudScore * 0.55)).toInt().coerceIn(0, 100)
                 }
@@ -169,7 +168,6 @@ object RealtimeScanCoordinator {
                     statusMessage = status
                 )
 
-                // DYNAMICALLY EMIT UPDATED PROGRESSIVE SCORE
                 _scanReports.emit(currentReport)
             }
         }
@@ -289,18 +287,30 @@ object RealtimeScanCoordinator {
             })
         }
 
-        // Wait for cloud engines to complete (or timeout after 6 seconds)
+        // Wait for cloud engines with 6 second timeout
         withTimeoutOrNull(6000L) {
             engineJobs.joinAll()
         }
 
-        // 5. Free AI Explanation Phase (Only if suspicious/malicious)
+        // 5. AI Threat Explainer (OpenAI / Claude / Gemini / Groq)
         var aiExplanation: String? = null
         if (currentReport.severity != ThreatSeverity.SAFE) {
-            currentReport = currentReport.copy(statusMessage = "🤖 Generating plain-English AI threat analysis...")
+            val aiProviderName = when {
+                !openAiKey.isNullOrBlank() -> "ChatGPT (GPT-4o-mini)"
+                !claudeKey.isNullOrBlank() -> "Claude 3.5 Haiku"
+                !geminiKey.isNullOrBlank() -> "Google Gemini Flash"
+                !groqKey.isNullOrBlank() -> "Groq (Llama-3)"
+                else -> "ThreatLens AI Engine"
+            }
+            currentReport = currentReport.copy(statusMessage = "🤖 Generating threat brief with $aiProviderName...")
             _scanReports.emit(currentReport)
 
-            val explainer = ThreatAiExplainer(geminiApiKey = geminiKey, groqApiKey = groqKey)
+            val explainer = ThreatAiExplainer(
+                openAiKey = openAiKey,
+                claudeKey = claudeKey,
+                geminiApiKey = geminiKey,
+                groqApiKey = groqKey
+            )
             aiExplanation = explainer.getExplanation(
                 targetName = file.name,
                 threatFamily = currentReport.threatFamily,
@@ -309,7 +319,7 @@ object RealtimeScanCoordinator {
             )
         }
 
-        // 6. FINAL COMPLETE VERDICT
+        // 6. Final Result
         val finalReport = currentReport.copy(
             isFinal = true,
             pendingEngines = emptyList(),
@@ -317,11 +327,9 @@ object RealtimeScanCoordinator {
             statusMessage = "✓ Scan Complete • Final Score: ${currentReport.currentScore}/100"
         )
 
-        // Cache and emit final state
         ScanThrottleManager.cacheReport(finalReport)
         _scanReports.emit(finalReport)
 
-        // Trigger Heads-Up alert if threat detected
         if (finalReport.severity == ThreatSeverity.MALICIOUS || finalReport.severity == ThreatSeverity.HIGH_RISK) {
             ThreatNotificationManager.showThreatAlert(context, finalReport)
         }

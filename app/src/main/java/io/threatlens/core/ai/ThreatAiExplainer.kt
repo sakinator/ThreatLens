@@ -4,6 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class ThreatAiExplainer(
+    private val openAiKey: String? = null,
+    private val claudeKey: String? = null,
     private val geminiApiKey: String? = null,
     private val groqApiKey: String? = null
 ) {
@@ -14,31 +16,31 @@ class ThreatAiExplainer(
         behaviors: List<String>,
         permissions: List<String>
     ): String = withContext(Dispatchers.IO) {
-        // 1. Try Google Gemini if key provided
+        // 1. OpenAI ChatGPT (if key provided)
+        if (!openAiKey.isNullOrBlank()) {
+            val result = OpenAiExplainer.explain(openAiKey, targetName, threatFamily, behaviors, permissions)
+            if (!result.isNullOrBlank()) return@withContext result
+        }
+
+        // 2. Anthropic Claude (if key provided)
+        if (!claudeKey.isNullOrBlank()) {
+            val result = ClaudeExplainer.explain(claudeKey, targetName, threatFamily, behaviors, permissions)
+            if (!result.isNullOrBlank()) return@withContext result
+        }
+
+        // 3. Google Gemini (Free tier)
         if (!geminiApiKey.isNullOrBlank()) {
-            val geminiResult = GeminiExplainer.explain(
-                geminiApiKey,
-                targetName,
-                threatFamily,
-                behaviors,
-                permissions
-            )
-            if (!geminiResult.isNullOrBlank()) return@withContext geminiResult
+            val result = GeminiExplainer.explain(geminiApiKey, targetName, threatFamily, behaviors, permissions)
+            if (!result.isNullOrBlank()) return@withContext result
         }
 
-        // 2. Try Groq as secondary AI engine
+        // 4. Groq Cloud (Free Llama 3)
         if (!groqApiKey.isNullOrBlank()) {
-            val groqResult = GroqExplainer.explain(
-                groqApiKey,
-                targetName,
-                threatFamily,
-                behaviors,
-                permissions
-            )
-            if (!groqResult.isNullOrBlank()) return@withContext groqResult
+            val result = GroqExplainer.explain(groqApiKey, targetName, threatFamily, behaviors, permissions)
+            if (!result.isNullOrBlank()) return@withContext result
         }
 
-        // 3. Instant reliable offline fallback
+        // 5. Smart offline definition fallback
         FallbackThreatDefinitions.getExplanation(threatFamily, behaviors)
     }
 }

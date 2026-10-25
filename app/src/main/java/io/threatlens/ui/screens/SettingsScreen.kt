@@ -1,7 +1,5 @@
 package io.threatlens.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.threatlens.ui.components.EngineLogoIcon
 import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.theme.*
 import io.threatlens.ui.viewmodel.MainViewModel
@@ -27,6 +26,8 @@ fun SettingsScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit
 ) {
+    var openaiInput by remember { mutableStateOf(viewModel.openAiKey.value) }
+    var claudeInput by remember { mutableStateOf(viewModel.claudeKey.value) }
     var geminiInput by remember { mutableStateOf(viewModel.geminiKey.value) }
     var groqInput by remember { mutableStateOf(viewModel.groqKey.value) }
     var vtInput by remember { mutableStateOf(viewModel.vtKey.value) }
@@ -85,38 +86,66 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // AI Keys Section
+            // AI EXPLAINER ENGINE SECTION
             Text(
-                text = "FREE AI THREAT EXPLAINER",
+                text = "AI THREAT EXPLAINERS (CHOOSE ANY OR ALL)",
                 color = NeonCyan,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            ApiKeyField(
-                label = "Google Gemini API Key (Recommended)",
+            // OpenAI ChatGPT
+            ApiKeyFieldWithIcon(
+                engineName = "ChatGPT",
+                label = "OpenAI ChatGPT API Key",
+                placeholder = "sk-proj-...",
+                hint = "Supports GPT-4o-mini & GPT-4o from platform.openai.com",
+                value = openaiInput,
+                onValueChange = { openaiInput = it }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Anthropic Claude
+            ApiKeyFieldWithIcon(
+                engineName = "Claude",
+                label = "Anthropic Claude API Key",
+                placeholder = "sk-ant-...",
+                hint = "Supports Claude 3.5 Haiku from console.anthropic.com",
+                value = claudeInput,
+                onValueChange = { claudeInput = it }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Google Gemini
+            ApiKeyFieldWithIcon(
+                engineName = "Google Gemini",
+                label = "Google Gemini API Key (Free)",
                 placeholder = "AIzaSy...",
-                hint = "Get a free 15 RPM key at aistudio.google.com",
+                hint = "Free 15 RPM tier via aistudio.google.com",
                 value = geminiInput,
                 onValueChange = { geminiInput = it }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ApiKeyField(
-                label = "Groq Cloud API Key",
+            // Groq Cloud
+            ApiKeyFieldWithIcon(
+                engineName = "Groq Cloud",
+                label = "Groq Cloud API Key (Free)",
                 placeholder = "gsk_...",
-                hint = "Free ultra-fast Llama-3 inference at console.groq.com",
+                hint = "Ultra-fast Llama-3 inference via console.groq.com",
                 value = groqInput,
                 onValueChange = { groqInput = it }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Cloud Scanner Keys Section
+            // CLOUD SCANNER KEYS SECTION
             Text(
                 text = "MULTI-ENGINE CLOUD SCANNERS",
                 color = NeonCyan,
@@ -125,7 +154,8 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            ApiKeyField(
+            ApiKeyFieldWithIcon(
+                engineName = "VirusTotal",
                 label = "VirusTotal API Key (v3)",
                 placeholder = "64-character hex key",
                 hint = "Free tier: 4 req/min & 500/day at virustotal.com",
@@ -135,37 +165,41 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ApiKeyField(
+            ApiKeyFieldWithIcon(
+                engineName = "MetaDefender",
                 label = "MetaDefender Cloud Key (OPSWAT)",
                 placeholder = "Free API key",
-                hint = "Checks ~30 engines at metadefender.com",
+                hint = "Multi-scans across ~30 engines at metadefender.com",
                 value = metaDefenderInput,
                 onValueChange = { metaDefenderInput = it }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ApiKeyField(
+            ApiKeyFieldWithIcon(
+                engineName = "Hybrid Analysis",
                 label = "Hybrid Analysis API Key",
                 placeholder = "Secret API key",
-                hint = "Free sandbox behavioral analysis at hybrid-analysis.com",
+                hint = "Falcon Sandbox behavioral analysis at hybrid-analysis.com",
                 value = haInput,
                 onValueChange = { haInput = it }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ApiKeyField(
+            ApiKeyFieldWithIcon(
+                engineName = "Kaspersky OpenTIP",
                 label = "Kaspersky OpenTIP API Key",
                 placeholder = "Private token",
-                hint = "Free enterprise hash reputation at opentip.kaspersky.com",
+                hint = "Enterprise hash intelligence at opentip.kaspersky.com",
                 value = kasperskyInput,
                 onValueChange = { kasperskyInput = it }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            ApiKeyField(
+            ApiKeyFieldWithIcon(
+                engineName = "Filescan.io",
                 label = "Filescan.io API Key",
                 placeholder = "Bearer token",
                 hint = "Free IOCs & report lookup at filescan.io",
@@ -173,14 +207,14 @@ fun SettingsScreen(
                 onValueChange = { filescanInput = it }
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(26.dp))
 
             // Save Button
             Button(
                 onClick = {
                     viewModel.saveApiKeys(
-                        geminiInput, groqInput, vtInput, haInput,
-                        kasperskyInput, metaDefenderInput, filescanInput
+                        openaiInput, claudeInput, geminiInput, groqInput,
+                        vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput
                     )
                     savedSnackbar = true
                 },
@@ -207,5 +241,42 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(30.dp))
         }
+    }
+}
+
+@Composable
+fun ApiKeyFieldWithIcon(
+    engineName: String,
+    label: String,
+    placeholder: String,
+    hint: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            EngineLogoIcon(engineName = engineName, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = TextMuted, fontSize = 13.sp) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = NeonCyan,
+                unfocusedBorderColor = CyberCardBorder,
+                focusedContainerColor = CyberCardSurface,
+                unfocusedContainerColor = CyberCardSurface,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
+            )
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(text = hint, color = TextSecondary, fontSize = 11.sp)
     }
 }

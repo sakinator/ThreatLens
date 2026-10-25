@@ -34,9 +34,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
-    // API Keys state
+    // AI API Keys
+    val openAiKey = MutableStateFlow(prefs.getString("openai_key", "") ?: "")
+    val claudeKey = MutableStateFlow(prefs.getString("claude_key", "") ?: "")
     val geminiKey = MutableStateFlow(prefs.getString("gemini_key", "") ?: "")
     val groqKey = MutableStateFlow(prefs.getString("groq_key", "") ?: "")
+
+    // Cloud Scanner Keys
     val vtKey = MutableStateFlow(prefs.getString("vt_key", "") ?: "")
     val haKey = MutableStateFlow(prefs.getString("ha_key", "") ?: "")
     val kasperskyKey = MutableStateFlow(prefs.getString("kaspersky_key", "") ?: "")
@@ -107,7 +111,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 fileSize = 14200000L,
                 localScore = 85,
                 cloudScore = 100,
-                finalScore = 95,
+                currentScore = 95,
+                isFinal = true,
                 severity = ThreatSeverity.MALICIOUS,
                 threatFamily = "Trojan-Banker.AndroidOS.Cerberus",
                 detectedBehaviors = listOf(
@@ -123,7 +128,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 ),
                 cloudEnginesFlagged = 42,
                 cloudEnginesTotal = 71,
-                cloudSources = listOf("MalwareBazaar (Abuse.ch)", "VirusTotal (42/71)", "MetaDefender (28/35)"),
+                cloudSources = listOf("MalwareBazaar (Abuse.ch)", "VirusTotal (42/71)", "MetaDefender (26/32)"),
+                statusMessage = "✓ Scan Complete • Final Score: 95/100",
                 aiExplanation = "🚨 **What is this?** This is Cerberus, a notorious Android banking trojan that disguises itself as a legit utility.\n\n⚠️ **What can it cause?**\n• Steals bank login credentials and credit card numbers.\n• Intercepts one-time SMS verification passwords (OTPs).\n• Can remotely control your screen.\n\n🛡️ **What to do:** Delete and uninstall this application immediately!"
             )
             val current = _scansList.value.toMutableList()
@@ -146,8 +152,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saveApiKeys(gemini: String, groq: String, vt: String, ha: String, kaspersky: String, metaDefender: String, filescan: String) {
+    fun saveApiKeys(
+        openai: String,
+        claude: String,
+        gemini: String,
+        groq: String,
+        vt: String,
+        ha: String,
+        kaspersky: String,
+        metaDefender: String,
+        filescan: String
+    ) {
         prefs.edit()
+            .putString("openai_key", openai.trim())
+            .putString("claude_key", claude.trim())
             .putString("gemini_key", gemini.trim())
             .putString("groq_key", groq.trim())
             .putString("vt_key", vt.trim())
@@ -157,6 +175,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .putString("filescan_key", filescan.trim())
             .apply()
 
+        openAiKey.value = openai.trim()
+        claudeKey.value = claude.trim()
         geminiKey.value = gemini.trim()
         groqKey.value = groq.trim()
         vtKey.value = vt.trim()
@@ -169,6 +189,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun syncKeysToCoordinator() {
+        RealtimeScanCoordinator.openAiKey = openAiKey.value
+        RealtimeScanCoordinator.claudeKey = claudeKey.value
         RealtimeScanCoordinator.geminiKey = geminiKey.value
         RealtimeScanCoordinator.groqKey = groqKey.value
         RealtimeScanCoordinator.virusTotalKey = vtKey.value

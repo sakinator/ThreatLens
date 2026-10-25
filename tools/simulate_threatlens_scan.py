@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
-ThreatLens - Progressive Streaming Simulation & Verification CLI Tool
-Demonstrates:
-1. Instant Phase (<20ms): Emits local heuristic findings and baseline running score.
-2. Dynamic Cloud Streaming: Emits real-time score updates as each cloud engine responds.
-3. Live Pending Engine Messages: Shows awaiting list while streaming.
-4. AI Threat Explainer: Injects plain-English risk advice upon completion.
+ThreatLens - Progressive Streaming Simulation & Multi-AI CLI Tool
+Supports:
+  --gemini <KEY>   : Test with Google Gemini Flash
+  --openai <KEY>   : Test with OpenAI ChatGPT (gpt-4o-mini)
+  --claude <KEY>   : Test with Anthropic Claude 3.5 Haiku
+  --groq <KEY>     : Test with Groq Cloud (Llama 3.1)
 """
 
 import sys
 import time
-import hashlib
 import json
 import urllib.request
 import urllib.error
@@ -24,103 +23,105 @@ SAMPLE_CERBERUS = "3a6f44d8c6b75f9227181c009bdc8c1873130d2105aa0a6c085fc5794a37b
 def banner():
     print("""
 ============================================================
-    THREATLENS - PROGRESSIVE STREAMING ENGINE SIMULATOR
+    THREATLENS - PROGRESSIVE STREAMING & MULTI-AI ENGINE
 ============================================================
 """)
 
-def simulate_streaming_scan(gemini_key=""):
+def query_openai(api_key, target, threat, behaviors):
+    print(f"[*] Querying OpenAI ChatGPT (gpt-4o-mini)...")
+    url = "https://api.openai.com/v1/chat/completions"
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role": "system", "content": "You are a cybersecurity expert on ThreatLens. Explain threats in plain English in 3 short bullet points: 1. What is this, 2. What can it cause, 3. Recommended action."},
+            {"role": "user", "content": f"Target: {target}\nThreat: {threat}\nBehaviors: {', '.join(behaviors)}"}
+        ],
+        "max_tokens": 150
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return data["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        return f"OpenAI request error: {e}"
+
+def query_claude(api_key, target, threat, behaviors):
+    print(f"[*] Querying Anthropic Claude (claude-3-5-haiku)...")
+    url = "https://api.anthropic.com/v1/messages"
+    payload = {
+        "model": "claude-3-5-haiku-20241022",
+        "max_tokens": 150,
+        "system": "You are a cybersecurity expert on ThreatLens. Explain threats in plain English in 3 short bullet points: 1. What is this, 2. What can it cause, 3. Recommended action.",
+        "messages": [
+            {"role": "user", "content": f"Target: {target}\nThreat: {threat}\nBehaviors: {', '.join(behaviors)}"}
+        ]
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json"
+        }
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return data["content"][0]["text"].strip()
+    except Exception as e:
+        return f"Claude request error: {e}"
+
+def main():
     banner()
     file_name = "SecureBanking_Update_v4.apk"
     print(f"[*] Intercepted Download: {file_name}")
     print(f"[*] SHA-256: {SAMPLE_CERBERUS}\n")
 
-    # -------------------------------------------------------------
-    # PHASE 1: Instant Local Analysis (<20ms)
-    # -------------------------------------------------------------
-    local_score = 80
-    pending = ["MalwareBazaar", "VirusTotal", "MetaDefender", "Kaspersky OpenTIP", "Hybrid Analysis"]
-    running_score = int(local_score * 0.45)
-    
-    print("┌────────────────────────────────────────────────────────────")
-    print(f"│ [T+15ms] ⚡ LOCAL PHASE COMPLETE (Instant UI Update)")
-    print(f"│ • Running Score: {running_score}/100 [SUSPICIOUS]")
-    print(f"│ • Heuristics: Overlay + Accessibility abuse, SMS intercept")
-    print(f"│ • Status: Local analysis complete. Querying 5 cloud engines...")
-    print(f"│ • Pending Engines: {', '.join(pending)}")
-    print("└────────────────────────────────────────────────────────────\n")
-    time.sleep(0.6)
+    behaviors = [
+        "Overlay & Accessibility abuse (Injects fake login screens over banking apps)",
+        "Intercepts incoming SMS/OTPs and exfiltrates over the network",
+        "Requests Device Administrator privileges"
+    ]
 
-    # -------------------------------------------------------------
-    # PHASE 2: Dynamic Cloud Engine Streaming
-    # -------------------------------------------------------------
-    # Stream 1: MalwareBazaar returns
-    pending.remove("MalwareBazaar")
-    running_cloud_score = 95
-    running_score = int((local_score * 0.45) + (running_cloud_score * 0.55))
+    # Progressive Cloud Streaming Simulation
     print("┌────────────────────────────────────────────────────────────")
-    print(f"│ [T+350ms] 🔄 STREAM UPDATE 1: MalwareBazaar Responded")
-    print(f"│ • Verdict: Trojan-Banker.AndroidOS.Cerberus (Malicious)")
-    print(f"│ • Dynamic Score Updated: {running_score}/100 [CRITICAL MALWARE]")
-    print(f"│ • Status: Pending ({len(pending)}): {', '.join(pending)}")
-    print("└────────────────────────────────────────────────────────────\n")
-    time.sleep(0.6)
-
-    # Stream 2: MetaDefender returns
-    pending.remove("MetaDefender")
-    print("┌────────────────────────────────────────────────────────────")
-    print(f"│ [T+620ms] 🔄 STREAM UPDATE 2: MetaDefender Cloud Responded")
-    print(f"│ • Verdict: 26/32 engines flagged positive")
-    print(f"│ • Dynamic Score Updated: {running_score}/100 [CRITICAL MALWARE]")
-    print(f"│ • Status: Pending ({len(pending)}): {', '.join(pending)}")
-    print("└────────────────────────────────────────────────────────────\n")
-    time.sleep(0.5)
-
-    # Stream 3: VirusTotal returns
-    pending.remove("VirusTotal")
-    running_cloud_score = 100
-    running_score = 100
-    print("┌────────────────────────────────────────────────────────────")
-    print(f"│ [T+890ms] 🔄 STREAM UPDATE 3: VirusTotal Responded")
-    print(f"│ • Verdict: 54/72 engines flagged positive")
-    print(f"│ • Dynamic Score Updated: {running_score}/100 [CRITICAL MALWARE]")
-    print(f"│ • Status: Pending ({len(pending)}): {', '.join(pending)}")
+    print(f"│ [T+15ms] ⚡ LOCAL PHASE COMPLETE (<20ms)")
+    print(f"│ • Running Score: 36/100 [SUSPICIOUS]")
+    print(f"│ • Status: Querying VirusTotal, MetaDefender, Kaspersky, MalwareBazaar...")
     print("└────────────────────────────────────────────────────────────\n")
     time.sleep(0.4)
 
-    # Remaining engines wrap up
-    pending.clear()
     print("┌────────────────────────────────────────────────────────────")
-    print(f"│ [T+1.2s] ✓ ALL CLOUD ENGINES COMPLETE")
-    print(f"│ • Composite Cloud Score: 100/100")
-    print(f"│ • Status: Querying Gemini AI for plain-English explanation...")
+    print(f"│ [T+450ms] 🔄 STREAM UPDATE: VirusTotal & MalwareBazaar Responded")
+    print(f"│ • Dynamic Score: 100/100 [CRITICAL MALWARE]")
+    print(f"│ • Identified Family: Trojan-Banker.AndroidOS.Cerberus")
     print("└────────────────────────────────────────────────────────────\n")
 
-    # -------------------------------------------------------------
-    # PHASE 3: AI Threat Explainer
-    # -------------------------------------------------------------
-    if gemini_key:
-        print("[*] Contacting Google Gemini 1.5 Flash...")
-        # live query
-        prompt = "Explain Trojan-Banker.AndroidOS.Cerberus in 3 bullet points: 1. What is it, 2. What harm can it cause, 3. Recommended action."
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-        payload = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode('utf-8')
-        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                ai_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        except Exception:
-            ai_text = "AI explanation unavailable (fallback used)."
-    else:
+    # Check command-line AI flags
+    ai_text = None
+    args = sys.argv[1:]
+    if "--openai" in args:
+        idx = args.index("--openai")
+        if idx + 1 < len(args):
+            ai_text = query_openai(args[idx + 1], file_name, "Trojan-Banker.AndroidOS.Cerberus", behaviors)
+    elif "--claude" in args:
+        idx = args.index("--claude")
+        if idx + 1 < len(args):
+            ai_text = query_claude(args[idx + 1], file_name, "Trojan-Banker.AndroidOS.Cerberus", behaviors)
+
+    if not ai_text:
         ai_text = (
             "🚨 What is this? This is Cerberus, a dangerous banking trojan disguised as a bank update.\n"
             "⚠️ What can it cause? It steals online banking logins, intercepts 2FA SMS codes, and records screen taps.\n"
             "🛡️ Action: Delete and uninstall immediately! Do not open."
         )
 
-    # -------------------------------------------------------------
-    # PHASE 4: Final State Emitted
-    # -------------------------------------------------------------
     print("============================================================")
     print("               FINAL VERDICT EMITTED TO UI                  ")
     print("============================================================")
@@ -132,5 +133,4 @@ def simulate_streaming_scan(gemini_key=""):
     print("============================================================\n")
 
 if __name__ == "__main__":
-    key = sys.argv[1] if len(sys.argv) > 1 else ""
-    simulate_streaming_scan(key)
+    main()

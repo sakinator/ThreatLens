@@ -31,6 +31,7 @@ data class EngineBrand(
 )
 
 object EngineRegistry {
+    // CLOUD SCANNERS
     val VIRUSTOTAL = EngineBrand(
         name = "VirusTotal",
         primaryColor = Color(0xFF0058FF),
@@ -79,6 +80,23 @@ object EngineRegistry {
         initials = "FS"
     )
 
+    // AI THREAT EXPLAINERS
+    val OPENAI_CHATGPT = EngineBrand(
+        name = "ChatGPT (OpenAI)",
+        primaryColor = Color(0xFF10A37F), // Official OpenAI Teal
+        accentColor = Color(0xFF19C37D),
+        icon = Icons.Default.Psychology,
+        initials = "GPT"
+    )
+
+    val ANTHROPIC_CLAUDE = EngineBrand(
+        name = "Claude (Anthropic)",
+        primaryColor = Color(0xFFCC785C), // Official Anthropic Terracotta
+        accentColor = Color(0xFFE08D79),
+        icon = Icons.Default.WbSunny,
+        initials = "CLA"
+    )
+
     val GEMINI_AI = EngineBrand(
         name = "Google Gemini",
         primaryColor = Color(0xFF4285F4),
@@ -98,6 +116,8 @@ object EngineRegistry {
     fun getBrand(name: String): EngineBrand {
         val lower = name.lowercase()
         return when {
+            lower.contains("chatgpt") || lower.contains("openai") || lower.contains("gpt") -> OPENAI_CHATGPT
+            lower.contains("claude") || lower.contains("anthropic") -> ANTHROPIC_CLAUDE
             lower.contains("virustotal") || lower.contains("vt") -> VIRUSTOTAL
             lower.contains("hybrid") -> HYBRID_ANALYSIS
             lower.contains("kaspersky") -> KASPERSKY
@@ -123,14 +143,14 @@ fun EngineLogoIcon(
                 Brush.linearGradient(listOf(brand.primaryColor, brand.accentColor)),
                 CircleShape
             )
-            .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape),
+            .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = brand.icon,
             contentDescription = brand.name,
             tint = Color.White,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(13.dp)
         )
     }
 }
