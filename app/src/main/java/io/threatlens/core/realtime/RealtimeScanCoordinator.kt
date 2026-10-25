@@ -333,5 +333,10 @@ object RealtimeScanCoordinator {
         if (finalReport.severity == ThreatSeverity.MALICIOUS || finalReport.severity == ThreatSeverity.HIGH_RISK) {
             ThreatNotificationManager.showThreatAlert(context, finalReport)
         }
+        return@withContext finalReport
+    }
+
+    suspend fun performScan(context: Context, file: File): ThreatReport {
+        return streamScan(context, file)
     }
 }

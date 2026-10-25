@@ -37,6 +37,9 @@ object ManifestHeuristicEngine {
         var score = 0
         val behaviors = mutableListOf<String>()
         val foundDangerousPermissions = mutableListOf<String>()
+        var isBanker = false
+        var isSpyware = false
+        var isDropper = false
 
         try {
             val pm = context.packageManager
@@ -46,7 +49,6 @@ object ManifestHeuristicEngine {
             )
 
             if (packageInfo == null) {
-                // If package manager cannot parse the APK, file could be corrupt or crafted/malformed to crash parser
                 behaviors.add("Malformed or heavily obfuscated APK header")
                 return HeuristicResult(40, behaviors, emptyList(), false, false, false)
             }
@@ -67,7 +69,6 @@ object ManifestHeuristicEngine {
             // 2. Toxic Combo 1: Overlay + Accessibility Service (Banking Trojan / Keylogger pattern)
             val hasAccessibility = permSet.contains("android.permission.BIND_ACCESSIBILITY_SERVICE")
             val hasOverlay = permSet.contains("android.permission.SYSTEM_ALERT_WINDOW")
-            var isBanker = false
             if (hasAccessibility && hasOverlay) {
                 score += 45
                 isBanker = true
@@ -80,7 +81,6 @@ object ManifestHeuristicEngine {
             // 3. Toxic Combo 2: SMS Interception + Internet (OTP / 2FA Stealer)
             val hasSms = permSet.contains("android.permission.RECEIVE_SMS") || permSet.contains("android.permission.READ_SMS")
             val hasInternet = permSet.contains("android.permission.INTERNET")
-            var isSpyware = false
             if (hasSms && hasInternet) {
                 score += 30
                 isSpyware = true
@@ -90,7 +90,6 @@ object ManifestHeuristicEngine {
             // 4. Toxic Combo 3: Silent Dropper (Install Packages + Boot Completed)
             val hasBoot = permSet.contains("android.permission.RECEIVE_BOOT_COMPLETED")
             val hasInstall = permSet.contains("android.permission.REQUEST_INSTALL_PACKAGES")
-            var isDropper = false
             if (hasBoot && hasInstall) {
                 score += 25
                 isDropper = true
@@ -115,7 +114,6 @@ object ManifestHeuristicEngine {
             behaviors.add("Analysis error: ${e.message}")
         }
 
-        // Clamp score to 100
         val finalLocalScore = score.coerceIn(0, 100)
 
         return HeuristicResult(

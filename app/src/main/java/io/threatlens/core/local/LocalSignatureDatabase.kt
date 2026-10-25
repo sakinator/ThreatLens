@@ -10,7 +10,9 @@ object LocalSignatureDatabase {
         val threatFamily: String,
         val category: String,
         val baseScore: Int
-    )
+    ) {
+        val family: String get() = threatFamily
+    }
 
     private val signatureMap = HashMap<String, SignatureEntry>().apply {
         // Banking Trojans (Cerberus, Anatsa, SharkBot, Teabot)

@@ -39,6 +39,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Full On-Demand Scan State (Bitdefender-style)
     val fullScanState: StateFlow<FullScanState> = FullSystemScanner.scanState
 
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
     // News Feed State
     private val _userLocation = MutableStateFlow(UserLocation())
     val userLocation: StateFlow<UserLocation> = _userLocation.asStateFlow()

@@ -25,8 +25,8 @@ object HybridThreatScorer {
 
         // 1. Critical Override: If local known signature matches, instant 100
         if (localSig != null) {
-            reasons.add("Exact match in Local Known Malware Database: ${localSig.family}")
-            primaryFamily = localSig.family
+            reasons.add("Exact match in Local Known Malware Database: ${localSig.threatFamily}")
+            primaryFamily = localSig.threatFamily
             return ScoreBreakdown(100, ThreatSeverity.MALICIOUS, primaryFamily, reasons)
         }
 

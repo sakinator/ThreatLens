@@ -22,7 +22,9 @@ data class ThreatReport(
     val pendingEngines: List<String> = emptyList(),
     val statusMessage: String = "Analyzing...",
     val timestamp: Long = System.currentTimeMillis()
-)
+) {
+    val finalScore: Int get() = currentScore
+}
 
 enum class ThreatSeverity(val label: String, val colorHex: Long) {
     SAFE("Clean", 0xFF00E676),            // Neon Green
