@@ -66,12 +66,22 @@ class ThreatLensVpnService : VpnService() {
     private fun startVpn() {
         if (_isVpnActive.value) return
 
-        startForeground(NOTIFICATION_ID, buildVpnNotification())
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildVpnNotification(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, buildVpnNotification())
+            }
+        } catch (_: Exception) {}
 
         try {
             val builder = Builder()
                 .setSession("ThreatLens Web & Link Shield")
-                .addAddress("10.111.222.1", 32)
+                .addAddress("10.111.222.1", 24)
                 .addDnsServer("10.111.222.1")
                 // Only route the fake DNS server IP through the VPN interface!
                 // All normal TCP/UDP web and app traffic completely bypasses VPN with 0 latency & 0 battery drain.

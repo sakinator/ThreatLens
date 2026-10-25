@@ -50,7 +50,7 @@ object HybridThreatScorer {
             if (cloudVerdict.failedEngines.isNotEmpty()) {
                 reasons.add("Cloud APIs unreachable (${cloudVerdict.failedEngines.joinToString()}) • Protected by On-Device Local Engine")
             } else {
-                reasons.add("Verified autonomously by ThreatLens 100% Offline Local Engine")
+                reasons.add("Verified by ThreatLens On-Device Security Engine")
             }
             localScore
         } else {

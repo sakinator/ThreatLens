@@ -151,6 +151,21 @@ object RealtimeScanCoordinator {
         if (!kasperskyKey.isNullOrBlank()) pendingEngines.add("Kaspersky OpenTIP")
         if (!filescanKey.isNullOrBlank()) pendingEngines.add("Filescan.io")
 
+        val engineVerdictMap = mutableMapOf<String, String>()
+        engineVerdictMap["ThreatLens Local Engine"] = if (localVerdict.isMalicious) {
+            "Flagged: ${localVerdict.threatFamily} (${localVerdict.detectedBehaviors.size} patterns)"
+        } else if (runningLocalScore > 0) {
+            "Suspicious: Score $runningLocalScore/100"
+        } else {
+            "Clean: 0 malicious patterns detected"
+        }
+
+        if (virusTotalKey.isNullOrBlank()) engineVerdictMap["VirusTotal"] = "Key Not Configured (Optional)"
+        if (metaDefenderKey.isNullOrBlank()) engineVerdictMap["MetaDefender"] = "Key Not Configured (Optional)"
+        if (hybridAnalysisKey.isNullOrBlank()) engineVerdictMap["Hybrid Analysis"] = "Key Not Configured (Optional)"
+        if (kasperskyKey.isNullOrBlank()) engineVerdictMap["Kaspersky OpenTIP"] = "Key Not Configured (Optional)"
+        if (filescanKey.isNullOrBlank()) engineVerdictMap["Filescan.io"] = "Key Not Configured (Optional)"
+
         var flaggedEnginesCount = 0
         var totalEnginesCount = 0
 
@@ -172,10 +187,11 @@ object RealtimeScanCoordinator {
             cloudSources = emptyList(),
             failedEngines = emptyList(),
             successfulEngines = emptyList(),
+            engineVerdictMap = engineVerdictMap.toMap(),
             isOfflineMode = false,
             isFinal = false,
             pendingEngines = pendingEngines.toList(),
-            statusMessage = "🛡️ Local engine analysis complete (${runningLocalScore}/100). Querying ${pendingEngines.size} cloud engines..."
+            statusMessage = if (pendingEngines.isNotEmpty()) "⚡ Querying ${pendingEngines.size} threat intelligence engines..." else "🛡️ Analyzed via ThreatLens On-Device Security Engine"
         )
 
         // EMIT IMMEDIATE LOCAL RESULT (UI updates in <20ms!)
@@ -221,6 +237,7 @@ object RealtimeScanCoordinator {
                 cloudSources = runningSources.toList(),
                 failedEngines = failedEngines.toList(),
                 successfulEngines = successfulEngines.toList(),
+                engineVerdictMap = engineVerdictMap.toMap(),
                 isOfflineMode = successfulEngines.isEmpty(),
                 pendingEngines = pendingEngines.toList(),
                 statusMessage = statusText
@@ -239,6 +256,14 @@ object RealtimeScanCoordinator {
             reportMutex.withLock {
                 pendingEngines.remove(engineName)
                 successfulEngines.add(engineName)
+                engineVerdictMap[engineName] = if (flagged > 0) {
+                    "Flagged: ${family ?: "$flagged/$total detections"}"
+                } else if (total > 0) {
+                    "Clean (0/$total engines flagged)"
+                } else {
+                    "Clean (Verified safe)"
+                }
+
                 if (score > runningCloudScore) {
                     runningCloudScore = score
                 }
@@ -263,6 +288,7 @@ object RealtimeScanCoordinator {
             reportMutex.withLock {
                 pendingEngines.remove(engineName)
                 failedEngines.add(engineName)
+                engineVerdictMap[engineName] = "Unreachable (Timeout / Offline)"
 
                 val status = if (pendingEngines.isEmpty()) {
                     if (successfulEngines.isEmpty()) {
@@ -479,20 +505,21 @@ object RealtimeScanCoordinator {
 
         // 6. Final Result Formulation
         val finalStatus = when {
-            successfulEngines.isEmpty() && failedEngines.isNotEmpty() ->
-                "🛡️ 100% Offline Local Engine Verdict • Cloud APIs unreachable • Score: ${currentReport.currentScore}/100"
-            successfulEngines.isEmpty() ->
-                "✓ 100% Offline Local Scan Complete • Score: ${currentReport.currentScore}/100"
+            successfulEngines.isNotEmpty() ->
+                "✓ Multi-Engine Scan Complete (${successfulEngines.joinToString(", ")}) • Score: ${currentReport.currentScore}/100"
             failedEngines.isNotEmpty() ->
-                "✓ Hybrid Scan Complete (${successfulEngines.size} cloud + Local Engine, ${failedEngines.size} offline) • Score: ${currentReport.currentScore}/100"
+                "🛡️ On-Device Analysis Complete (Cloud APIs unreachable) • Score: ${currentReport.currentScore}/100"
+            pendingEngines.isNotEmpty() ->
+                "✓ Multi-Engine Cloud & On-Device Scan Complete • Score: ${currentReport.currentScore}/100"
             else ->
-                "✓ All Cloud Engines & Local Verification Complete • Final Score: ${currentReport.currentScore}/100"
+                "🛡️ On-Device Security Scan Complete • Score: ${currentReport.currentScore}/100"
         }
 
         val finalReport = currentReport.copy(
             isFinal = true,
             pendingEngines = emptyList(),
             aiExplanation = aiExplanation,
+            engineVerdictMap = engineVerdictMap.toMap(),
             statusMessage = finalStatus
         )
 

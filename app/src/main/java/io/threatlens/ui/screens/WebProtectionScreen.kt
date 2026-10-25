@@ -67,7 +67,11 @@ fun WebProtectionScreen(
             val intent = Intent(context, ThreatLensVpnService::class.java).apply {
                 action = ThreatLensVpnService.ACTION_START
             }
-            context.startService(intent)
+            try {
+                androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            } catch (_: Exception) {
+                try { context.startService(intent) } catch (_: Exception) {}
+            }
         }
     }
 
@@ -165,13 +169,19 @@ fun WebProtectionScreen(
                                         val intent = Intent(context, ThreatLensVpnService::class.java).apply {
                                             action = ThreatLensVpnService.ACTION_START
                                         }
-                                        context.startService(intent)
+                                        try {
+                                            androidx.core.content.ContextCompat.startForegroundService(context, intent)
+                                        } catch (_: Exception) {
+                                            try { context.startService(intent) } catch (_: Exception) {}
+                                        }
                                     }
                                 } else {
                                     val intent = Intent(context, ThreatLensVpnService::class.java).apply {
                                         action = ThreatLensVpnService.ACTION_STOP
                                     }
-                                    context.startService(intent)
+                                    try {
+                                        context.startService(intent)
+                                    } catch (_: Exception) {}
                                 }
                             },
                             colors = SwitchDefaults.colors(

@@ -429,7 +429,7 @@ fun DashboardScreen(
         ThreatDetailSheet(
             report = report,
             onDismiss = { viewModel.selectReport(null) },
-            onDelete = { path -> viewModel.deleteFile(path) }
+            onDelete = { threat -> viewModel.deleteThreat(threat) }
         )
     }
 }

@@ -38,6 +38,7 @@ fun FullScanScreen(
     val isPaused = scanState.status == FullScanStatus.PAUSED
     val isCompleted = scanState.status == FullScanStatus.COMPLETED
     val selectedReport by viewModel.selectedReport.collectAsState()
+    var showConfirmDeleteAllDialog by remember { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -448,11 +449,7 @@ fun FullScanScreen(
 
                 item {
                     Button(
-                        onClick = {
-                            scanState.threatsFound.forEach { threat ->
-                                viewModel.deleteFile(threat.targetPath)
-                            }
-                        },
+                        onClick = { showConfirmDeleteAllDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -460,7 +457,7 @@ fun FullScanScreen(
                         Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS",
+                            text = "UNINSTALL / DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS",
                             fontWeight = FontWeight.Black,
                             color = Color.White,
                             fontSize = 12.sp
@@ -481,12 +478,58 @@ fun FullScanScreen(
         }
     }
 
+    // Confirmation Dialog for Bulk Delete / Uninstall
+    if (showConfirmDeleteAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDeleteAllDialog = false },
+            containerColor = CyberDarkSurface,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null, tint = NeonCrimson, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Remove All ${scanState.threatsFound.size} Threats?", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Text(
+                    text = "This will permanently delete all downloaded malicious files and launch system uninstallers for any detected app threats.",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmDeleteAllDialog = false
+                        scanState.threatsFound.forEach { threat ->
+                            viewModel.deleteThreat(threat)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("REMOVE ALL NOW", color = Color.White, fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showConfirmDeleteAllDialog = false },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL")
+                }
+            }
+        )
+    }
+
     // Modal Bottom Sheet for Threat Detail View
     selectedReport?.let { report ->
         ThreatDetailSheet(
             report = report,
             onDismiss = { viewModel.selectReport(null) },
-            onDelete = { path -> viewModel.deleteFile(path) }
+            onDelete = { threat -> viewModel.deleteThreat(threat) }
         )
     }
 }

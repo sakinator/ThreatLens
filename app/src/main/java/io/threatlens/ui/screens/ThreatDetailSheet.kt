@@ -8,10 +8,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,8 +30,11 @@ import io.threatlens.ui.theme.*
 fun ThreatDetailSheet(
     report: ThreatReport,
     onDismiss: () -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (ThreatReport) -> Unit
 ) {
+    val context = LocalContext.current
+    var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = CyberDarkSurface,
@@ -212,6 +216,89 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Multi-Engine Source-by-Source Verdict Breakdown
+            if (report.engineVerdictMap.isNotEmpty()) {
+                GlassCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Threat Intelligence Breakdown by Source",
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                        Surface(
+                            color = CyberDarkSurface,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "${report.engineVerdictMap.size} Sources",
+                                color = NeonCyan,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        report.engineVerdictMap.forEach { (sourceName, verdict) ->
+                            val isFlagged = verdict.startsWith("Flagged", ignoreCase = true) || verdict.contains("Malicious", ignoreCase = true) || verdict.contains("Suspicious", ignoreCase = true)
+                            val isClean = verdict.startsWith("Clean", ignoreCase = true)
+
+                            Surface(
+                                color = CyberDarkSurface,
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isFlagged) NeonCrimson.copy(alpha = 0.5f) else CyberCardBorder
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        EngineLogoIcon(sourceName, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(sourceName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text(
+                                                text = verdict,
+                                                color = if (isFlagged) NeonCrimson else if (isClean) NeonEmerald else TextMuted,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        color = if (isFlagged) NeonCrimson.copy(alpha = 0.2f) else if (isClean) NeonEmerald.copy(alpha = 0.2f) else CyberCardSurface,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isFlagged) "FLAGGED" else if (isClean) "CLEAN" else "INACTIVE",
+                                            color = if (isFlagged) NeonCrimson else if (isClean) NeonEmerald else TextMuted,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             // Observed Heuristics
             if (report.detectedBehaviors.isNotEmpty()) {
                 GlassCard {
@@ -327,18 +414,34 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Delete / Quarantine Button
+            val isInstalled = remember(report) {
+                if (report.targetPath.contains("/data/app")) true
+                else if (!report.packageName.isNullOrBlank()) {
+                    try {
+                        context.packageManager.getPackageInfo(report.packageName, 0)
+                        true
+                    } catch (_: Exception) {
+                        false
+                    }
+                } else false
+            }
+
+            // Primary Action Button (Uninstall for installed apps, Delete for downloaded files)
             Button(
-                onClick = { onDelete(report.targetPath) },
+                onClick = { showConfirmDeleteDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                Icon(if (isInstalled) Icons.Default.DeleteForever else Icons.Default.Delete, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete / Quarantine File Immediately", fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    text = if (isInstalled) "UNINSTALL APPLICATION" else "PERMANENTLY DELETE FILE",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -348,6 +451,7 @@ fun ThreatDetailSheet(
                 onClick = {
                     io.threatlens.core.exclusions.ExclusionManager.addAvPath(report.targetPath)
                     io.threatlens.core.exclusions.ExclusionManager.addAvHash(report.sha256, report.targetName)
+                    android.widget.Toast.makeText(context, "✓ Added ${report.appName ?: report.targetName} to Whitelist", android.widget.Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
@@ -364,5 +468,69 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Confirmation Popup Dialog for Delete / Uninstall
+    if (showConfirmDeleteDialog) {
+        val isInstalledApp = report.targetPath.contains("/data/app") || (!report.packageName.isNullOrBlank() && try {
+            context.packageManager.getPackageInfo(report.packageName, 0)
+            true
+        } catch (_: Exception) { false })
+
+        AlertDialog(
+            onDismissRequest = { showConfirmDeleteDialog = false },
+            containerColor = CyberDarkSurface,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isInstalledApp) Icons.Default.DeleteForever else Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = NeonCrimson,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isInstalledApp) "Uninstall Application?" else "Delete Malicious File?",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            },
+            text = {
+                Text(
+                    text = if (isInstalledApp) {
+                        "Are you sure you want to uninstall \"${report.appName ?: report.targetName}\"?\n\nThis will open Android's system uninstaller to permanently remove this app from your device."
+                    } else {
+                        "Are you sure you want to permanently delete \"${report.targetName}\"?\n\nThis malicious file will be permanently erased from your storage."
+                    },
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmDeleteDialog = false
+                        onDelete(report)
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(if (isInstalledApp) "UNINSTALL" else "DELETE", color = Color.White, fontWeight = FontWeight.Black)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showConfirmDeleteDialog = false },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("CANCEL")
+                }
+            }
+        )
     }
 }

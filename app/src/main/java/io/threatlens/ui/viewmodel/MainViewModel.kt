@@ -3,6 +3,8 @@ package io.threatlens.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -132,16 +135,72 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteThreat(report: ThreatReport) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            var fileDeleted = false
+            val isInstalled = report.targetPath.contains("/data/app") || (!report.packageName.isNullOrBlank() && try {
+                app.packageManager.getPackageInfo(report.packageName, 0)
+                true
+            } catch (_: Exception) { false })
+
+            if (isInstalled && !report.packageName.isNullOrBlank()) {
+                withContext(Dispatchers.Main) {
+                    try {
+                        val intent = Intent(Intent.ACTION_DELETE).apply {
+                            data = Uri.parse("package:${report.packageName}")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        app.startActivity(intent)
+                        Toast.makeText(app, "Opening uninstaller for ${report.appName ?: report.targetName}...", Toast.LENGTH_SHORT).show()
+                    } catch (_: Exception) {
+                        Toast.makeText(app, "Could not launch system uninstaller", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                try {
+                    val file = File(report.targetPath)
+                    if (file.exists()) {
+                        fileDeleted = file.delete()
+                    }
+                } catch (_: Exception) {}
+
+                withContext(Dispatchers.Main) {
+                    val label = report.appName ?: report.targetName
+                    if (fileDeleted) {
+                        Toast.makeText(app, "✓ File deleted successfully: $label", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(app, "✓ Removed from scan results: $label", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            val current = _scansList.value.toMutableList()
+            current.removeAll { it.targetPath == report.targetPath || it.sha256 == report.sha256 }
+            _scansList.value = current
+            _selectedReport.value = null
+        }
+    }
+
     fun deleteFile(path: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val file = File(path)
+            var deleted = false
             if (file.exists()) {
-                file.delete()
+                deleted = file.delete()
             }
             val current = _scansList.value.toMutableList()
             current.removeAll { it.targetPath == path }
             _scansList.value = current
             _selectedReport.value = null
+
+            withContext(Dispatchers.Main) {
+                if (deleted) {
+                    Toast.makeText(getApplication(), "✓ File deleted successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(getApplication(), "✓ Threat removed from list", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
