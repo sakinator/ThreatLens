@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         checkAndRequestPermissions()
+        handleThreatIntent(intent)
 
         setContent {
             ThreatLensTheme {
@@ -180,6 +181,26 @@ class MainActivity : ComponentActivity() {
                     val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
                     startActivity(intent)
                 }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleThreatIntent(intent)
+    }
+
+    private fun handleThreatIntent(intent: Intent?) {
+        val threatId = intent?.getStringExtra("THREAT_ID")
+        val threatSha256 = intent?.getStringExtra("THREAT_SHA256")
+        if (threatId != null || threatSha256 != null) {
+            val matched = viewModel.threatReports.value.firstOrNull {
+                (threatId != null && it.id == threatId) ||
+                (threatSha256 != null && it.sha256.equals(threatSha256, ignoreCase = true))
+            }
+            if (matched != null) {
+                viewModel.selectReport(matched)
             }
         }
     }

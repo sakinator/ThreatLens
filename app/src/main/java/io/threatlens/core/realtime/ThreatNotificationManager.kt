@@ -161,6 +161,8 @@ object ThreatNotificationManager {
 
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             putExtra("THREAT_ID", report.id)
+            putExtra("THREAT_SHA256", report.sha256)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             context, report.id.hashCode(), launchIntent,

@@ -148,10 +148,10 @@ fun FullScanScreen(
                                 Icon(
                                     imageVector = Icons.Default.Cancel,
                                     contentDescription = null,
-                                    tint = CyberAmber,
+                                    tint = NeonCrimson,
                                     modifier = Modifier.size(50.dp)
                                 )
-                                Text("Scan Aborted", color = CyberAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("Scan Aborted", color = NeonCrimson, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -229,28 +229,12 @@ fun FullScanScreen(
                             Icon(Icons.Default.Security, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Offline Signatures: ${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} Active",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        color = NeonEmerald.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            text = io.threatlens.core.update.SignatureUpdateService.getFormattedLastUpdated(),
-                                            color = NeonEmerald,
-                                            fontSize = 9.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = "Offline Signatures: ${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} Active",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
                                 Text(
                                     text = "Sources: MalwareBazaar, CIRCL, ATT&CK, VX-Underground",
                                     color = TextMuted,
@@ -259,19 +243,31 @@ fun FullScanScreen(
                             }
                         }
 
-                        TextButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    io.threatlens.core.update.SignatureUpdateService.updateSignaturesNow(context)
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            if (isUpdatingSignatures) {
-                                CircularProgressIndicator(modifier = Modifier.size(12.dp), color = NeonCyan, strokeWidth = 1.5.dp)
-                            } else {
-                                Text("Update", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            TextButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        io.threatlens.core.update.SignatureUpdateService.updateSignaturesNow(context)
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                if (isUpdatingSignatures) {
+                                    CircularProgressIndicator(modifier = Modifier.size(12.dp), color = NeonCyan, strokeWidth = 1.5.dp)
+                                } else {
+                                    Text("UPDATE", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
+                            Text(
+                                text = io.threatlens.core.update.SignatureUpdateService.getFormattedLastUpdated(),
+                                color = TextMuted,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
                         }
                     }
                 }

@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.threatlens.core.diagnostics.AppDiagnosticLogger
+import io.threatlens.core.diagnostics.RelativeTimeFormatter
 import io.threatlens.core.local.LocalSignatureDatabase
 import io.threatlens.core.update.SignatureUpdateService
 import io.threatlens.core.update.SignatureUpdateStatus
@@ -317,15 +319,16 @@ fun SettingsScreen(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "Last Updated",
+                                text = "Engine Core",
                                 color = TextMuted,
                                 fontSize = 11.sp
                             )
                             Text(
-                                text = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(lastUpdateTimestamp)),
-                                color = TextSecondary,
-                                fontSize = 12.sp,
-                                fontFamily = FontFamily.Monospace
+                                text = "ClamAV • YARA • Local",
+                                color = NeonCyan,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -419,6 +422,33 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("UPDATE SIGNATURES NOW", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 12.sp)
                         }
+                    }
+
+                    // Database Update Relative Time Tag
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (signatureStatus is SignatureUpdateStatus.Failed) Icons.Default.Info else Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = if (signatureStatus is SignatureUpdateStatus.Failed) CyberAmber else NeonEmerald,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (signatureStatus is SignatureUpdateStatus.Failed) {
+                                "Mirror timeout • ${RelativeTimeFormatter.format(lastUpdateTimestamp)}"
+                            } else {
+                                "Definitions ${RelativeTimeFormatter.format(lastUpdateTimestamp)}"
+                            },
+                            color = if (signatureStatus is SignatureUpdateStatus.Failed) CyberAmber else TextSecondary,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
                     }
 
                     // Nightly Wi-Fi Auto-Update Toggle
@@ -996,6 +1026,79 @@ fun SettingsScreen(
                         }
                     }
                 )
+            }
+
+            // Diagnostics & Error Log Exporter Card
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                borderColor = CyberCardBorder
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BugReport,
+                            contentDescription = null,
+                            tint = NeonCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Diagnostics & Error Logs",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Export sanitized error traces and engine telemetry for debugging",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = CyberCardBorder.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                AppDiagnosticLogger.copyLogsToClipboard(context)
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Copy Logs", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+
+                        Button(
+                            onClick = {
+                                AppDiagnosticLogger.shareLogFile(context)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = CyberDarkSurface),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.4f))
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Share File", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(30.dp))

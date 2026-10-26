@@ -12,25 +12,90 @@ object FallbackThreatDefinitions {
         val lower = family.lowercase()
         val sb = StringBuilder()
 
-        // 1. Executive Threat Assessment
-        sb.append("### 🛡️ Executive Threat Assessment\n")
-        val execSummary = when {
-            lower.contains("banker") || lower.contains("cerberus") || lower.contains("anatsa") || lower.contains("sharkbot") ->
-                "**Critical Financial Threat**: This application is classified as a Banking Trojan designed to steal credentials and 2FA codes by superimposing fraudulent overlays above genuine banking, crypto, and payment apps."
-            lower.contains("spy") || lower.contains("spynote") || lower.contains("smsstealer") ->
-                "**High-Risk Spyware**: This binary functions as spyware or a surveillance tool engineered to covertly harvest SMS messages, call logs, contacts, camera feeds, and keystrokes for remote exfiltration."
-            lower.contains("dropper") ->
-                "**Malicious Dropper**: This application serves as a covert installer designed to bypass security filters and silently download secondary high-threat payloads (ransomware or banking Trojans) onto your device."
-            lower.contains("joker") || lower.contains("toll") ->
-                "**Toll Fraud / Billing Malware**: This application silently subscribes your mobile device to unauthorized premium SMS and carrier billing services without your consent."
-            lower.contains("adware") || lower.contains("hiddenads") ->
-                "**Aggressive Adware / PUP**: Intrusive software that floods the screen with unauthorized ads, drains battery, consumes background bandwidth, and frequently conceals its icon."
-            lower.contains("heuristic") || lower.contains("suspicious") ->
-                "**Suspicious Capabilities**: While no confirmed known signature matched, the application combines high-privilege capabilities and anomalous structural patterns that pose security or privacy risks."
-            else ->
-                "**Threat Flagged**: The file has been flagged by security engines. It exhibits anomalous behaviors or signatures that deviate from standard safe Android applications."
+        // Extract any vendor detections from engineDetails
+        val allDetections = mutableListOf<String>()
+        engineDetails.values.flatten().forEach { detail ->
+            if (detail.contains(":")) {
+                allDetections.add(detail.substringAfter(":").trim())
+            }
         }
-        sb.append(execSummary).append("\n\n")
+        val combinedDetectionText = (allDetections + family).joinToString(" ").lowercase()
+
+        // 1. Executive Threat Assessment (Heuristic + Family + Vendor Synthesis)
+        sb.append("### 🛡️ Executive Threat Assessment\n")
+
+        val isBanker = combinedDetectionText.contains("bankchameleon") || combinedDetectionText.contains("banker") ||
+                       combinedDetectionText.contains("cerberus") || combinedDetectionText.contains("anatsa") ||
+                       combinedDetectionText.contains("sharkbot") || combinedDetectionText.contains("teabot")
+        val isSpyware = combinedDetectionText.contains("spy") || combinedDetectionText.contains("spynote") ||
+                        combinedDetectionText.contains("smsstealer") || combinedDetectionText.contains("craxs")
+        val isDropper = combinedDetectionText.contains("dropper") || combinedDetectionText.contains("hiddad")
+        val isTollFraud = combinedDetectionText.contains("joker") || combinedDetectionText.contains("toll") || combinedDetectionText.contains("billing")
+        val isMalctOrRiskware = combinedDetectionText.contains("malct") || combinedDetectionText.contains("riskware") || combinedDetectionText.contains("repack")
+        val isAdware = combinedDetectionText.contains("adware") || combinedDetectionText.contains("hiddenads")
+
+        // Heuristic Behavioral Analysis
+        val hasSmsTheft = behaviors.any { it.contains("sms", ignoreCase = true) || it.contains("otp", ignoreCase = true) } ||
+                         permissions.any { it.contains("read_sms", ignoreCase = true) || it.contains("receive_sms", ignoreCase = true) }
+        val hasOverlay = behaviors.any { it.contains("overlay", ignoreCase = true) || it.contains("alert_window", ignoreCase = true) } ||
+                         permissions.any { it.contains("system_alert_window", ignoreCase = true) }
+        val hasAccessibility = behaviors.any { it.contains("accessibility", ignoreCase = true) } ||
+                               permissions.any { it.contains("bind_accessibility_service", ignoreCase = true) }
+        val hasSurveillance = permissions.any { it.contains("record_audio", ignoreCase = true) || it.contains("camera", ignoreCase = true) }
+
+        val assessmentSummary = buildString {
+            when {
+                isBanker -> {
+                    append("**Critical Financial Threat**: Classified as a **Banking Trojan** (${if (combinedDetectionText.contains("bankchameleon")) "BankChameleon / Malct" else family}). ")
+                    append("Engineered to superimpose deceptive login overlay screens above genuine banking and payment apps. ")
+                    if (hasSmsTheft) {
+                        append("It actively intercepts SMS broadcasts to siphon two-factor authentication (2FA) OTP tokens and bypass transaction verification.")
+                    }
+                }
+                isSpyware -> {
+                    append("**High-Risk Surveillance Threat**: Classified as **Mobile Spyware / Remote Access Trojan (RAT)**. ")
+                    append("Designed to covertly exfiltrate personal data. ")
+                    if (hasSurveillance || hasSmsTheft) {
+                        append("It combines background audio/camera access and SMS monitoring to harvest conversations, private messages, and keystrokes.")
+                    }
+                }
+                isMalctOrRiskware -> {
+                    append("**Malicious Riskware / PUP**: Flagged under the **Malct / Riskware Repack** family. ")
+                    append("Indicates a modified or repackaged application embedding aggressive ad injection, unauthorized telemetry, or secondary downloader stubs into genuine app code.")
+                }
+                isDropper -> {
+                    append("**Malicious Dropper**: Classified as a **Secondary Payload Dropper**. ")
+                    append("Serves as an evasive initial stager engineered to bypass standard application filters and silently download secondary malicious binaries into device storage.")
+                }
+                isTollFraud -> {
+                    append("**Toll Fraud / Billing Malware**: Classified under the **Joker / Toll Fraud** family. ")
+                    append("Silently subscribes the user's mobile device to unauthorized premium SMS and carrier services without notification.")
+                }
+                isAdware -> {
+                    append("**Aggressive Adware / PUP**: Classified as intrusive adware that floods the device with unauthorized full-screen advertisements and consumes background battery and data.")
+                }
+                hasSmsTheft && hasOverlay -> {
+                    append("**Heuristic Threat Alert (Banking Overlay & 2FA Theft Footprint)**: ThreatLens on-device heuristics detected an anomalous operational pattern. ")
+                    append("The binary requests both screen overlay projection (`SYSTEM_ALERT_WINDOW`) and SMS message interception (`RECEIVE_SMS`), a combination virtually exclusive to banking credential overlay harvesters.")
+                }
+                hasSmsTheft -> {
+                    append("**Heuristic Security Alert (2FA OTP Interception Footprint)**: ThreatLens heuristics detected SMS broadcast interception capabilities. ")
+                    append("Applications with these privileges can observe incoming one-time passwords (OTP) and sensitive verification messages.")
+                }
+                hasOverlay -> {
+                    append("**Heuristic UI Warning (Screen Overlay Capability)**: The application requests permission to draw over other active apps. ")
+                    append("While sometimes used by legitimate floating utilities, this capability is frequently exploited to display deceptive phishing overlays above genuine apps.")
+                }
+                lower.contains("heuristic") || lower.contains("suspicious") -> {
+                    append("**Heuristic Capability Finding**: While no confirmed known signature matched, the application combines high-privilege capabilities and anomalous structural patterns that elevate security and privacy risk.")
+                }
+                else -> {
+                    append("**Threat Flagged**: Flagged by security scanning engines. ")
+                    append("It exhibits anomalous behaviors or signatures deviating from standard safe Android applications.")
+                }
+            }
+        }
+        sb.append(assessmentSummary).append("\n\n")
 
         // Filter active vs inactive unconfigured engines
         val activeVerdicts = engineVerdicts.filter { (_, v) ->
@@ -56,40 +121,50 @@ object FallbackThreatDefinitions {
                 }
             }
             sb.append("\n")
-        }
-
-        // 3. Point-by-Point Findings & Risk Breakdown
-        if (behaviors.isNotEmpty() || permissions.isNotEmpty()) {
-            sb.append("### ⚠️ Point-by-Point Finding Analysis\n")
-            behaviors.forEach { behavior ->
-                val explanation = explainBehavior(behavior)
-                sb.append("• **$behavior**: $explanation\n")
-            }
-            val dangerousPerms = permissions.filter { isHighRiskPermission(it) }
-            if (dangerousPerms.isNotEmpty()) {
-                dangerousPerms.forEach { perm ->
-                    val explanation = explainPermission(perm)
-                    sb.append("• **${perm.substringAfterLast(".")}**: $explanation\n")
-                }
+        } else if (activeVerdicts.isNotEmpty()) {
+            sb.append("### 🔬 Multi-Engine Consensus\n")
+            activeVerdicts.forEach { (engine, verdict) ->
+                sb.append("• **$engine**: $verdict\n")
             }
             sb.append("\n")
         }
 
-        // 4. Recommended Action & Remediation
-        sb.append("### 🛑 Recommended Remediation\n")
+        // 3. Observed Malicious Behaviors (if any bytecode/runtime behaviors triggered)
+        if (behaviors.isNotEmpty()) {
+            sb.append("### ⚡ Observed Malicious Behaviors\n")
+            behaviors.forEach { behavior ->
+                val explanation = explainBehavior(behavior)
+                sb.append("• **$behavior**: $explanation\n")
+            }
+            sb.append("\n")
+        }
+
+        // 4. High-Risk Capabilities & Permissions
+        val dangerousPerms = permissions.filter { isHighRiskPermission(it) }
+        if (dangerousPerms.isNotEmpty()) {
+            sb.append("### 🔑 High-Risk Capabilities & Permissions\n")
+            dangerousPerms.forEach { perm ->
+                val explanation = explainPermission(perm)
+                sb.append("• **${perm.substringAfterLast(".")}**: $explanation\n")
+            }
+            sb.append("\n")
+        }
+
+        // 5. Recommended Action & Guidance
+        sb.append("### 🛡️ Recommended Action & Guidance\n")
         val action = when {
-            lower.contains("banker") || lower.contains("spy") || lower.contains("dropper") ->
-                "**1.** Immediately uninstall this application without opening it.\n**2.** Check Device Administrators in Android Settings to ensure it has not granted itself persistence.\n**3.** If recently launched, change online banking and email passwords from another device."
-            lower.contains("toll") || lower.contains("joker") ->
+            isBanker || isSpyware || isDropper ->
+                "**1.** Immediately uninstall this application without opening it.\n**2.** Check Device Administrators in Android Settings to ensure it has not granted itself persistence.\n**3.** If recently launched, change online banking and email passwords from another secure device."
+            isTollFraud ->
                 "**1.** Uninstall the application immediately.\n**2.** Check your mobile carrier statement for unrecognized subscription charges.\n**3.** Revoke SMS permissions for unknown apps."
-            lower.contains("adware") ->
+            isAdware || isMalctOrRiskware ->
                 "**1.** Remove the application from Android Settings > Apps.\n**2.** Clear browser cache and restart your device to terminate background advertising services."
             else ->
                 "**1.** Do not grant accessibility or device admin privileges to this app.\n**2.** If not recognized or from an unverified source, remove the file/APK immediately."
         }
         sb.append(action)
 
-        // 5. Inactive Engines Coverage Notice at the very end
+        // 6. Inactive Engines Coverage Notice at the very end
         if (inactiveEngines.isNotEmpty()) {
             sb.append("\n\n### ℹ️ Engine Coverage Notice\n")
             sb.append("The following engines were not queried due to missing API key configuration: **${inactiveEngines.joinToString(", ")}**. Configure keys in Settings to expand multi-engine coverage.")

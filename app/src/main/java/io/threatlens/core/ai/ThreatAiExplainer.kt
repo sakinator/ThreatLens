@@ -70,11 +70,12 @@ object ThreatAiPromptBuilder {
             Requested High-Privilege Permissions:
             $permissionsSummary
 
-            Provide a comprehensive, point-by-point security analysis structured in clear markdown with these 4 sections:
-            1. 🛡️ Executive Threat Assessment: Plain-English summary of what this app/file is and the consensus threat verdict across active scanning engines.
-            2. 🔬 Multi-Engine Consensus & Antivirus Vendor Analysis: Explain what the active detection engines and specific AV vendors (e.g. Kaspersky, Avast, Microsoft, ThreatLens) found, including what the malware signature/family names indicate. Do NOT list unconfigured engines here.
-            3. ⚠️ Point-by-Point Technical Findings & Risk Breakdown: Analyze EACH observed behavior and dangerous permission point-by-point, explaining exactly how malware exploits them (e.g., overlay attacks, SMS theft, background surveillance, accessibility manipulation).
-            4. 🛑 Recommended Action & Remediation Plan: Step-by-step guidance on how to safely quarantine/remove this app and protect user accounts.
+            Provide a comprehensive, point-by-point security analysis structured in clear markdown with these 5 sections:
+            1. 🛡️ Executive Threat Assessment: Plain-English summary synthesizing both heuristic behavioral patterns (e.g. overlay injection, SMS/OTP interception, background surveillance) and any specific vendor/family detections. Explain exactly what this app tries to do to the user and device.
+            2. 🔬 Multi-Engine Consensus & Antivirus Vendor Analysis: Explain what the active detection engines and specific AV vendors (e.g. AhnLab, Bitdefender, Kaspersky, Tencent, ClamAV) found, explaining what the signature/family names indicate. Do NOT list unconfigured engines here.
+            3. ⚡ Observed Malicious Behaviors: Analyze any runtime or bytecode behavioral patterns detected (overlay attacks, SMS exfiltration, accessibility manipulation).
+            4. 🔑 High-Risk Capabilities & Permissions: Explain the dangerous Android permissions requested (e.g. location, camera, SMS read) and how they could be abused.
+            5. 🛡️ Recommended Action & Guidance: Step-by-step guidance on how to safely quarantine/remove this app and protect user accounts.
             $inactiveInstruction
         """.trimIndent()
     }

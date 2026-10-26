@@ -98,11 +98,51 @@ object EngineRegistry {
     )
 
     val THREATLENS_LOCAL = EngineBrand(
-        name = "ThreatLens Local Engine",
+        name = "ThreatLens Behavioral Heuristics",
         primaryColor = Color(0xFF00E5FF),
         accentColor = Color(0xFF0066FF),
         icon = Icons.Default.Shield,
         initials = "TL"
+    )
+
+    val CLAMAV = EngineBrand(
+        name = "ClamAV Open Source Engine",
+        primaryColor = Color(0xFFD97706),
+        accentColor = Color(0xFFF59E0B),
+        icon = Icons.Default.Security,
+        initials = "CLAM"
+    )
+
+    val YARA = EngineBrand(
+        name = "YARA Mobile Threat Rules",
+        primaryColor = Color(0xFFDC2626),
+        accentColor = Color(0xFFEF4444),
+        icon = Icons.Default.Radar,
+        initials = "YARA"
+    )
+
+    val CERT_SHIELD = EngineBrand(
+        name = "ThreatLens Certificate & Repack Shield",
+        primaryColor = Color(0xFF7C3AED),
+        accentColor = Color(0xFF8B5CF6),
+        icon = Icons.Default.VerifiedUser,
+        initials = "CERT"
+    )
+
+    val PACKER_SHIELD = EngineBrand(
+        name = "ThreatLens Anti-Analysis & Packer Shield",
+        primaryColor = Color(0xFF059669),
+        accentColor = Color(0xFF10B981),
+        icon = Icons.Default.Layers,
+        initials = "PACK"
+    )
+
+    val SIGNATURE_DB = EngineBrand(
+        name = "ThreatLens Offline Signature DB",
+        primaryColor = Color(0xFF2563EB),
+        accentColor = Color(0xFF3B82F6),
+        icon = Icons.Default.Storage,
+        initials = "SIG"
     )
 
     // AI THREAT EXPLAINERS
@@ -151,7 +191,12 @@ object EngineRegistry {
             lower.contains("filescan") -> FILESCAN
             lower.contains("alienvault") || lower.contains("otx") -> ALIENVAULT_OTX
             lower.contains("circl") || lower.contains("hashlookup") -> CIRCL_LU
-            lower.contains("threatlens") || lower.contains("local") -> THREATLENS_LOCAL
+            lower.contains("clamav") -> CLAMAV
+            lower.contains("yara") -> YARA
+            lower.contains("cert") || lower.contains("repack") -> CERT_SHIELD
+            lower.contains("packer") || lower.contains("entropy") -> PACKER_SHIELD
+            lower.contains("signature db") || lower.contains("offline signature") -> SIGNATURE_DB
+            lower.contains("threatlens") || lower.contains("local") || lower.contains("behavioral") -> THREATLENS_LOCAL
             lower.contains("gemini") -> GEMINI_AI
             lower.contains("groq") -> GROQ_AI
             else -> EngineBrand(name, NeonCyan, CyberAmber, Icons.Default.Security, "AV")

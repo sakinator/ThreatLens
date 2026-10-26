@@ -26,7 +26,11 @@ object LocalAntivirusEngine {
         val detectedBehaviors: List<String>,
         val dangerousPermissions: List<String>,
         val matchedSignatures: List<String>,
-        val engineSources: List<String>
+        val engineSources: List<String>,
+        val clamAvResult: ClamAvEngine.ClamAvResult? = null,
+        val yaraResult: YaraMobileRules.YaraResult? = null,
+        val certResult: ApkCertificateVerifier.CertResult? = null,
+        val packerResult: PackerEntropyDetector.PackerResult? = null
     )
 
     // Known malicious bytecode signatures & strings found in mobile malware
@@ -111,30 +115,72 @@ object LocalAntivirusEngine {
         val sig = LocalSignatureDatabase.lookup(sha256)
         if (sig != null) {
             matchedSignatures.add(sig.threatFamily)
-            sources.add("ThreatLens Local Signature DB")
+            sources.add("ThreatLens Offline Signature DB")
             behaviors.add("Matches verified malware hash in offline database: ${sig.threatFamily}")
-            return LocalScanVerdict(
-                isMalicious = true,
-                localScore = 100,
-                threatFamily = sig.threatFamily,
-                category = sig.category,
-                detectionType = io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE,
-                scoreBreakdown = io.threatlens.core.model.ScoreBreakdown(
-                    signatureScore = 100,
-                    totalScore = 100,
-                    rationale = "Confirmed malware: Cryptographic hash matches known ${sig.category} signature."
-                ),
-                detectedBehaviors = behaviors,
-                dangerousPermissions = emptyList(),
-                matchedSignatures = matchedSignatures,
-                engineSources = sources
-            )
+            highestScore = 100
+            detectedFamily = sig.threatFamily
+            category = sig.category
+        }
+
+        // 2. Cisco ClamAV Open-Source Rule & CVD Hash Inspection
+        val clamAv = ClamAvEngine.scanFile(file, sha256)
+        if (clamAv.isMalicious) {
+            clamAv.signatureName?.let { matchedSignatures.add(it) }
+            sources.add("ClamAV Open Source Engine")
+            behaviors.addAll(clamAv.details)
+            if (clamAv.confidenceScore > highestScore) {
+                highestScore = clamAv.confidenceScore
+                detectedFamily = clamAv.signatureName ?: detectedFamily
+                category = clamAv.matchedCategory
+            }
         }
 
         val isApk = file.extension.equals("apk", ignoreCase = true)
+
+        // 3. VirusTotal YARA Mobile Threat Pattern Scan
+        val yara = if (isApk) YaraMobileRules.scanApk(file) else null
+        if (yara != null && yara.isMatched) {
+            yara.ruleName?.let { matchedSignatures.add(it) }
+            sources.add("YARA Mobile Threat Rules")
+            behaviors.addAll(yara.details)
+            if (yara.score > highestScore) {
+                highestScore = yara.score
+                detectedFamily = yara.threatFamily ?: detectedFamily
+                category = "YARA Rule Match"
+            }
+        }
+
+        // 4. ThreatLens Certificate & Repack Shield
+        val cert = if (isApk) ApkCertificateVerifier.verifyApk(context, file, null) else null
+        if (cert != null && (cert.isSuspicious || cert.isMalicious)) {
+            sources.add("ThreatLens Certificate & Repack Shield")
+            behaviors.addAll(cert.details)
+            if (cert.score > highestScore) {
+                highestScore = cert.score
+                if (detectedFamily == "Clean") {
+                    detectedFamily = cert.issueType ?: "Suspicious.Certificate"
+                    category = "Certificate Integrity Issue"
+                }
+            }
+        }
+
+        // 5. ThreatLens Anti-Analysis & Packer Shield
+        val packer = if (isApk) PackerEntropyDetector.inspectApk(file) else null
+        if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) {
+            sources.add("ThreatLens Anti-Analysis & Packer Shield")
+            behaviors.addAll(packer.details)
+            if (packer.score > highestScore) {
+                highestScore = packer.score
+                if (detectedFamily == "Clean") {
+                    detectedFamily = packer.packerName ?: "Obfuscated.Packer"
+                    category = "Packer / Obfuscation"
+                }
+            }
+        }
+
         var hasBytecodeMatch = false
 
-        // 2. Deep DEX & Bytecode Pattern Scan (Offline YARA-style scanner)
+        // 6. Deep DEX & Bytecode Pattern Scan (Offline YARA-style scanner)
         if (isApk && file.exists() && file.canRead()) {
             val bytecodeMatches = scanApkBytecode(file)
             for (rule in bytecodeMatches) {
@@ -152,7 +198,7 @@ object LocalAntivirusEngine {
 
         var heuristicScore = 0
 
-        // 3. Static Manifest & Heuristic Permission Matrix
+        // 7. Static Manifest & Heuristic Permission Matrix
         if (isApk) {
             val heuristic = ManifestHeuristicEngine.analyzeApk(context, file)
             behaviors.addAll(heuristic.suspiciousBehaviors)
@@ -188,11 +234,11 @@ object LocalAntivirusEngine {
             }
 
             if (heuristic.suspiciousBehaviors.isNotEmpty()) {
-                sources.add("ThreatLens Manifest Heuristics")
+                sources.add("ThreatLens Behavioral Heuristics")
             }
         }
 
-        val isMalicious = highestScore >= 75 || hasBytecodeMatch || sig != null
+        val isMalicious = highestScore >= 75 || hasBytecodeMatch || sig != null || clamAv.isMalicious || (yara != null && yara.isMatched) || (cert != null && cert.isMalicious)
         val detectionType = when {
             hasBytecodeMatch || sig != null -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
             highestScore >= 25 -> io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
@@ -235,7 +281,11 @@ object LocalAntivirusEngine {
             detectedBehaviors = behaviors,
             dangerousPermissions = dangerousPermissions,
             matchedSignatures = matchedSignatures,
-            engineSources = sources
+            engineSources = sources,
+            clamAvResult = clamAv,
+            yaraResult = yara,
+            certResult = cert,
+            packerResult = packer
         )
     }
 

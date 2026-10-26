@@ -1,6 +1,8 @@
 package io.threatlens.core.update
 
 import android.content.Context
+import io.threatlens.core.diagnostics.AppDiagnosticLogger
+import io.threatlens.core.diagnostics.RelativeTimeFormatter
 import io.threatlens.core.local.LocalSignatureDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -184,6 +186,7 @@ object SignatureUpdateService {
 
             return@withContext resultStatus
         } catch (e: Exception) {
+            AppDiagnosticLogger.logError("SignatureUpdateService", "Signature update failed: ${e.message}", e)
             val failStatus = SignatureUpdateStatus.Failed(e.message ?: "Network timeout during signature download")
             _status.value = failStatus
             _isUpdating.value = false
@@ -191,7 +194,7 @@ object SignatureUpdateService {
             withContext(Dispatchers.Main) {
                 android.widget.Toast.makeText(
                     context,
-                    "Database notice: Using offline fallback definitions (${e.message ?: "Network offline"})",
+                    "Database notice: Mirror unreachable • Protected autonomously by local definitions (${LocalSignatureDatabase.totalSignatures} rules active)",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
             }
@@ -201,14 +204,7 @@ object SignatureUpdateService {
     }
 
     fun getFormattedLastUpdated(): String {
-        val ts = _lastUpdateTimestamp.value
-        val diff = System.currentTimeMillis() - ts
-        return when {
-            diff < 60_000 -> "Just now"
-            diff < 3600_000 -> "${diff / 60_000}m ago"
-            diff < 86400_000 -> "${diff / 3600_000}h ago"
-            else -> java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(ts))
-        }
+        return RelativeTimeFormatter.format(_lastUpdateTimestamp.value)
     }
 
     private fun loadSavedSignatures(context: Context) {

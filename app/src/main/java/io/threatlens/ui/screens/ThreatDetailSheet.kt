@@ -732,27 +732,32 @@ fun ThreatDetailSheet(
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         inactiveEngines.forEach { (name, _) ->
-                                            Row(
+                                            Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .background(CyberBlack, RoundedCornerShape(6.dp))
-                                                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                                                verticalAlignment = Alignment.CenterVertically
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
                                             ) {
-                                                EngineLogoIcon(name, modifier = Modifier.size(18.dp))
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                    text = name,
-                                                    color = TextSecondary,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    modifier = Modifier.weight(1f)
-                                                )
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    EngineLogoIcon(name, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = name,
+                                                        color = TextPrimary,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
                                                     text = "No results (API key not configured)",
                                                     color = TextMuted,
                                                     fontSize = 10.sp,
-                                                    fontFamily = FontFamily.Monospace
+                                                    fontFamily = FontFamily.Monospace,
+                                                    modifier = Modifier.padding(start = 24.dp)
                                                 )
                                             }
                                         }
@@ -1517,15 +1522,15 @@ private fun parseAiMarkdownSections(rawMarkdown: String): List<AiSectionBlock> {
 
 private fun isSectionHeader(line: String): Boolean {
     if (line.startsWith("#")) return true
-    if (line.matches(Regex("""^(\d+\.|\*\*?\d+\.?\*\*?)\s*(🛡️|🔬|⚠️|🛑|ℹ️|[A-Z]).*"""))) return true
-    if (line.startsWith("🛡️") || line.startsWith("🔬") || line.startsWith("⚠️") || line.startsWith("🛑") || line.startsWith("ℹ️")) return true
+    if (line.matches(Regex("""^(\d+\.|\*\*?\d+\.?\*\*?)\s*(🛡️|🔬|⚡|🔑|⚠️|🛑|ℹ️).*"""))) return true
+    if (line.startsWith("🛡️") || line.startsWith("🔬") || line.startsWith("⚡") || line.startsWith("🔑") || line.startsWith("⚠️") || line.startsWith("🛑") || line.startsWith("ℹ️")) return true
     return false
 }
 
 private fun getSectionHeaderStyle(rawHeading: String): Triple<String, String, Color> {
     val clean = rawHeading
         .replace(Regex("""^[#\s\d\.\*]+"""), "")
-        .replace(Regex("""^\s*(🛡️|🔬|⚠️|🛑|ℹ️)\s*"""), "")
+        .replace(Regex("""^\s*(🛡️|🔬|⚡|🔑|⚠️|🛑|ℹ️)\s*"""), "")
         .replace("**", "")
         .trim()
 
@@ -1535,12 +1540,16 @@ private fun getSectionHeaderStyle(rawHeading: String): Triple<String, String, Co
             Triple(if (clean.isEmpty()) "Executive Threat Assessment" else clean, "EXECUTIVE", NeonCyan)
         lower.contains("consensus") || lower.contains("vendor") || lower.contains("multi-engine") || lower.contains("🔬") ->
             Triple(if (clean.isEmpty()) "Multi-Engine Consensus" else clean, "CONSENSUS", Color(0xFF38BDF8))
-        lower.contains("point-by-point") || lower.contains("finding") || lower.contains("technical") || lower.contains("risk") || lower.contains("behavior") || lower.contains("⚠️") ->
+        lower.contains("observed") || lower.contains("behavior") || lower.contains("⚡") ->
+            Triple(if (clean.isEmpty()) "Observed Malicious Behaviors" else clean, "BEHAVIORS", NeonOrange)
+        lower.contains("permission") || lower.contains("capability") || lower.contains("🔑") ->
+            Triple(if (clean.isEmpty()) "High-Risk Capabilities & Permissions" else clean, "PERMISSIONS", CyberAmber)
+        lower.contains("point-by-point") || lower.contains("finding") || lower.contains("technical") || lower.contains("risk") || lower.contains("⚠️") ->
             Triple(if (clean.isEmpty()) "Technical Findings & Risk" else clean, "FINDINGS", CyberAmber)
-        lower.contains("remediation") || lower.contains("action") || lower.contains("plan") || lower.contains("recommended") || lower.contains("🛑") ->
-            Triple(if (clean.isEmpty()) "Recommended Remediation" else clean, "ACTION", NeonCrimson)
+        lower.contains("remediation") || lower.contains("action") || lower.contains("plan") || lower.contains("recommended") || lower.contains("guidance") || lower.contains("🛑") ->
+            Triple(if (clean.isEmpty()) "Recommended Action & Guidance" else clean, "RECOMMENDATION", NeonCrimson)
         lower.contains("notice") || lower.contains("coverage") || lower.contains("inactive") || lower.contains("unconfigured") || lower.contains("ℹ️") ->
-            Triple(if (clean.isEmpty()) "Engine Coverage Notice" else clean, "NOTICE", TextMuted)
+            Triple(if (clean.isEmpty()) "Engine Coverage Notice" else clean, "COVERAGE", TextMuted)
         else ->
             Triple(if (clean.isEmpty()) "Security Analysis" else clean, "ANALYSIS", NeonCyan)
     }
