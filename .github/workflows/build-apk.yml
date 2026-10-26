@@ -31,6 +31,10 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
+      - name: Run Codebase Auditor & Syntax Regression Suite
+        run: |
+          python3 tools/codebase_auditor.py
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:

@@ -40,6 +40,10 @@ object ManifestHeuristicEngine {
         var isBanker = false
         var isSpyware = false
         var isDropper = false
+        var isKnownTrustedVendor = false
+        var hasAccessibility = false
+        var hasOverlay = false
+        var hasLauncher = true
 
         try {
             val pm = context.packageManager
@@ -52,6 +56,17 @@ object ManifestHeuristicEngine {
                 behaviors.add("Malformed or heavily obfuscated APK header")
                 return HeuristicResult(40, behaviors, emptyList(), false, false, false)
             }
+
+            val pkg = packageInfo.packageName?.lowercase() ?: ""
+            isKnownTrustedVendor = pkg.startsWith("com.google.") ||
+                    pkg.startsWith("com.android.") ||
+                    pkg.startsWith("com.microsoft.") ||
+                    pkg.startsWith("com.whatsapp") ||
+                    pkg.startsWith("com.jio.") ||
+                    pkg.startsWith("com.realme.") ||
+                    pkg.startsWith("com.oppo.") ||
+                    pkg.startsWith("com.sec.android.") ||
+                    pkg.startsWith("com.samsung.")
 
             val requestedPermissions = packageInfo.requestedPermissions?.toList() ?: emptyList()
 
@@ -67,8 +82,8 @@ object ManifestHeuristicEngine {
             val permSet = requestedPermissions.toSet()
 
             // 2. Toxic Combo 1: Overlay + Accessibility Service (Banking Trojan / Keylogger pattern)
-            val hasAccessibility = permSet.contains("android.permission.BIND_ACCESSIBILITY_SERVICE")
-            val hasOverlay = permSet.contains("android.permission.SYSTEM_ALERT_WINDOW")
+            hasAccessibility = permSet.contains("android.permission.BIND_ACCESSIBILITY_SERVICE")
+            hasOverlay = permSet.contains("android.permission.SYSTEM_ALERT_WINDOW")
             if (hasAccessibility && hasOverlay) {
                 score += 45
                 isBanker = true
@@ -104,7 +119,7 @@ object ManifestHeuristicEngine {
 
             // 6. Stealth Check: No Launcher Activity
             val activities = packageInfo.activities ?: emptyArray()
-            val hasLauncher = activities.any { it.name.contains("Main", ignoreCase = true) || it.name.contains("Launch", ignoreCase = true) }
+            hasLauncher = activities.any { it.name.contains("Main", ignoreCase = true) || it.name.contains("Launch", ignoreCase = true) }
             if (activities.isNotEmpty() && !hasLauncher) {
                 score += 20
                 behaviors.add("Stealth application: Disguises icon or hides from app launcher")
@@ -113,18 +128,6 @@ object ManifestHeuristicEngine {
         } catch (e: Exception) {
             behaviors.add("Analysis error: ${e.message}")
         }
-
-        // Whitelist / Known OEM vendor check: Verified vendors should not be marked malicious by raw permission count
-        val pkg = packageInfo?.packageName?.lowercase() ?: ""
-        val isKnownTrustedVendor = pkg.startsWith("com.google.") ||
-                pkg.startsWith("com.android.") ||
-                pkg.startsWith("com.microsoft.") ||
-                pkg.startsWith("com.whatsapp") ||
-                pkg.startsWith("com.jio.") ||
-                pkg.startsWith("com.realme.") ||
-                pkg.startsWith("com.oppo.") ||
-                pkg.startsWith("com.sec.android.") ||
-                pkg.startsWith("com.samsung.")
 
         // Static permission heuristics alone should NEVER exceed 45 (SUSPICIOUS/HIGH PRIVILEGE),
         // unless there is an aggressive stealth Trojan combination (Accessibility + Overlay + Hidden Icon).
@@ -144,7 +147,6 @@ object ManifestHeuristicEngine {
             isLikelyDropper = isDropper && !isKnownTrustedVendor,
             isLikelyBanker = isBanker && !isKnownTrustedVendor,
             isLikelySpyware = isSpyware && !isKnownTrustedVendor
-        )
         )
     }
 }

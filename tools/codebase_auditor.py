@@ -17,8 +17,124 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     except Exception:
         pass
 
+def check_brackets_and_syntax(rel_path, text):
+    """
+    Checks syntax integrity:
+    1. Parentheses (), Brackets [], and Braces {} balancing
+    2. Unclosed string literals
+    Ignores comments and content inside string literals.
+    """
+    errors = []
+    stack = []
+    lines = text.split("\n")
+    
+    i = 0
+    n = len(text)
+    line_num = 1
+    
+    in_block_comment = False
+    in_line_comment = False
+    in_triple_string = False
+    in_single_string = False
+    
+    while i < n:
+        c = text[i]
+        
+        if c == '\n':
+            line_num += 1
+            if in_line_comment:
+                in_line_comment = False
+            i += 1
+            continue
+            
+        if in_line_comment:
+            i += 1
+            continue
+            
+        if in_block_comment:
+            if c == '*' and i + 1 < n and text[i + 1] == '/':
+                in_block_comment = False
+                i += 2
+                continue
+            i += 1
+            continue
+            
+        if in_triple_string:
+            if c == '"' and i + 2 < n and text[i + 1] == '"' and text[i + 2] == '"':
+                in_triple_string = False
+                i += 3
+                continue
+            i += 1
+            continue
+            
+        if in_single_string:
+            if c == '\\':
+                i += 2
+                continue
+            if c == '"':
+                in_single_string = False
+                i += 1
+                continue
+            i += 1
+            continue
+            
+        # Check start of comment or string
+        if c == '/' and i + 1 < n:
+            if text[i + 1] == '/':
+                in_line_comment = True
+                i += 2
+                continue
+            elif text[i + 1] == '*':
+                in_block_comment = True
+                i += 2
+                continue
+                
+        if c == '"':
+            if i + 2 < n and text[i + 1] == '"' and text[i + 2] == '"':
+                in_triple_string = True
+                i += 3
+                continue
+            else:
+                in_single_string = True
+                i += 1
+                continue
+                
+        if c == '\'':
+            # Char literal like '\n' or 'c'
+            if i + 1 < n and text[i + 1] == '\\':
+                i += 4
+            else:
+                i += 3
+            continue
+            
+        # Brackets tracking
+        if c in '({[':
+            stack.append((c, line_num))
+        elif c in ')}]':
+            if not stack:
+                errors.append(f"[{rel_path}:{line_num}] Unmatched closing '{c}'")
+            else:
+                top, top_line = stack.pop()
+                expected = {')': '(', '}': '{', ']': '['}[c]
+                if top != expected:
+                    errors.append(f"[{rel_path}:{line_num}] Mismatched bracket: expected '{expected}' (opened line {top_line}), got '{c}'")
+        i += 1
+        
+    if in_block_comment:
+        errors.append(f"[{rel_path}] Unclosed block comment /* ... */")
+    if in_triple_string:
+        errors.append(f"[{rel_path}] Unclosed triple-quote string \"\"\" ... \"\"\"")
+    if in_single_string:
+        errors.append(f"[{rel_path}] Unclosed string literal \" ... \"")
+    while stack:
+        top, top_line = stack.pop()
+        errors.append(f"[{rel_path}:{top_line}] Unclosed opening '{top}'")
+        
+    return errors
+
 def audit_codebase():
-    base_dir = os.path.join("D:\\ThreatLens", "app", "src", "main", "java")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = os.path.abspath(os.path.join(script_dir, "..", "app", "src", "main", "java"))
     kt_files = glob.glob(os.path.join(base_dir, "**", "*.kt"), recursive=True)
 
     declared_symbols = set()
@@ -45,6 +161,9 @@ def audit_codebase():
         rel = os.path.relpath(f, base_dir)
         with open(f, "r", encoding="utf-8") as fp:
             text = fp.read()
+
+        # Syntax & Bracket Integrity
+        issues.extend(check_brackets_and_syntax(rel, text))
 
         # Check color references
         color_usages = re.findall(r'\b(Neon[A-Za-z0-9_]+|Cyber[A-Za-z0-9_]+)\b', text)
