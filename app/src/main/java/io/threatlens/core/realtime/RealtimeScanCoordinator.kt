@@ -762,4 +762,78 @@ object RealtimeScanCoordinator {
     ): ThreatReport {
         return streamScan(context, file, customAppName, customPackageName)
     }
+
+    suspend fun applyUpdatedVtResult(
+        oldReport: ThreatReport,
+        vtResult: VirusTotalProvider.VtResult
+    ): ThreatReport {
+        val updatedVerdictMap = oldReport.engineVerdictMap.toMutableMap()
+        val updatedDetailsMap = oldReport.engineDetailsMap.toMutableMap()
+
+        val vtVerdict = if (vtResult.maliciousCount > 0) {
+            "Flagged (${vtResult.maliciousCount}/${vtResult.totalEngines}): ${vtResult.suggestedThreatLabel ?: "Malware"}"
+        } else {
+            "Clean (0/${vtResult.totalEngines} engines flagged)"
+        }
+        updatedVerdictMap["VirusTotal"] = vtVerdict
+
+        val vtDetails = if (vtResult.detectedVendors.isNotEmpty()) {
+            vtResult.detectedVendors
+        } else {
+            listOf("0/${vtResult.totalEngines} security vendors flagged this file across VirusTotal.")
+        }
+        updatedDetailsMap["VirusTotal"] = vtDetails
+
+        val vtScore = if (vtResult.maliciousCount >= 4) 100 else if (vtResult.maliciousCount >= 1) 45 else 0
+        val newCloudScore = maxOf(oldReport.cloudScore, vtScore)
+
+        val newWeighted = if (oldReport.localScore >= 75 || vtResult.maliciousCount >= 4) {
+            maxOf(oldReport.localScore, newCloudScore)
+        } else if (vtResult.totalEngines >= 25 && vtResult.maliciousCount == 0 && oldReport.localScore < 60) {
+            (oldReport.localScore * 0.35).toInt()
+        } else {
+            maxOf(oldReport.localScore, ((oldReport.localScore * 0.40) + (newCloudScore * 0.60)).toInt())
+        }.coerceIn(0, 100)
+
+        val newSeverity = when {
+            newWeighted >= 75 -> ThreatSeverity.MALICIOUS
+            newWeighted >= 50 -> ThreatSeverity.HIGH_RISK
+            newWeighted >= 25 -> ThreatSeverity.SUSPICIOUS
+            else -> ThreatSeverity.SAFE
+        }
+
+        val newFamily = if (vtResult.suggestedThreatLabel != null && (oldReport.threatFamily == "Clean" || oldReport.threatFamily.startsWith("Heuristic."))) {
+            vtResult.suggestedThreatLabel
+        } else {
+            oldReport.threatFamily
+        }
+
+        // Re-generate AI explanation with the fresh VirusTotal findings
+        val explainer = ThreatAiExplainer(openAiKey, claudeKey, geminiKey, groqKey)
+        val updatedAiExplanation = explainer.getExplanation(
+            targetName = oldReport.appName ?: oldReport.targetName,
+            threatFamily = newFamily,
+            behaviors = oldReport.detectedBehaviors,
+            permissions = oldReport.dangerousPermissions,
+            engineVerdicts = updatedVerdictMap,
+            engineDetails = updatedDetailsMap
+        )
+
+        val updatedReport = oldReport.copy(
+            cloudScore = newCloudScore,
+            currentScore = newWeighted,
+            severity = newSeverity,
+            threatFamily = newFamily,
+            engineVerdictMap = updatedVerdictMap,
+            engineDetailsMap = updatedDetailsMap,
+            aiExplanation = updatedAiExplanation,
+            cloudEnginesFlagged = oldReport.cloudEnginesFlagged + (if (vtResult.maliciousCount > 0) 1 else 0),
+            cloudEnginesTotal = maxOf(oldReport.cloudEnginesTotal, vtResult.totalEngines),
+            statusMessage = "✓ VirusTotal Sandbox Detonation Complete (${vtResult.maliciousCount}/${vtResult.totalEngines} flagged)"
+        )
+
+        ScanThrottleManager.cacheReport(updatedReport)
+        _scanReports.emit(updatedReport)
+        return updatedReport
+    }
 }

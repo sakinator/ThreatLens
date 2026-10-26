@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.threatlens.core.cloud.CloudThreatAggregator
+import io.threatlens.core.cloud.VirusTotalProvider
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.ui.components.AppIconBadge
 import io.threatlens.ui.components.EngineLogoIcon
@@ -30,16 +32,21 @@ import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ScoreBadge
 import io.threatlens.ui.components.VendorFindingBadge
 import io.threatlens.ui.theme.*
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ThreatDetailSheet(
     report: ThreatReport,
     onDismiss: () -> Unit,
-    onDelete: (ThreatReport) -> Unit
+    onDelete: (ThreatReport) -> Unit,
+    onUploadSample: ((ThreatReport) -> Unit)? = null,
+    uploadProgress: VirusTotalProvider.UploadProgress? = null,
+    isVtKeyConfigured: Boolean = false
 ) {
     val context = LocalContext.current
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+    var showUploadConfirmDialog by remember { mutableStateOf(false) }
     val expandedEngines = remember { mutableStateMapOf<String, Boolean>() }
 
     ModalBottomSheet(
@@ -658,6 +665,227 @@ fun ThreatDetailSheet(
             }
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Deep Cloud Sandbox Detonation & Sample Submission Card
+            val targetFile = remember(report.targetPath) { File(report.targetPath) }
+            val fileExists = remember(report.targetPath) { targetFile.exists() && targetFile.length() > 0 }
+            val isUnindexed = report.engineVerdictMap["VirusTotal"]?.contains("Unindexed", ignoreCase = true) == true || report.cloudEnginesTotal == 0
+
+            if (fileExists && onUploadSample != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = CyberCardSurface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            EngineLogoIcon("VirusTotal", modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "VirusTotal Cloud Detonation",
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = if (isUnindexed) "Unindexed hash • Multi-scanner detonation" else "Submit binary for full dynamic sandbox analysis",
+                                    color = TextMuted,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Surface(
+                                color = if (isUnindexed) CyberAmber.copy(alpha = 0.15f) else NeonCyan.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = if (isUnindexed) "UNINDEXED" else "ON-DEMAND",
+                                    color = if (isUnindexed) CyberAmber else NeonCyan,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        when (uploadProgress) {
+                            is VirusTotalProvider.UploadProgress.Uploading -> {
+                                Text(
+                                    text = "Uploading APK to VirusTotal Multi-Scanner...",
+                                    color = NeonCyan,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LinearProgressIndicator(
+                                    progress = { uploadProgress.percentage / 100f },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = NeonCyan,
+                                    trackColor = CyberDarkSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "${uploadProgress.bytesSent / (1024 * 1024)} MB / ${maxOf(1L, uploadProgress.totalBytes / (1024 * 1024))} MB",
+                                        color = TextMuted,
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Text(
+                                        text = "${uploadProgress.percentage}%",
+                                        color = NeonCyan,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            is VirusTotalProvider.UploadProgress.Queued -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = CyberAmber
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "Queued in Cloud Sandbox...",
+                                            color = CyberAmber,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                        Text(
+                                            text = "Awaiting worker slot (ID: ${uploadProgress.analysisId.take(16)}...)",
+                                            color = TextMuted,
+                                            fontSize = 10.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    }
+                                }
+                            }
+                            is VirusTotalProvider.UploadProgress.InProgress -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = NeonCyan
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Multi-Engine Detonation in Progress...",
+                                            color = NeonCyan,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                        Text(
+                                            text = "${uploadProgress.completedEngines}/${uploadProgress.totalEngines} commercial AV vendors evaluated",
+                                            color = TextSecondary,
+                                            fontSize = 10.sp,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    }
+                                }
+                            }
+                            is VirusTotalProvider.UploadProgress.Completed -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = if (uploadProgress.result.maliciousCount > 0) NeonCrimson else NeonEmerald,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "✓ Cloud Detonation Complete",
+                                            color = if (uploadProgress.result.maliciousCount > 0) NeonCrimson else NeonEmerald,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                        Text(
+                                            text = "${uploadProgress.result.maliciousCount}/${uploadProgress.result.totalEngines} vendors flagged • Report updated live",
+                                            color = TextPrimary,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                            is VirusTotalProvider.UploadProgress.Error -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = CyberAmber,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = uploadProgress.message,
+                                        color = CyberAmber,
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                            else -> {
+                                Text(
+                                    text = if (isVtKeyConfigured) {
+                                        "Submit this ${targetFile.length() / (1024 * 1024)} MB APK to VirusTotal for multi-engine cloud detonation across 70+ commercial AV engines."
+                                    } else {
+                                        "Configure a free VirusTotal API key in Settings to upload unindexed APKs for live 70+ engine detonation."
+                                    },
+                                    color = TextSecondary,
+                                    fontSize = 11.sp,
+                                    lineHeight = 16.sp
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Button(
+                                    onClick = {
+                                        if (isVtKeyConfigured) {
+                                            showUploadConfirmDialog = true
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Configure VirusTotal API key in Settings first", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = if (isVtKeyConfigured) NeonCyan else CyberCardBorder),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudUpload,
+                                        contentDescription = null,
+                                        tint = if (isVtKeyConfigured) CyberBlack else TextMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isVtKeyConfigured) "SUBMIT SAMPLE FOR DEEP DETONATION" else "CONFIGURE API KEY TO UPLOAD",
+                                        color = if (isVtKeyConfigured) CyberBlack else TextMuted,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             // Observed Heuristics
             if (report.detectedBehaviors.isNotEmpty()) {
                 GlassCard {
@@ -888,6 +1116,57 @@ fun ThreatDetailSheet(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("CANCEL")
+                }
+            }
+        )
+    }
+
+    // Confirmation Dialog for Sample Upload to VirusTotal
+    if (showUploadConfirmDialog && onUploadSample != null) {
+        val targetFile = File(report.targetPath)
+        val sizeMb = maxOf(1L, targetFile.length() / (1024 * 1024))
+        AlertDialog(
+            onDismissRequest = { showUploadConfirmDialog = false },
+            containerColor = CyberDarkSurface,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Submit Sample to VirusTotal?", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "You are about to upload this binary for dynamic multi-engine detonation:\n",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                    Text("• Target: ${report.appName ?: report.targetName}", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("• File Size: $sizeMb MB", color = TextPrimary, fontSize = 12.sp)
+                    Text("• Engines: 70+ commercial antivirus vendors", color = NeonCyan, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Note: Uploaded samples become accessible to global security researchers and antivirus vendors for threat intelligence.",
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showUploadConfirmDialog = false
+                        onUploadSample(report)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+                ) {
+                    Text("UPLOAD & DETONATE", color = CyberBlack, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUploadConfirmDialog = false }) {
+                    Text("CANCEL", color = TextMuted)
                 }
             }
         )

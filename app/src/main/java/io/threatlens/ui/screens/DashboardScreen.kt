@@ -44,6 +44,8 @@ fun DashboardScreen(
     val isScanning by viewModel.isScanning.collectAsState()
     val fullScanState by viewModel.fullScanState.collectAsState()
     val selectedReport by viewModel.selectedReport.collectAsState()
+    val uploadProgress by viewModel.uploadProgress.collectAsState()
+    val vtKey by viewModel.vtKey.collectAsState()
 
     val isVpnActive by io.threatlens.core.vpn.ThreatLensVpnService.isVpnActive.collectAsState()
     val activeDns by io.threatlens.core.vpn.ThreatLensVpnService.activeDnsProvider.collectAsState()
@@ -499,7 +501,10 @@ fun DashboardScreen(
         ThreatDetailSheet(
             report = report,
             onDismiss = { viewModel.selectReport(null) },
-            onDelete = { threat -> viewModel.deleteThreat(threat) }
+            onDelete = { threat -> viewModel.deleteThreat(threat) },
+            onUploadSample = { viewModel.uploadSampleToVirusTotal(it) },
+            uploadProgress = uploadProgress,
+            isVtKeyConfigured = vtKey.isNotBlank()
         )
     }
 }

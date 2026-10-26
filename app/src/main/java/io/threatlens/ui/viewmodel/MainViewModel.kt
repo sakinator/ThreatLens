@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.threatlens.core.cloud.VirusTotalProvider
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.news.CyberNewsArticle
@@ -71,6 +72,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val filescanKey = MutableStateFlow(prefs.getString("filescan_key", "") ?: "")
     val bazaarKey = MutableStateFlow(prefs.getString("bazaar_key", "") ?: "")
 
+    // VirusTotal Sample Upload & Detonation Live State
+    private val _uploadProgress = MutableStateFlow<VirusTotalProvider.UploadProgress?>(null)
+    val uploadProgress: StateFlow<VirusTotalProvider.UploadProgress?> = _uploadProgress.asStateFlow()
+
     init {
         // Initialize API Key Vault immediately
         ApiKeyVault.init(application)
@@ -128,6 +133,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectReport(report: ThreatReport?) {
         _selectedReport.value = report
+        _uploadProgress.value = null
+    }
+
+    fun uploadSampleToVirusTotal(report: ThreatReport) {
+        val apiKey = vtKey.value.trim()
+        if (apiKey.isBlank()) {
+            _uploadProgress.value = VirusTotalProvider.UploadProgress.Error("VirusTotal API Key is not configured. Add it in Settings.")
+            return
+        }
+        val file = File(report.targetPath)
+        if (!file.exists()) {
+            _uploadProgress.value = VirusTotalProvider.UploadProgress.Error("Target APK file is not directly accessible on storage.")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            VirusTotalProvider.uploadFileForDeepAnalysis(file, apiKey).collect { progress ->
+                _uploadProgress.value = progress
+                if (progress is VirusTotalProvider.UploadProgress.Completed) {
+                    val updated = RealtimeScanCoordinator.applyUpdatedVtResult(report, progress.result)
+                    _selectedReport.value = updated
+                    val currentList = _scansList.value.toMutableList()
+                    val idx = currentList.indexOfFirst { it.sha256 == updated.sha256 }
+                    if (idx != -1) {
+                        currentList[idx] = updated
+                        _scansList.value = currentList
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearUploadProgress() {
+        _uploadProgress.value = null
     }
 
     fun startFullOnDemandScan() {

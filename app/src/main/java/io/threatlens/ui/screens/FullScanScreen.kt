@@ -38,6 +38,8 @@ fun FullScanScreen(
     val isPaused = scanState.status == FullScanStatus.PAUSED
     val isCompleted = scanState.status == FullScanStatus.COMPLETED
     val selectedReport by viewModel.selectedReport.collectAsState()
+    val uploadProgress by viewModel.uploadProgress.collectAsState()
+    val vtKey by viewModel.vtKey.collectAsState()
     var showConfirmDeleteAllDialog by remember { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -545,7 +547,10 @@ fun FullScanScreen(
         ThreatDetailSheet(
             report = report,
             onDismiss = { viewModel.selectReport(null) },
-            onDelete = { threat -> viewModel.deleteThreat(threat) }
+            onDelete = { threat -> viewModel.deleteThreat(threat) },
+            onUploadSample = { viewModel.uploadSampleToVirusTotal(it) },
+            uploadProgress = uploadProgress,
+            isVtKeyConfigured = vtKey.isNotBlank()
         )
     }
 }
