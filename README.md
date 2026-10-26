@@ -63,10 +63,17 @@ When an untrusted link or malicious APK host is intercepted:
 * **Proxy Interception**: Audits `http.proxyHost` and `ConnectivityManager.defaultProxy` for unauthorized traffic redirection.
 * **DNS Poisoning & Captive Portal Audits**: Validates public canary host resolution (`cloudflare-dns.com`) against RFC 1918 private subnets.
 
-### 🔄 6. Seamless In-Place APK Updates
+### 🔄 6. Seamless In-Place APK Updates & Durable Key Vault
 * Built with a permanent 30-year release keystore (`keystore/release.jks`) configured identically for release and debug builds.
 * Guarantee: **Install and update new releases directly over older APKs with zero signature conflicts or uninstallation required**.
+* **Durable API Key Vault**: Cloud and AI API keys persist across app updates with full JSON export and import capabilities.
 * Built-in update checker in the About Screen queries GitHub API for latest releases.
+
+### 🔬 7. Deep Multi-Engine Cloud Intelligence & Sub-Engine Logos
+* **Sub-Engine Brand Badges**: Commercial AV vendors inside VirusTotal and MetaDefender (Kaspersky, Microsoft Defender, Avast, Bitdefender, ESET, Sophos, TrendMicro) render with authentic brand badges and colors.
+* **Exact Detection Ratios & Family Resolution**: Replaces cryptic codes with concrete ratios (e.g. `2/72 vendors flagged`) and actual malware families (`Cerberus`, `SpyNote`, `Banker`).
+* **Live Web Report Hyperlinks**: One-click "View Web Results ↗" buttons opening direct analysis pages on VirusTotal, AlienVault OTX, CIRCL, Hybrid Analysis, and MetaDefender.
+* **Deep 4-Part AI Threat Evaluation**: Structured point-by-point security breakdown (Executive Assessment, Multi-Engine Vendor Consensus, Point-by-Point Finding Analysis, and Actionable Remediation Directives) available both online (Gemini, Groq, ChatGPT, Claude) and 100% offline.
 
 ---
 

@@ -138,11 +138,18 @@ def audit_codebase():
     kt_files = glob.glob(os.path.join(base_dir, "**", "*.kt"), recursive=True)
 
     declared_symbols = set()
+    symbol_packages = {}
     for f in kt_files:
         with open(f, "r", encoding="utf-8") as fp:
             text = fp.read()
-        for m in re.finditer(r'(?:class|object|interface|enum class)\s+([A-Za-z0-9_]+)', text):
-            declared_symbols.add(m.group(1))
+        pkg_m = re.search(r'package\s+([A-Za-z0-9_.]+)', text)
+        pkg = pkg_m.group(1) if pkg_m else ""
+        # Match only TOP-LEVEL classes/objects/interfaces
+        for m in re.finditer(r'^(?:data\s+class|class|object|interface|enum\s+class)\s+([A-Za-z0-9_]+)', text, re.MULTILINE):
+            sym = m.group(1)
+            declared_symbols.add(sym)
+            if pkg:
+                symbol_packages[sym] = pkg
         for m in re.finditer(r'val\s+([A-Za-z0-9_]+)\s*=', text):
             declared_symbols.add(m.group(1))
 
@@ -162,6 +169,25 @@ def audit_codebase():
         with open(f, "r", encoding="utf-8") as fp:
             text = fp.read()
 
+        pkg_m = re.search(r'package\s+([A-Za-z0-9_.]+)', text)
+        cur_pkg = pkg_m.group(1) if pkg_m else ""
+        imports = set(re.findall(r'import\s+([A-Za-z0-9_.*]+)', text))
+
+        # Check cross-package references
+        words = set(re.findall(r'\b([A-Z][A-Za-z0-9_]+)\b', text))
+        for w in words:
+            if w in symbol_packages:
+                # If declared inside this file itself, skip
+                if re.search(rf'\b(?:class|object|interface)\s+{w}\b', text):
+                    continue
+                def_pkg = symbol_packages[w]
+                if def_pkg != cur_pkg:
+                    specific_imp = f"{def_pkg}.{w}"
+                    wildcard_imp = f"{def_pkg}.*"
+                    if specific_imp not in imports and wildcard_imp not in imports:
+                        if f"{def_pkg}.{w}" not in text:
+                            issues.append(f"[{rel}] Missing cross-package import: {specific_imp}")
+
         # Syntax & Bracket Integrity
         issues.extend(check_brackets_and_syntax(rel, text))
 
@@ -175,6 +201,21 @@ def audit_codebase():
         if ".clickable" in text:
             if "import androidx.compose.foundation.clickable" not in text and "import androidx.compose.foundation.*" not in text:
                 issues.append(f"[{rel}] Missing import: androidx.compose.foundation.clickable")
+
+        # Check background modifier import
+        if ".background(" in text:
+            if "import androidx.compose.foundation.background" not in text and "import androidx.compose.foundation.*" not in text:
+                issues.append(f"[{rel}] Missing import: androidx.compose.foundation.background")
+
+        # Check border modifier import
+        if ".border(" in text:
+            if "import androidx.compose.foundation.border" not in text and "import androidx.compose.foundation.*" not in text:
+                issues.append(f"[{rel}] Missing import: androidx.compose.foundation.border")
+
+        # Check scroll imports
+        if "verticalScroll" in text or "rememberScrollState" in text:
+            if "import androidx.compose.foundation.verticalScroll" not in text and "import androidx.compose.foundation.*" not in text:
+                issues.append(f"[{rel}] Missing import: androidx.compose.foundation.verticalScroll")
 
         # Check coroutine launch import
         if re.search(r'\b(launch\s*\{)', text):

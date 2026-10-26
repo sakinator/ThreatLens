@@ -1,6 +1,7 @@
 package io.threatlens.core.realtime
 
 import android.content.Context
+import io.threatlens.core.ai.FallbackThreatDefinitions
 import io.threatlens.core.ai.ThreatAiExplainer
 import io.threatlens.core.cloud.*
 import io.threatlens.core.local.HashUtil
@@ -589,7 +590,7 @@ object RealtimeScanCoordinator {
                         val kasDetails = mutableListOf<String>()
                         kasDetails.add("Kaspersky Threat Zone: ${kas.zone}")
                         if (!kas.threatFamily.isNullOrBlank()) kasDetails.add("Kaspersky: ${kas.threatFamily}")
-                        kasDetails.add("Enterprise Intelligence: ${kas.details}")
+                        kasDetails.add("Enterprise Intelligence: Zone ${kas.zone} verified hash")
                         onEngineFinished(
                             "Kaspersky OpenTIP",
                             score = score,

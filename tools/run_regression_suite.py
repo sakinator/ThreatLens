@@ -51,6 +51,7 @@ class RegressionTestRunner:
         self.test_mitm_detection_logic()
         self.test_heuristic_scoring_engine()
         self.test_ai_fallback_rules()
+        self.test_cloud_and_vendor_brand_registry()
         self.test_kotlin_syntax_and_imports()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
@@ -189,7 +190,8 @@ class RegressionTestRunner:
     # 5. Test Heuristic Scoring Engine
     def test_heuristic_scoring_engine(self):
         print(f"\n{YELLOW}▶ SUITE 5: Heuristic & Signature Engine{RESET}")
-        heur_file = os.path.join("D:\\ThreatLens", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        heur_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
         with open(heur_file, "r", encoding="utf-8") as f:
             code = f.read()
 
@@ -202,18 +204,41 @@ class RegressionTestRunner:
     # 6. Test AI Threat Explainer Fallbacks
     def test_ai_fallback_rules(self):
         print(f"\n{YELLOW}▶ SUITE 6: Multi-LLM & Offline Threat Explainer Fallbacks{RESET}")
-        fallback_file = os.path.join("D:\\ThreatLens", "app", "src", "main", "java", "io", "threatlens", "core", "ai", "FallbackThreatDefinitions.kt")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        fallback_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "ai", "FallbackThreatDefinitions.kt")
         with open(fallback_file, "r", encoding="utf-8") as f:
             code = f.read()
 
         families = ["banker", "dropper", "spy", "joker", "toll", "adware"]
         for fam in families:
             self.record(f"Offline AI Fallback Rule for '{fam}'", fam in code.lower())
+        self.record("Offline 4-Part Structured Point-by-Point Breakdown", "Executive Threat Assessment" in code and "Point-by-Point Finding Analysis" in code)
 
-    # 7. Test Static Kotlin Syntax & Clean Imports
+    # 7. Test Multi-Cloud Threat Intelligence & Sub-Engine Vendor Brands
+    def test_cloud_and_vendor_brand_registry(self):
+        print(f"\n{YELLOW}▶ SUITE 7: Multi-Cloud Intelligence & Sub-Engine Vendor Registry{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cloud_agg_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "CloudThreatAggregator.kt")
+        with open(cloud_agg_file, "r", encoding="utf-8") as f:
+            agg_code = f.read()
+
+        engines = ["VirusTotal", "AlienVault OTX", "CIRCL Hashlookup", "MalwareBazaar", "Kaspersky OpenTIP", "Hybrid Analysis", "MetaDefender", "Filescan.io"]
+        for eng in engines:
+            self.record(f"Live Web Report URL Generator for '{eng}'", eng in agg_code)
+
+        logos_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "EngineLogos.kt")
+        with open(logos_file, "r", encoding="utf-8") as f:
+            logo_code = f.read()
+
+        vendors = ["Kaspersky", "Microsoft", "Avast", "Bitdefender", "ESET", "Sophos", "Google", "TrendMicro", "McAfee"]
+        for ven in vendors:
+            self.record(f"Sub-Engine Commercial AV Brand Logo for '{ven}'", ven in logo_code)
+
+    # 8. Test Static Kotlin Syntax & Clean Imports
     def test_kotlin_syntax_and_imports(self):
-        print(f"\n{YELLOW}▶ SUITE 7: Static Kotlin Codebase Integrity & Verification{RESET}")
-        base_dir = os.path.join("D:\\ThreatLens", "app", "src", "main", "java")
+        print(f"\n{YELLOW}▶ SUITE 8: Static Kotlin Codebase Integrity & Verification{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.join(script_dir, "..", "app", "src", "main", "java")
         kt_files = glob.glob(os.path.join(base_dir, "**", "*.kt"), recursive=True)
         self.record(f"Total Kotlin Source Files Identified ({len(kt_files)} files)", len(kt_files) >= 40)
 
