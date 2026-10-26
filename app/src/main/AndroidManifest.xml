@@ -25,7 +25,8 @@
 
     <application
         android:name=".ThreatLensApplication"
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:restoreAnyVersion="true"
         android:icon="@drawable/ic_threatlens_logo"
         android:label="ThreatLens"
         android:roundIcon="@drawable/ic_threatlens_logo"

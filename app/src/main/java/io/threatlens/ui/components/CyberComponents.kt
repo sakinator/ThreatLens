@@ -179,44 +179,80 @@ fun ThreatItemRow(
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Detected APK Name & Package Name
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            color = CyberDarkSurface,
-                            shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                text = report.targetName,
-                                color = NeonCyan,
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                            )
-                        }
-                        if (!report.packageName.isNullOrBlank() && report.packageName != report.appName) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = report.packageName,
-                                color = TextMuted,
-                                fontSize = 10.sp,
-                                fontFamily = FontFamily.Monospace,
-                                maxLines = 1
-                            )
-                        }
+                    // Package Name on its own row with full width and ellipsis
+                    if (!report.packageName.isNullOrBlank() && report.packageName != report.appName) {
+                        Text(
+                            text = report.packageName,
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = report.threatFamily,
-                        color = if (report.threatFamily != "Clean") NeonCrimson else NeonEmerald,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
+                    // Threat Family & Detected File Badge (if downloaded file)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!report.targetName.equals("base.apk", ignoreCase = true) && !report.targetName.equals(report.appName, ignoreCase = true)) {
+                            Surface(
+                                color = CyberDarkSurface,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = report.targetName,
+                                    color = NeonCyan,
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+                        Surface(
+                            color = when (report.detectionType) {
+                                io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson.copy(alpha = 0.18f)
+                                io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE -> NeonCyan.copy(alpha = 0.18f)
+                                io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber.copy(alpha = 0.18f)
+                                io.threatlens.core.model.DetectionType.CLEAN -> NeonEmerald.copy(alpha = 0.18f)
+                            },
+                            shape = RoundedCornerShape(3.dp)
+                        ) {
+                            Text(
+                                text = when (report.detectionType) {
+                                    io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> "SIGNATURE"
+                                    io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE -> "CLOUD"
+                                    io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> "HEURISTIC"
+                                    io.threatlens.core.model.DetectionType.CLEAN -> "SAFE"
+                                },
+                                color = when (report.detectionType) {
+                                    io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson
+                                    io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE -> NeonCyan
+                                    io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber
+                                    io.threatlens.core.model.DetectionType.CLEAN -> NeonEmerald
+                                },
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = report.threatFamily,
+                            color = if (report.threatFamily != "Clean") NeonCrimson else NeonEmerald,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))

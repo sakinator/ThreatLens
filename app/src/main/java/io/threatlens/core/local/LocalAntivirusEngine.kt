@@ -21,6 +21,8 @@ object LocalAntivirusEngine {
         val localScore: Int,
         val threatFamily: String,
         val category: String,
+        val detectionType: io.threatlens.core.model.DetectionType = io.threatlens.core.model.DetectionType.CLEAN,
+        val scoreBreakdown: io.threatlens.core.model.ScoreBreakdown? = null,
         val detectedBehaviors: List<String>,
         val dangerousPermissions: List<String>,
         val matchedSignatures: List<String>,
@@ -72,18 +74,18 @@ object LocalAntivirusEngine {
             description = "CraxsRAT keyboard logger and screen injection framework"
         ),
         BytecodeRule(
-            pattern = "/system/xbin/su",
-            family = "Exploit.AndroidOS.RootExploit",
-            category = "Privilege Escalation",
-            score = 75,
-            description = "Hardcoded root binary invocation attempt to gain unrestricted kernel rights"
-        ),
-        BytecodeRule(
             pattern = "chmod 777 /data/local/tmp",
             family = "Exploit.Dropper.PrivEsc",
             category = "Root Dropper",
             score = 85,
             description = "Alters system execution privileges to drop secondary unverified payload"
+        ),
+        BytecodeRule(
+            pattern = "daemonsu",
+            family = "Exploit.AndroidOS.RootExploit",
+            category = "Privilege Escalation",
+            score = 85,
+            description = "Spawns unauthorized background root daemon to bypass Android security sandbox"
         )
     )
 
@@ -116,6 +118,12 @@ object LocalAntivirusEngine {
                 localScore = 100,
                 threatFamily = sig.threatFamily,
                 category = sig.category,
+                detectionType = io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE,
+                scoreBreakdown = io.threatlens.core.model.ScoreBreakdown(
+                    signatureScore = 100,
+                    totalScore = 100,
+                    rationale = "Confirmed malware: Cryptographic hash matches known ${sig.category} signature."
+                ),
                 detectedBehaviors = behaviors,
                 dangerousPermissions = emptyList(),
                 matchedSignatures = matchedSignatures,
@@ -124,11 +132,13 @@ object LocalAntivirusEngine {
         }
 
         val isApk = file.extension.equals("apk", ignoreCase = true)
+        var hasBytecodeMatch = false
 
         // 2. Deep DEX & Bytecode Pattern Scan (Offline YARA-style scanner)
         if (isApk && file.exists() && file.canRead()) {
             val bytecodeMatches = scanApkBytecode(file)
             for (rule in bytecodeMatches) {
+                hasBytecodeMatch = true
                 matchedSignatures.add(rule.family)
                 behaviors.add(rule.description)
                 sources.add("ThreatLens Bytecode Engine")
@@ -140,11 +150,14 @@ object LocalAntivirusEngine {
             }
         }
 
+        var heuristicScore = 0
+
         // 3. Static Manifest & Heuristic Permission Matrix
         if (isApk) {
             val heuristic = ManifestHeuristicEngine.analyzeApk(context, file)
             behaviors.addAll(heuristic.suspiciousBehaviors)
             dangerousPermissions.addAll(heuristic.dangerousPermissions)
+            heuristicScore = heuristic.score
 
             if (heuristic.score > highestScore) {
                 highestScore = heuristic.score
@@ -162,7 +175,11 @@ object LocalAntivirusEngine {
                             detectedFamily = "Heuristic.Dropper"
                             category = "Malicious Dropper"
                         }
-                        heuristic.score >= 50 -> {
+                        heuristic.score >= 40 -> {
+                            detectedFamily = "Heuristic.HighPrivilege"
+                            category = "High Privilege Tool"
+                        }
+                        heuristic.score >= 20 -> {
                             detectedFamily = "Heuristic.Suspicious"
                             category = "Potentially Unwanted Application"
                         }
@@ -176,15 +193,40 @@ object LocalAntivirusEngine {
         }
 
         val isMalicious = highestScore >= 75
+        val detectionType = when {
+            hasBytecodeMatch || sig != null -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
+            highestScore > 0 -> io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
+            else -> io.threatlens.core.model.DetectionType.CLEAN
+        }
+
+        val rationale = when (detectionType) {
+            io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
+                "Confirmed Malware: Trojan or RAT payload signature discovered embedded in application bytecode."
+            io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
+                "Heuristic Finding: Score based on ${dangerousPermissions.size} sensitive permissions and runtime capabilities. No confirmed Trojan signature matched."
+            else ->
+                "Verified Safe: 0 malicious signatures or harmful heuristic patterns identified."
+        }
+
         if (sources.isEmpty()) {
             sources.add("ThreatLens Local Engine (Clean)")
         }
+
+        val breakdown = io.threatlens.core.model.ScoreBreakdown(
+            signatureScore = if (hasBytecodeMatch) highestScore else 0,
+            permissionScore = minOf(dangerousPermissions.size * 5, 25),
+            heuristicScore = heuristicScore,
+            totalScore = highestScore.coerceIn(0, 100),
+            rationale = rationale
+        )
 
         return LocalScanVerdict(
             isMalicious = isMalicious,
             localScore = highestScore.coerceIn(0, 100),
             threatFamily = detectedFamily,
             category = category,
+            detectionType = detectionType,
+            scoreBreakdown = breakdown,
             detectedBehaviors = behaviors,
             dangerousPermissions = dangerousPermissions,
             matchedSignatures = matchedSignatures,

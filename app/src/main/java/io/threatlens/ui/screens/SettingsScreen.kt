@@ -1,5 +1,9 @@
 package io.threatlens.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +53,10 @@ fun SettingsScreen(
     var filescanInput by remember { mutableStateOf(viewModel.filescanKey.value) }
     var bazaarInput by remember { mutableStateOf(viewModel.bazaarKey.value) }
     var savedSnackbar by remember { mutableStateOf(false) }
+    val isRealtimeShieldEnabled by viewModel.isRealtimeShieldEnabled.collectAsState()
+    var showImportDialog by remember { mutableStateOf(false) }
+    var importJsonText by remember { mutableStateOf("") }
+    val versionName = remember { io.threatlens.core.update.UpdateCheckService.getInstalledVersionName(context) }
     val validationStatusMap = remember { mutableStateMapOf<String, io.threatlens.core.validation.ValidationStatus>() }
     var isValidatingAll by remember { mutableStateOf(false) }
 
@@ -152,10 +160,60 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("About ThreatLens & Credits", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("Version 1.0.0 • Check for updates & links", color = TextSecondary, fontSize = 11.sp)
+                            Text("Version $versionName • Check for updates & links", color = TextSecondary, fontSize = 11.sp)
                         }
                     }
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextMuted)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Real-Time Background Antivirus Protection Engine Toggle
+            GlassCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (isRealtimeShieldEnabled) Icons.Default.Shield else Icons.Default.SecurityUpdateWarning,
+                            contentDescription = null,
+                            tint = if (isRealtimeShieldEnabled) NeonCyan else TextMuted,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Real-Time Antivirus Engine",
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = if (isRealtimeShieldEnabled) 
+                                    "Active: Monitors downloads & installs as they happen" 
+                                else 
+                                    "Turned off: Manual on-demand scan mode only",
+                                color = if (isRealtimeShieldEnabled) NeonCyan else TextMuted,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isRealtimeShieldEnabled,
+                        onCheckedChange = { viewModel.setRealtimeShieldEnabled(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = CyberBlack,
+                            checkedTrackColor = NeonCyan,
+                            uncheckedThumbColor = TextMuted,
+                            uncheckedTrackColor = CyberDarkSurface
+                        )
+                    )
                 }
             }
 
@@ -765,7 +823,7 @@ fun SettingsScreen(
                 onClick = {
                     viewModel.saveApiKeys(
                         openaiInput, claudeInput, geminiInput, groqInput,
-                        vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput
+                        vtInput, haInput, kasperskyInput, metaDefenderInput, filescanInput, bazaarInput
                     )
                     savedSnackbar = true
                 },
@@ -788,6 +846,155 @@ fun SettingsScreen(
                     color = NeonEmerald,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // API Key Vault Backup & Portability Card (Export & Import)
+            GlassCard {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.VpnKey,
+                            contentDescription = null,
+                            tint = NeonCyan,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Key Vault Backup & Migration",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Keys survive app updates automatically. Export to migrate or backup.",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Export Button
+                        OutlinedButton(
+                            onClick = {
+                                val json = viewModel.exportApiKeys()
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("ThreatLens_Keys_Backup", json)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "Exported keys copied to clipboard!", Toast.LENGTH_LONG).show()
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export Keys", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Import Button
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clipText = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                                    if (clipText.contains("{") && clipText.contains("}")) {
+                                        importJsonText = clipText
+                                    }
+                                } catch (_: Exception) {}
+                                showImportDialog = true
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonEmerald),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Import Keys", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Import Keys Dialog
+            if (showImportDialog) {
+                AlertDialog(
+                    onDismissRequest = { showImportDialog = false },
+                    containerColor = CyberDarkSurface,
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Key, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Import API Keys Vault", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Paste your exported JSON keys payload below:",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                            OutlinedTextField(
+                                value = importJsonText,
+                                onValueChange = { importJsonText = it },
+                                placeholder = { Text("{\n  \"keys\": {\n    \"openai\": \"...\"\n  }\n}", color = TextMuted, fontSize = 11.sp) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    color = TextPrimary
+                                ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = NeonCyan,
+                                    unfocusedBorderColor = CyberCardBorder,
+                                    focusedContainerColor = CyberBlack,
+                                    unfocusedContainerColor = CyberBlack
+                                )
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                val (count, message) = viewModel.importApiKeys(importJsonText)
+                                if (count > 0) {
+                                    // Update screen text fields
+                                    openaiInput = viewModel.openAiKey.value
+                                    claudeInput = viewModel.claudeKey.value
+                                    geminiInput = viewModel.geminiKey.value
+                                    groqInput = viewModel.groqKey.value
+                                    vtInput = viewModel.vtKey.value
+                                    haInput = viewModel.haKey.value
+                                    kasperskyInput = viewModel.kasperskyKey.value
+                                    metaDefenderInput = viewModel.metaDefenderKey.value
+                                    filescanInput = viewModel.filescanKey.value
+                                    bazaarInput = viewModel.bazaarKey.value
+                                    showImportDialog = false
+                                }
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
+                        ) {
+                            Text("Import & Save", color = CyberBlack, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showImportDialog = false }) {
+                            Text("Cancel", color = TextMuted)
+                        }
+                    }
                 )
             }
 

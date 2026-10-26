@@ -191,6 +191,8 @@ object RealtimeScanCoordinator {
             currentScore = runningLocalScore,
             severity = highestSeverity,
             threatFamily = runningFamily,
+            detectionType = localVerdict.detectionType,
+            scoreBreakdown = localVerdict.scoreBreakdown,
             detectedBehaviors = localVerdict.detectedBehaviors,
             dangerousPermissions = localVerdict.dangerousPermissions,
             cloudSources = emptyList(),
@@ -236,11 +238,39 @@ object RealtimeScanCoordinator {
                 else -> ThreatSeverity.SAFE
             }
 
+            val effectiveDetectionType = when {
+                localVerdict.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
+                    io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
+                flaggedEnginesCount > 0 ->
+                    io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
+                localVerdict.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
+                    io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
+                else ->
+                    io.threatlens.core.model.DetectionType.CLEAN
+            }
+
+            val currentBreakdown = currentReport.scoreBreakdown?.copy(
+                cloudScore = runningCloudScore,
+                totalScore = weighted,
+                rationale = when (effectiveDetectionType) {
+                    io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
+                        "Confirmed Malware: Matched known mobile Trojan or exploit signature in database/bytecode."
+                    io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE ->
+                        "Cloud Flagged: Flagged by $flaggedEnginesCount cloud threat intelligence engine(s)."
+                    io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
+                        "Heuristic Finding: Flagged for high-privilege capabilities or unusual permission matrix. (0 confirmed signatures)"
+                    else ->
+                        "Verified Safe: 0 malicious signatures or behavioral anomalies found across local and cloud engines."
+                }
+            )
+
             currentReport = currentReport.copy(
                 cloudScore = runningCloudScore,
                 currentScore = weighted,
                 severity = highestSeverity,
                 threatFamily = runningFamily,
+                detectionType = effectiveDetectionType,
+                scoreBreakdown = currentBreakdown,
                 cloudEnginesFlagged = flaggedEnginesCount,
                 cloudEnginesTotal = totalEnginesCount,
                 cloudSources = runningSources.toList(),

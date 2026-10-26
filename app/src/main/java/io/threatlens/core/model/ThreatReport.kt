@@ -1,5 +1,21 @@
 package io.threatlens.core.model
 
+enum class DetectionType(val label: String, val badgeText: String) {
+    CONFIRMED_SIGNATURE("Confirmed Malware", "SIGNATURE MATCH"),
+    HEURISTIC_PATTERN("Heuristic Finding", "HEURISTIC PATTERN"),
+    CLOUD_INTELLIGENCE("Cloud Intelligence", "CLOUD CONSENSUS"),
+    CLEAN("Verified Safe", "VERIFIED SAFE")
+}
+
+data class ScoreBreakdown(
+    val signatureScore: Int = 0,
+    val permissionScore: Int = 0,
+    val heuristicScore: Int = 0,
+    val cloudScore: Int = 0,
+    val totalScore: Int = 0,
+    val rationale: String = ""
+)
+
 data class ThreatReport(
     val id: String = java.util.UUID.randomUUID().toString(),
     val targetName: String,
@@ -15,6 +31,8 @@ data class ThreatReport(
     val threatScore: Int = currentScore,
     val severity: ThreatSeverity = ThreatSeverity.SAFE,
     val threatFamily: String = "Clean",
+    val detectionType: DetectionType = DetectionType.CLEAN,
+    val scoreBreakdown: ScoreBreakdown? = null,
     val detectedBehaviors: List<String> = emptyList(),
     val dangerousPermissions: List<String> = emptyList(),
     val cloudEnginesFlagged: Int = 0,

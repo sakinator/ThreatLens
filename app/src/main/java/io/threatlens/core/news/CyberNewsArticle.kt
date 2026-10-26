@@ -7,6 +7,7 @@ data class CyberNewsArticle(
     val source: String,
     val articleUrl: String,
     val publishedAt: String,
+    val publishedTimestamp: Long = System.currentTimeMillis(),
     val isLocalCountryThreat: Boolean = false,
     val countryTarget: String? = null
 )

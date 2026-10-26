@@ -14,5 +14,7 @@ class ThreatLensApplication : Application() {
         io.threatlens.core.exclusions.ExclusionManager.init(this)
         // Initialize local signature database and load persisted updates
         SignatureUpdateService.init(this)
+        // Initialize durable API key vault (survives app updates and restores lost keys)
+        io.threatlens.core.storage.ApiKeyVault.init(this)
     }
 }

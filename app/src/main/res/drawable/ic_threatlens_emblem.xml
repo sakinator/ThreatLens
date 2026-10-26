@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="36dp"
+    android:viewportWidth="320"
+    android:viewportHeight="360">
+
+    <group
+        android:translateX="-96"
+        android:translateY="-98">
+        <!-- Left Armor Facet -->
+        <path
+            android:fillColor="#0F243C"
+            android:pathData="M 112,112 L 256,112 L 256,448 C 202,422 112,362 112,270 Z" />
+
+        <!-- Right Armor Facet -->
+        <path
+            android:fillColor="#071220"
+            android:pathData="M 256,112 L 400,112 L 400,270 C 400,362 310,422 256,448 Z" />
+
+        <!-- Outer Solid Shield Beveled Border -->
+        <path
+            android:strokeColor="#00E5FF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M 112,112 L 400,112 L 400,270 C 400,362 310,422 256,448 C 202,422 112,362 112,270 Z" />
+
+        <!-- Central Vertical Spine Line -->
+        <path
+            android:strokeColor="#00E5FF"
+            android:strokeWidth="3"
+            android:strokeAlpha="0.6"
+            android:strokeLineCap="round"
+            android:pathData="M 256,116 L 256,444" />
+
+        <!-- Chiseled Inset Shield Line -->
+        <path
+            android:strokeColor="#38BDF8"
+            android:strokeWidth="3"
+            android:strokeAlpha="0.4"
+            android:pathData="M 144,142 L 368,142 L 368,266 C 368,340 296,394 256,416 C 216,394 144,340 144,266 Z" />
+
+        <!-- Bold Security Checkmark (Iconic Antivirus Protection) -->
+        <path
+            android:strokeColor="#00E5FF"
+            android:strokeWidth="24"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M 194,272 L 238,316 L 322,216" />
+    </group>
+</vector>

@@ -18,6 +18,7 @@ import io.threatlens.core.realtime.RealtimeDownloadShieldService
 import io.threatlens.core.realtime.RealtimeScanCoordinator
 import io.threatlens.core.scanner.FullScanState
 import io.threatlens.core.scanner.FullSystemScanner
+import io.threatlens.core.storage.ApiKeyVault
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,9 @@ import java.io.File
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("threatlens_prefs", Context.MODE_PRIVATE)
+
+    private val _isRealtimeShieldEnabled = MutableStateFlow(prefs.getBoolean("key_realtime_shield_enabled", true))
+    val isRealtimeShieldEnabled: StateFlow<Boolean> = _isRealtimeShieldEnabled.asStateFlow()
 
     private val _isShieldActive = MutableStateFlow(true)
     val isShieldActive: StateFlow<Boolean> = _isShieldActive.asStateFlow()
@@ -68,7 +72,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val bazaarKey = MutableStateFlow(prefs.getString("bazaar_key", "") ?: "")
 
     init {
-        syncKeysToCoordinator()
+        // Initialize API Key Vault immediately
+        ApiKeyVault.init(application)
+        reloadKeysFromPrefs()
 
         viewModelScope.launch {
             RealtimeScanCoordinator.scanReports.collect { newReport ->
@@ -79,7 +85,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        startShieldService()
+        if (_isRealtimeShieldEnabled.value) {
+            startShieldService()
+        } else {
+            _isShieldActive.value = false
+        }
         loadCyberNews()
     }
 
@@ -99,6 +109,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleShield() {
         if (_isShieldActive.value) stopShieldService() else startShieldService()
+    }
+
+    fun setRealtimeShieldEnabled(enabled: Boolean) {
+        _isRealtimeShieldEnabled.value = enabled
+        prefs.edit().putBoolean("key_realtime_shield_enabled", enabled).commit()
+        if (enabled) {
+            startShieldService()
+        } else {
+            stopShieldService()
+        }
     }
 
     fun selectReport(report: ThreatReport?) {
@@ -217,18 +237,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         filescan: String,
         bazaar: String = ""
     ) {
-        prefs.edit()
-            .putString("openai_key", openai.trim())
-            .putString("claude_key", claude.trim())
-            .putString("gemini_key", gemini.trim())
-            .putString("groq_key", groq.trim())
-            .putString("vt_key", vt.trim())
-            .putString("ha_key", ha.trim())
-            .putString("kaspersky_key", kaspersky.trim())
-            .putString("metadefender_key", metaDefender.trim())
-            .putString("filescan_key", filescan.trim())
-            .putString("bazaar_key", bazaar.trim())
-            .apply()
+        val app = getApplication<Application>()
+        ApiKeyVault.saveAllKeys(
+            context = app,
+            openai = openai,
+            claude = claude,
+            gemini = gemini,
+            groq = groq,
+            vt = vt,
+            ha = ha,
+            kaspersky = kaspersky,
+            metaDefender = metaDefender,
+            filescan = filescan,
+            bazaar = bazaar
+        )
 
         openAiKey.value = openai.trim()
         claudeKey.value = claude.trim()
@@ -240,52 +262,53 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         metaDefenderKey.value = metaDefender.trim()
         filescanKey.value = filescan.trim()
         bazaarKey.value = bazaar.trim()
-
-        syncKeysToCoordinator()
     }
 
     fun saveSingleApiKey(provider: String, key: String) {
         val trimmed = key.trim()
-        val prefKey = when (provider.lowercase()) {
-            "openai" -> "openai_key"
-            "claude" -> "claude_key"
-            "gemini" -> "gemini_key"
-            "groq" -> "groq_key"
-            "vt", "virustotal" -> "vt_key"
-            "ha", "hybridanalysis" -> "ha_key"
-            "kaspersky" -> "kaspersky_key"
-            "metadefender" -> "metadefender_key"
-            "filescan" -> "filescan_key"
-            "bazaar", "malwarebazaar", "abusech" -> "bazaar_key"
-            else -> return
-        }
-
-        prefs.edit().putString(prefKey, trimmed).apply()
+        val app = getApplication<Application>()
+        ApiKeyVault.saveSingleKey(app, provider, trimmed)
 
         when (provider.lowercase()) {
-            "openai" -> { openAiKey.value = trimmed; RealtimeScanCoordinator.openAiKey = trimmed }
-            "claude" -> { claudeKey.value = trimmed; RealtimeScanCoordinator.claudeKey = trimmed }
-            "gemini" -> { geminiKey.value = trimmed; RealtimeScanCoordinator.geminiKey = trimmed }
-            "groq" -> { groqKey.value = trimmed; RealtimeScanCoordinator.groqKey = trimmed }
-            "vt", "virustotal" -> { vtKey.value = trimmed; RealtimeScanCoordinator.virusTotalKey = trimmed }
-            "ha", "hybridanalysis" -> { haKey.value = trimmed; RealtimeScanCoordinator.hybridAnalysisKey = trimmed }
-            "kaspersky" -> { kasperskyKey.value = trimmed; RealtimeScanCoordinator.kasperskyKey = trimmed }
-            "metadefender" -> { metaDefenderKey.value = trimmed; RealtimeScanCoordinator.metaDefenderKey = trimmed }
-            "filescan" -> { filescanKey.value = trimmed; RealtimeScanCoordinator.filescanKey = trimmed }
-            "bazaar", "malwarebazaar", "abusech" -> { bazaarKey.value = trimmed; RealtimeScanCoordinator.bazaarKey = trimmed }
+            "openai" -> openAiKey.value = trimmed
+            "claude" -> claudeKey.value = trimmed
+            "gemini" -> geminiKey.value = trimmed
+            "groq" -> groqKey.value = trimmed
+            "vt", "virustotal" -> vtKey.value = trimmed
+            "ha", "hybridanalysis" -> haKey.value = trimmed
+            "kaspersky" -> kasperskyKey.value = trimmed
+            "metadefender" -> metaDefenderKey.value = trimmed
+            "filescan" -> filescanKey.value = trimmed
+            "bazaar", "malwarebazaar", "abusech" -> bazaarKey.value = trimmed
         }
     }
 
+    fun exportApiKeys(): String {
+        return ApiKeyVault.exportKeysJson(getApplication())
+    }
+
+    fun importApiKeys(jsonStr: String): Pair<Int, String> {
+        val result = ApiKeyVault.importKeysJson(getApplication(), jsonStr)
+        if (result.first > 0) {
+            reloadKeysFromPrefs()
+        }
+        return result
+    }
+
+    fun reloadKeysFromPrefs() {
+        openAiKey.value = prefs.getString("openai_key", "") ?: ""
+        claudeKey.value = prefs.getString("claude_key", "") ?: ""
+        geminiKey.value = prefs.getString("gemini_key", "") ?: ""
+        groqKey.value = prefs.getString("groq_key", "") ?: ""
+        vtKey.value = prefs.getString("vt_key", "") ?: ""
+        haKey.value = prefs.getString("ha_key", "") ?: ""
+        kasperskyKey.value = prefs.getString("kaspersky_key", "") ?: ""
+        metaDefenderKey.value = prefs.getString("metadefender_key", "") ?: ""
+        filescanKey.value = prefs.getString("filescan_key", "") ?: ""
+        bazaarKey.value = prefs.getString("bazaar_key", "") ?: ""
+    }
+
     private fun syncKeysToCoordinator() {
-        RealtimeScanCoordinator.openAiKey = openAiKey.value
-        RealtimeScanCoordinator.claudeKey = claudeKey.value
-        RealtimeScanCoordinator.geminiKey = geminiKey.value
-        RealtimeScanCoordinator.groqKey = groqKey.value
-        RealtimeScanCoordinator.virusTotalKey = vtKey.value
-        RealtimeScanCoordinator.hybridAnalysisKey = haKey.value
-        RealtimeScanCoordinator.kasperskyKey = kasperskyKey.value
-        RealtimeScanCoordinator.metaDefenderKey = metaDefenderKey.value
-        RealtimeScanCoordinator.filescanKey = filescanKey.value
-        RealtimeScanCoordinator.bazaarKey = bazaarKey.value
+        ApiKeyVault.syncToCoordinator(getApplication())
     }
 }

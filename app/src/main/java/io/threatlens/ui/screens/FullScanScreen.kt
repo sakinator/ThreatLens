@@ -227,12 +227,28 @@ fun FullScanScreen(
                             Icon(Icons.Default.Security, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text(
-                                    text = "Offline Signatures: ${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} Active",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Offline Signatures: ${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} Active",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = NeonEmerald.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = io.threatlens.core.update.SignatureUpdateService.getFormattedLastUpdated(),
+                                            color = NeonEmerald,
+                                            fontSize = 9.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
                                 Text(
                                     text = "Sources: MalwareBazaar, CIRCL, ATT&CK, VX-Underground",
                                     color = TextMuted,

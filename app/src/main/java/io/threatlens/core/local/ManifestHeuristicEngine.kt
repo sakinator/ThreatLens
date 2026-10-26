@@ -114,15 +114,37 @@ object ManifestHeuristicEngine {
             behaviors.add("Analysis error: ${e.message}")
         }
 
-        val finalLocalScore = score.coerceIn(0, 100)
+        // Whitelist / Known OEM vendor check: Verified vendors should not be marked malicious by raw permission count
+        val pkg = packageInfo?.packageName?.lowercase() ?: ""
+        val isKnownTrustedVendor = pkg.startsWith("com.google.") ||
+                pkg.startsWith("com.android.") ||
+                pkg.startsWith("com.microsoft.") ||
+                pkg.startsWith("com.whatsapp") ||
+                pkg.startsWith("com.jio.") ||
+                pkg.startsWith("com.realme.") ||
+                pkg.startsWith("com.oppo.") ||
+                pkg.startsWith("com.sec.android.") ||
+                pkg.startsWith("com.samsung.")
+
+        // Static permission heuristics alone should NEVER exceed 45 (SUSPICIOUS/HIGH PRIVILEGE),
+        // unless there is an aggressive stealth Trojan combination (Accessibility + Overlay + Hidden Icon).
+        // True MALICIOUS (>=75) requires verified bytecode malware or cloud engine consensus.
+        val maxHeuristicCap = when {
+            isKnownTrustedVendor -> 25 // Trusted vendors capped at Low Risk / High Privilege
+            hasAccessibility && hasOverlay && (!hasLauncher) -> 65 // Strong stealth banker pattern
+            else -> 45 // Permissions alone cannot make an app MALICIOUS
+        }
+
+        val finalLocalScore = minOf(score, maxHeuristicCap).coerceIn(0, 100)
 
         return HeuristicResult(
             score = finalLocalScore,
             suspiciousBehaviors = behaviors,
             dangerousPermissions = foundDangerousPermissions,
-            isLikelyDropper = isDropper,
-            isLikelyBanker = isBanker,
-            isLikelySpyware = isSpyware
+            isLikelyDropper = isDropper && !isKnownTrustedVendor,
+            isLikelyBanker = isBanker && !isKnownTrustedVendor,
+            isLikelySpyware = isSpyware && !isKnownTrustedVendor
+        )
         )
     }
 }

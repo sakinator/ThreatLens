@@ -171,12 +171,43 @@ object SignatureUpdateService {
 
             _status.value = resultStatus
             _isUpdating.value = false
+
+            // Post instant feedback Toast on Main thread
+            withContext(Dispatchers.Main) {
+                val toastMsg = if (newSignaturesAdded > 0) {
+                    "✓ ThreatLens Database Updated: +$newSignaturesAdded new signatures (Total: $finalTotal)"
+                } else {
+                    "✓ Database is Up to Date ($finalTotal active malware definitions)"
+                }
+                android.widget.Toast.makeText(context, toastMsg, android.widget.Toast.LENGTH_LONG).show()
+            }
+
             return@withContext resultStatus
         } catch (e: Exception) {
             val failStatus = SignatureUpdateStatus.Failed(e.message ?: "Network timeout during signature download")
             _status.value = failStatus
             _isUpdating.value = false
+
+            withContext(Dispatchers.Main) {
+                android.widget.Toast.makeText(
+                    context,
+                    "Database notice: Using offline fallback definitions (${e.message ?: "Network offline"})",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+
             return@withContext failStatus
+        }
+    }
+
+    fun getFormattedLastUpdated(): String {
+        val ts = _lastUpdateTimestamp.value
+        val diff = System.currentTimeMillis() - ts
+        return when {
+            diff < 60_000 -> "Just now"
+            diff < 3600_000 -> "${diff / 60_000}m ago"
+            diff < 86400_000 -> "${diff / 3600_000}h ago"
+            else -> java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(ts))
         }
     }
 

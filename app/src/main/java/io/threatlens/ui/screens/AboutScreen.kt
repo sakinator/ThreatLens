@@ -64,10 +64,9 @@ fun AboutScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Logo & Title
-            Icon(
-                painter = painterResource(id = R.drawable.ic_threatlens_logo),
+            Image(
+                painter = painterResource(id = R.drawable.ic_threatlens_emblem),
                 contentDescription = "ThreatLens Logo",
-                tint = NeonCyan,
                 modifier = Modifier.size(64.dp)
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -76,13 +75,15 @@ fun AboutScreen(
                 Text("LENS", color = NeonCyan, fontWeight = FontWeight.Black, fontSize = 22.sp, letterSpacing = 1.sp)
             }
             Spacer(modifier = Modifier.height(4.dp))
+            val versionName = remember { UpdateCheckService.getInstalledVersionName(context) }
+
             Surface(
                 color = NeonCyan.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(8.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.4f))
             ) {
                 Text(
-                    text = "v1.0.0 • Open-Source Edition",
+                    text = "v$versionName • Open-Source Edition",
                     color = NeonCyan,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -101,14 +102,14 @@ fun AboutScreen(
                 ) {
                     Column {
                         Text("Software Updates", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("Current Version: v${UpdateCheckService.CURRENT_VERSION}", color = TextSecondary, fontSize = 11.sp)
+                        Text("Current Version: v$versionName", color = TextSecondary, fontSize = 11.sp)
                     }
 
                     Button(
                         onClick = {
                             coroutineScope.launch {
                                 isCheckingUpdates = true
-                                updateResult = UpdateCheckService.checkForUpdates()
+                                updateResult = UpdateCheckService.checkForUpdates(context)
                                 isCheckingUpdates = false
                             }
                         },

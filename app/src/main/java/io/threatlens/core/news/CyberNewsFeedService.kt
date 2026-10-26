@@ -59,8 +59,9 @@ object CyberNewsFeedService {
             articles.addAll(getOfflineCuratedThreatNews(userLocation))
         }
 
-        // Distinct by title, prioritizing region-specific articles
+        // Distinct by title, and sort strictly chronologically by time (latest on top for both local and global)
         articles.distinctBy { it.title.trim().lowercase() }
+            .sortedByDescending { it.publishedTimestamp }
     }
 
     private fun fetchRssFeed(feedUrl: String, isLocal: Boolean, targetRegion: String): List<CyberNewsArticle> {
@@ -124,6 +125,8 @@ object CyberNewsFeedService {
                                     val publisher = if (parts.size > 1) parts.last() else currentSource
 
                                     val summary = generateThreatSummary(cleanTitle)
+                                    val timestamp = parsePubTimestamp(currentPubDate)
+                                    val formattedTime = formatTimestamp(timestamp, currentPubDate)
 
                                     list.add(
                                         CyberNewsArticle(
@@ -131,7 +134,8 @@ object CyberNewsFeedService {
                                             summary = summary,
                                             source = publisher,
                                             articleUrl = currentLink,
-                                            publishedAt = formatPubDate(currentPubDate),
+                                            publishedAt = formattedTime,
+                                            publishedTimestamp = timestamp,
                                             isLocalCountryThreat = isLocal,
                                             countryTarget = targetRegion
                                         )
@@ -167,45 +171,62 @@ object CyberNewsFeedService {
         }
     }
 
-    private fun formatPubDate(rawDate: String): String {
-        if (rawDate.isBlank()) return "Recent"
-        try {
-            val formats = listOf(
-                SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH),
-                SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.ENGLISH),
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH)
-            )
-            for (format in formats) {
-                try {
-                    val date = format.parse(rawDate)
-                    if (date != null) {
-                        val diff = System.currentTimeMillis() - date.time
-                        val minutes = diff / (1000 * 60)
-                        val hours = minutes / 60
-                        val days = hours / 24
-                        return when {
-                            minutes < 60 -> "${maxOf(1, minutes)}m ago"
-                            hours < 24 -> "${hours}h ago"
-                            days == 1L -> "Yesterday"
-                            days < 7 -> "${days}d ago"
-                            else -> SimpleDateFormat("MMM dd", Locale.ENGLISH).format(date)
-                        }
+    private fun parsePubTimestamp(rawDate: String): Long {
+        if (rawDate.isBlank()) return System.currentTimeMillis()
+        val formats = listOf(
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH),
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.ENGLISH),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH),
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH),
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.ENGLISH)
+        )
+        for (format in formats) {
+            try {
+                val date = format.parse(rawDate)
+                if (date != null) {
+                    return date.time
+                }
+            } catch (_: Exception) {}
+        }
+        return System.currentTimeMillis()
+    }
+
+    private fun formatTimestamp(timestamp: Long, rawDate: String): String {
+        val diff = System.currentTimeMillis() - timestamp
+        if (diff < 0) return "Just now"
+        val minutes = diff / (1000 * 60)
+        val hours = minutes / 60
+        val days = hours / 24
+        return when {
+            minutes < 2 -> "Just now"
+            minutes < 60 -> "${minutes}m ago"
+            hours < 24 -> "${hours}h ago"
+            days == 1L -> "Yesterday"
+            days < 7 -> "${days}d ago"
+            else -> {
+                if (rawDate.isNotBlank()) {
+                    try {
+                        val date = Date(timestamp)
+                        SimpleDateFormat("MMM dd", Locale.ENGLISH).format(date)
+                    } catch (_: Exception) {
+                        "Recent"
                     }
-                } catch (_: Exception) {}
+                } else "Recent"
             }
-        } catch (_: Exception) {}
-        return if (rawDate.length > 16) rawDate.substring(0, 16) else rawDate
+        }
     }
 
     private fun getOfflineCuratedThreatNews(location: UserLocation): List<CyberNewsArticle> {
         val isIndia = location.countryCode.equals("IN", ignoreCase = true) || location.country.contains("India", ignoreCase = true)
+        val now = System.currentTimeMillis()
         return listOf(
             CyberNewsArticle(
                 title = if (isIndia) "CERT-In Issues High-Severity Alert on Android Banking Trojans & UPI Scams" else "New Anatsa Banking Trojan Wave Targets Mobile Users",
                 summary = if (isIndia) "Indian Computer Emergency Response Team (CERT-In) issues advisory on malicious APKs masquerading as bank rewards and digital arrest callers." else "Cybersecurity teams report a surge in Anatsa banking malware evading app store security checks to steal bank logins.",
                 source = if (isIndia) "CERT-In Advisory" else "BleepingComputer",
                 articleUrl = if (isIndia) "https://www.cert-in.org.in" else "https://www.bleepingcomputer.com",
-                publishedAt = "Today",
+                publishedAt = "2h ago",
+                publishedTimestamp = now - (2 * 3600 * 1000),
                 isLocalCountryThreat = true,
                 countryTarget = if (isIndia) "India" else location.country
             ),
@@ -214,7 +235,8 @@ object CyberNewsFeedService {
                 summary = "Critical security flaw allows malicious files to execute arbitrary code when downloaded or previewed.",
                 source = "The Hacker News",
                 articleUrl = "https://thehackernews.com",
-                publishedAt = "Today",
+                publishedAt = "4h ago",
+                publishedTimestamp = now - (4 * 3600 * 1000),
                 isLocalCountryThreat = false,
                 countryTarget = "Worldwide"
             ),
@@ -224,6 +246,7 @@ object CyberNewsFeedService {
                 source = "Threatpost",
                 articleUrl = "https://threatpost.com",
                 publishedAt = "Yesterday",
+                publishedTimestamp = now - (24 * 3600 * 1000),
                 isLocalCountryThreat = false,
                 countryTarget = "Worldwide"
             )

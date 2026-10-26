@@ -1,5 +1,6 @@
 package io.threatlens.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,10 +61,9 @@ fun DashboardScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_threatlens_logo),
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_threatlens_emblem),
                             contentDescription = "ThreatLens Logo",
-                            tint = NeonCyan,
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -248,6 +248,75 @@ fun DashboardScreen(
                         value = "< 0.5%",
                         valueColor = NeonCyan
                     )
+                }
+            }
+
+            // Real-Time Protection Shield (Background Engine Toggle for On-Demand preference)
+            item {
+                val isRealtimeEnabled by viewModel.isRealtimeShieldEnabled.collectAsState()
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            1.dp,
+                            if (isRealtimeEnabled) NeonCyan.copy(alpha = 0.5f) else CyberCardBorder,
+                            RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(
+                                        if (isRealtimeEnabled) NeonCyan.copy(alpha = 0.15f) else CyberDarkSurface,
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isRealtimeEnabled) Icons.Default.Shield else Icons.Default.SecurityUpdateWarning,
+                                    contentDescription = null,
+                                    tint = if (isRealtimeEnabled) NeonCyan else TextMuted,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Real-Time Antivirus Engine",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = if (isRealtimeEnabled) 
+                                        "Active • Scans downloads & APK installs instantly" 
+                                    else 
+                                        "Turned Off • Manual on-demand scan mode only",
+                                    color = if (isRealtimeEnabled) NeonCyan else TextMuted,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isRealtimeEnabled,
+                            onCheckedChange = { viewModel.setRealtimeShieldEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = CyberBlack,
+                                checkedTrackColor = NeonCyan,
+                                uncheckedThumbColor = TextMuted,
+                                uncheckedTrackColor = CyberDarkSurface
+                            )
+                        )
+                    }
                 }
             }
 

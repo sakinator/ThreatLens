@@ -23,9 +23,23 @@ object UpdateCheckService {
         .readTimeout(6, TimeUnit.SECONDS)
         .build()
 
-    const val CURRENT_VERSION = "1.0.0"
+    fun getInstalledVersionName(context: android.content.Context? = null): String {
+        if (context == null) return "1.3.2"
+        return try {
+            val pInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }
+            pInfo.versionName ?: "1.3.2"
+        } catch (_: Exception) {
+            "1.3.2"
+        }
+    }
 
-    suspend fun checkForUpdates(): UpdateInfo = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdates(context: android.content.Context? = null): UpdateInfo = withContext(Dispatchers.IO) {
+        val currentVer = getInstalledVersionName(context)
         try {
             val request = Request.Builder()
                 .url("https://api.github.com/repos/sakinator/ThreatLens/releases/latest")
@@ -38,13 +52,13 @@ object UpdateCheckService {
                 if (!response.isSuccessful) {
                     return@withContext UpdateInfo(
                         hasUpdate = false,
-                        latestVersion = CURRENT_VERSION,
-                        currentVersion = CURRENT_VERSION,
+                        latestVersion = currentVer,
+                        currentVersion = currentVer,
                         releaseUrl = "https://github.com/sakinator/ThreatLens/releases"
                     )
                 }
 
-                val raw = response.body?.string() ?: return@withContext UpdateInfo(false, CURRENT_VERSION, CURRENT_VERSION, "")
+                val raw = response.body?.string() ?: return@withContext UpdateInfo(false, currentVer, currentVer, "")
                 val json = JSONObject(raw)
 
                 val tagName = json.optString("tag_name", "").removePrefix("v").trim()
@@ -64,12 +78,12 @@ object UpdateCheckService {
                     }
                 }
 
-                val isNewer = isVersionGreater(tagName, CURRENT_VERSION)
+                val isNewer = isVersionGreater(tagName, currentVer)
 
                 return@withContext UpdateInfo(
                     hasUpdate = isNewer,
-                    latestVersion = tagName.ifBlank { CURRENT_VERSION },
-                    currentVersion = CURRENT_VERSION,
+                    latestVersion = tagName.ifBlank { currentVer },
+                    currentVersion = currentVer,
                     releaseUrl = htmlUrl,
                     changelog = body,
                     downloadApkUrl = apkDownloadUrl
@@ -78,8 +92,8 @@ object UpdateCheckService {
         } catch (_: Exception) {
             UpdateInfo(
                 hasUpdate = false,
-                latestVersion = CURRENT_VERSION,
-                currentVersion = CURRENT_VERSION,
+                latestVersion = currentVer,
+                currentVersion = currentVer,
                 releaseUrl = "https://github.com/sakinator/ThreatLens/releases"
             )
         }
