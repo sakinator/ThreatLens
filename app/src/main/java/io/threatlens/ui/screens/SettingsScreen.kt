@@ -1030,13 +1030,10 @@ fun SettingsScreen(
 
             // Diagnostics & Error Log Exporter Card
             GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                borderColor = CyberCardBorder
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(

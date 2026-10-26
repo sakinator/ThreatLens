@@ -195,7 +195,7 @@ class MainActivity : ComponentActivity() {
         val threatId = intent?.getStringExtra("THREAT_ID")
         val threatSha256 = intent?.getStringExtra("THREAT_SHA256")
         if (threatId != null || threatSha256 != null) {
-            val matched = viewModel.threatReports.value.firstOrNull {
+            val matched = viewModel.scansList.value.firstOrNull {
                 (threatId != null && it.id == threatId) ||
                 (threatSha256 != null && it.sha256.equals(threatSha256, ignoreCase = true))
             }

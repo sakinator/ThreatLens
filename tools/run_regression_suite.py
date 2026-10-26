@@ -351,6 +351,7 @@ class RegressionTestRunner:
         rel_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "diagnostics", "RelativeTimeFormatter.kt")
         settings_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
         scan_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+        about_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "AboutScreen.kt")
 
         self.record("RelativeTimeFormatter.kt Exists", os.path.exists(rel_file))
         with open(rel_file, "r", encoding="utf-8") as f:
@@ -359,12 +360,15 @@ class RegressionTestRunner:
             settings_code = f.read()
         with open(scan_file, "r", encoding="utf-8") as f:
             scan_code = f.read()
+        with open(about_file, "r", encoding="utf-8") as f:
+            about_code = f.read()
 
         self.record("Human-Readable Interval Support (just now, Xm ago, Xh ago, Yesterday)", "just now" in rel_code and "h ago" in rel_code and "Yesterday" in rel_code)
         self.record("SettingsScreen Displays Relative Time Tag Under Button", "RelativeTimeFormatter.format(lastUpdateTimestamp)" in settings_code)
         self.record("SettingsScreen Displays Multi-Core Local Engine Badge", "ClamAV • YARA • Local" in settings_code)
         self.record("FullScanScreen Definition Tag Placed Under Update Button", "getFormattedLastUpdated()" in scan_code)
         self.record("FullScanScreen Aborted Status Colored NeonCrimson (Red)", "FullScanStatus.CANCELLED -> {" in scan_code and "NeonCrimson" in scan_code)
+        self.record("AboutScreen Implements Scrollable Formatted Changelog Box", "fun ScrollableChangelogBox(" in about_code and "verticalScroll(scrollState)" in about_code)
 
     # 15. Test Granular Per-Brand Network Error Isolation
     def test_per_brand_error_isolation(self):

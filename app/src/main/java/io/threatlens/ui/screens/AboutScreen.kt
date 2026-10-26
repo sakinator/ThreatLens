@@ -140,10 +140,17 @@ fun AboutScreen(
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text("🎉 New Version Available: v${result.latestVersion}", color = NeonEmerald, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                 if (!result.changelog.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Release Notes & Changelog:",
+                                        color = TextPrimary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(result.changelog, color = TextSecondary, fontSize = 11.sp, maxLines = 3)
+                                    ScrollableChangelogBox(changelog = result.changelog)
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
                                 Button(
                                     onClick = {
                                         val url = result.downloadApkUrl ?: result.releaseUrl
@@ -260,5 +267,77 @@ fun LinkRow(
     ) {
         Text(text = title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Icon(Icons.Default.OpenInNew, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+fun ScrollableChangelogBox(
+    changelog: String,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    val formattedLines = remember(changelog) {
+        changelog.lines().filter { it.isNotBlank() }
+    }
+
+    Surface(
+        color = CyberBlack.copy(alpha = 0.85f),
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 60.dp, max = 180.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            formattedLines.forEach { rawLine ->
+                val trimmed = rawLine.trim()
+                when {
+                    trimmed.startsWith("###") || trimmed.startsWith("##") || trimmed.startsWith("#") -> {
+                        val headingText = trimmed.replace(Regex("""^#+\s*"""), "")
+                        Text(
+                            text = headingText,
+                            color = NeonCyan,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                        )
+                    }
+                    trimmed.startsWith("-") || trimmed.startsWith("*") || trimmed.startsWith("•") -> {
+                        val bulletContent = trimmed.substring(1).trim()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = "•",
+                                color = NeonEmerald,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                            Text(
+                                text = bulletContent.replace("**", ""),
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+                    else -> {
+                        Text(
+                            text = trimmed.replace("**", ""),
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
