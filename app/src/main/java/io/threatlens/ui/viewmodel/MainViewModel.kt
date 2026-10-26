@@ -82,6 +82,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 current.removeAll { it.sha256 == newReport.sha256 }
                 current.add(0, newReport)
                 _scansList.value = current
+
+                // Dynamically update the currently opened detail sheet in real-time
+                if (_selectedReport.value?.sha256 == newReport.sha256) {
+                    _selectedReport.value = newReport
+                }
             }
         }
 

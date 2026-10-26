@@ -155,12 +155,22 @@ object RealtimeScanCoordinator {
         if (!filescanKey.isNullOrBlank()) pendingEngines.add("Filescan.io")
 
         val engineVerdictMap = mutableMapOf<String, String>()
+        val engineDetailsMap = mutableMapOf<String, List<String>>()
+
         engineVerdictMap["ThreatLens Local Engine"] = if (localVerdict.isMalicious) {
             "Flagged: ${localVerdict.threatFamily} (${localVerdict.detectedBehaviors.size} patterns)"
-        } else if (runningLocalScore > 0) {
-            "Suspicious: Score $runningLocalScore/100"
+        } else if (runningLocalScore >= 25) {
+            "Suspicious: Score $runningLocalScore/100 (${localVerdict.dangerousPermissions.size} permissions)"
         } else {
-            "Clean: 0 malicious patterns detected"
+            "Clean (Score $runningLocalScore/100 • Safe)"
+        }
+
+        engineDetailsMap["ThreatLens Local Engine"] = if (localVerdict.isMalicious || localVerdict.detectedBehaviors.isNotEmpty()) {
+            localVerdict.detectedBehaviors
+        } else if (localVerdict.dangerousPermissions.isNotEmpty()) {
+            listOf("Requested sensitive permissions: ${localVerdict.dangerousPermissions.joinToString(", ")}", "Bytecode pattern scan: Clean", "Offline signature database: Clean")
+        } else {
+            listOf("Bytecode pattern scan: Clean", "Offline signature database: Clean", "Normal permission matrix")
         }
 
         engineVerdictMap["AlienVault OTX"] = "Scanning public threat pulses..."
@@ -177,6 +187,16 @@ object RealtimeScanCoordinator {
 
         var flaggedEnginesCount = 0
         var totalEnginesCount = 0
+
+        val initialAiExplanation = if (highestSeverity != ThreatSeverity.SAFE || localVerdict.detectedBehaviors.isNotEmpty() || localVerdict.dangerousPermissions.isNotEmpty()) {
+            FallbackThreatDefinitions.getExplanation(
+                family = runningFamily,
+                behaviors = localVerdict.detectedBehaviors,
+                permissions = localVerdict.dangerousPermissions,
+                engineVerdicts = engineVerdictMap.toMap(),
+                engineDetails = engineDetailsMap.toMap()
+            )
+        } else null
 
         var currentReport = ThreatReport(
             targetName = file.name,
@@ -199,8 +219,10 @@ object RealtimeScanCoordinator {
             failedEngines = emptyList(),
             successfulEngines = emptyList(),
             engineVerdictMap = engineVerdictMap.toMap(),
+            engineDetailsMap = engineDetailsMap.toMap(),
             isOfflineMode = false,
             isFinal = false,
+            aiExplanation = initialAiExplanation,
             pendingEngines = pendingEngines.toList(),
             statusMessage = if (pendingEngines.isNotEmpty()) "⚡ Querying ${pendingEngines.size} threat intelligence engines..." else "🛡️ Analyzed via ThreatLens On-Device Security Engine"
         )
@@ -277,6 +299,7 @@ object RealtimeScanCoordinator {
                 failedEngines = failedEngines.toList(),
                 successfulEngines = successfulEngines.toList(),
                 engineVerdictMap = engineVerdictMap.toMap(),
+                engineDetailsMap = engineDetailsMap.toMap(),
                 isOfflineMode = successfulEngines.isEmpty(),
                 pendingEngines = pendingEngines.toList(),
                 statusMessage = statusText
@@ -290,13 +313,21 @@ object RealtimeScanCoordinator {
             flagged: Int,
             total: Int,
             sourceLabel: String,
-            family: String?
+            family: String?,
+            details: List<String> = emptyList()
         ) {
             reportMutex.withLock {
                 pendingEngines.remove(engineName)
                 successfulEngines.add(engineName)
+                if (details.isNotEmpty()) {
+                    engineDetailsMap[engineName] = details
+                }
                 engineVerdictMap[engineName] = if (flagged > 0) {
-                    "Flagged: ${family ?: "$flagged/$total detections"}"
+                    if (total > 0) {
+                        "Flagged ($flagged/$total): ${family ?: "Malware"}"
+                    } else {
+                        "Flagged: ${family ?: "$flagged detections"}"
+                    }
                 } else if (total > 0) {
                     "Clean (0/$total engines flagged)"
                 } else {
@@ -355,7 +386,8 @@ object RealtimeScanCoordinator {
                         flagged = otx.pulseCount,
                         total = maxOf(1, otx.pulseCount),
                         sourceLabel = if (otx.isMalicious) "AlienVault OTX (${otx.pulseCount} pulses)" else "AlienVault OTX (Clean)",
-                        family = otx.threatFamily
+                        family = otx.threatFamily,
+                        details = if (otx.tags.isNotEmpty()) otx.tags else listOf(otx.details)
                     )
                 } else {
                     onEngineFailed("AlienVault OTX")
@@ -371,13 +403,19 @@ object RealtimeScanCoordinator {
                 val circl = CirclHashlookupProvider.queryHash(sha256)
                 if (circl != null) {
                     val score = if (circl.isMalicious) 90 else 0
+                    val circlDetails = if (circl.isMalicious) {
+                        listOf(circl.details, "Database: NIST NSRL & CIRCL CERT Threat feeds")
+                    } else {
+                        listOf(circl.details, "Validated against NIST National Software Reference Library (NSRL)")
+                    }
                     onEngineFinished(
                         "CIRCL Hashlookup",
                         score = score,
                         flagged = if (circl.isMalicious) 1 else 0,
                         total = 1,
                         sourceLabel = if (circl.isMalicious) "CIRCL Threat DB" else "CIRCL Hashlookup (Clean)",
-                        family = if (circl.isMalicious) "CIRCL.Malware" else null
+                        family = if (circl.isMalicious) "CIRCL.Malware" else null,
+                        details = circlDetails
                     )
                 } else {
                     onEngineFailed("CIRCL Hashlookup")
@@ -393,6 +431,15 @@ object RealtimeScanCoordinator {
                 try {
                     val bazaar = MalwareBazaarProvider.queryHash(sha256, bazaarKey)
                     if (bazaar != null) {
+                        val mbDetails = if (bazaar.isMalicious) {
+                            listOf(
+                                "Signature: ${bazaar.signature ?: "Known Malware Sample"}",
+                                "File Type: ${bazaar.fileType ?: "APK Binary"}",
+                                "Tags: ${bazaar.tags.joinToString(", ").ifEmpty { "Known Android Threat" }}"
+                            )
+                        } else {
+                            listOf("Sample clean / unflagged in Abuse.ch MalwareBazaar malware repository.")
+                        }
                         if (bazaar.isMalicious) {
                             onEngineFinished(
                                 "MalwareBazaar",
@@ -400,7 +447,8 @@ object RealtimeScanCoordinator {
                                 flagged = 1,
                                 total = 1,
                                 sourceLabel = "MalwareBazaar (Abuse.ch)",
-                                family = bazaar.signature
+                                family = bazaar.signature,
+                                details = mbDetails
                             )
                         } else {
                             onEngineFinished(
@@ -409,7 +457,8 @@ object RealtimeScanCoordinator {
                                 flagged = 0,
                                 total = 1,
                                 sourceLabel = "MalwareBazaar (Clean)",
-                                family = null
+                                family = null,
+                                details = mbDetails
                             )
                         }
                     } else {
@@ -428,13 +477,19 @@ object RealtimeScanCoordinator {
                     val vt = VirusTotalProvider.queryHash(sha256, virusTotalKey!!)
                     if (vt != null && vt.totalEngines > 0) {
                         val score = if (vt.maliciousCount >= 4) 100 else if (vt.maliciousCount >= 1) 45 else 0
+                        val details = if (vt.detectedVendors.isNotEmpty()) {
+                            vt.detectedVendors
+                        } else {
+                            listOf("0/${vt.totalEngines} security vendors flagged this file across VirusTotal.")
+                        }
                         onEngineFinished(
                             "VirusTotal",
                             score = score,
                             flagged = vt.maliciousCount,
                             total = vt.totalEngines,
                             sourceLabel = "VirusTotal (${vt.maliciousCount}/${vt.totalEngines})",
-                            family = vt.suggestedThreatLabel
+                            family = vt.suggestedThreatLabel,
+                            details = details
                         )
                     } else if (vt != null) {
                         onEngineFinished(
@@ -443,7 +498,8 @@ object RealtimeScanCoordinator {
                             flagged = 0,
                             total = 0,
                             sourceLabel = "VirusTotal (Unindexed)",
-                            family = null
+                            family = null,
+                            details = listOf("Hash not indexed in VirusTotal database.")
                         )
                     } else {
                         onEngineFailed("VirusTotal")
@@ -461,13 +517,19 @@ object RealtimeScanCoordinator {
                     val md = MetaDefenderProvider.queryHash(sha256, metaDefenderKey!!)
                     if (md != null && md.totalEngines > 0) {
                         val score = if (md.enginesFlagged >= 3) 95 else if (md.threatFound) 40 else 0
+                        val mdDetails = if (md.detectedVendors.isNotEmpty()) {
+                            md.detectedVendors
+                        } else {
+                            listOf("0/${md.totalEngines} commercial AV engines flagged in OPSWAT MetaDefender.")
+                        }
                         onEngineFinished(
                             "MetaDefender",
                             score = score,
                             flagged = md.enginesFlagged,
                             total = md.totalEngines,
                             sourceLabel = "MetaDefender (${md.enginesFlagged}/${md.totalEngines})",
-                            family = md.threatName
+                            family = md.threatName,
+                            details = mdDetails
                         )
                     } else if (md != null) {
                         onEngineFinished(
@@ -476,7 +538,8 @@ object RealtimeScanCoordinator {
                             flagged = 0,
                             total = 0,
                             sourceLabel = "MetaDefender (Clean)",
-                            family = null
+                            family = null,
+                            details = listOf("Verified safe across commercial AV vendor multiscanning.")
                         )
                     } else {
                         onEngineFailed("MetaDefender")
@@ -493,13 +556,19 @@ object RealtimeScanCoordinator {
                 try {
                     val ha = HybridAnalysisProvider.queryHash(sha256, hybridAnalysisKey!!)
                     if (ha != null) {
+                        val haDetails = mutableListOf<String>()
+                        haDetails.add("Falcon Threat Score: ${ha.threatScore}/100")
+                        if (!ha.verdict.isNullOrBlank()) haDetails.add("Detonation Verdict: ${ha.verdict}")
+                        if (!ha.vxFamily.isNullOrBlank()) haDetails.add("Malware Family: ${ha.vxFamily}")
+                        haDetails.add("Sandbox: Falcon Dynamic Behavioral Detonation")
                         onEngineFinished(
                             "Hybrid Analysis",
                             score = ha.threatScore,
                             flagged = if (ha.threatScore >= 50) 1 else 0,
                             total = 1,
                             sourceLabel = "Hybrid Analysis (${ha.threatScore}/100)",
-                            family = ha.vxFamily
+                            family = ha.vxFamily,
+                            details = haDetails
                         )
                     } else {
                         onEngineFailed("Hybrid Analysis")
@@ -517,13 +586,18 @@ object RealtimeScanCoordinator {
                     val kas = KasperskyOpenTipProvider.queryHash(sha256, kasperskyKey!!)
                     if (kas != null) {
                         val score = if (kas.zone.equals("Red", ignoreCase = true)) 100 else if (kas.zone.equals("Yellow", ignoreCase = true)) 60 else 0
+                        val kasDetails = mutableListOf<String>()
+                        kasDetails.add("Kaspersky Threat Zone: ${kas.zone}")
+                        if (!kas.threatFamily.isNullOrBlank()) kasDetails.add("Kaspersky: ${kas.threatFamily}")
+                        kasDetails.add("Enterprise Intelligence: ${kas.details}")
                         onEngineFinished(
                             "Kaspersky OpenTIP",
                             score = score,
                             flagged = if (score > 0) 1 else 0,
                             total = 1,
                             sourceLabel = "Kaspersky (${kas.zone})",
-                            family = kas.threatFamily
+                            family = kas.threatFamily,
+                            details = kasDetails
                         )
                     } else {
                         onEngineFailed("Kaspersky OpenTIP")
@@ -540,13 +614,18 @@ object RealtimeScanCoordinator {
                 try {
                     val fs = FilescanProvider.queryHash(sha256, filescanKey!!)
                     if (fs != null) {
+                        val fsDetails = mutableListOf<String>()
+                        fsDetails.add("Filescan Threat Score: ${fs.threatScore}/100")
+                        if (!fs.verdict.isNullOrBlank()) fsDetails.add("Verdict: ${fs.verdict}")
+                        fsDetails.add("Static Analysis & IOC Extraction Engine")
                         onEngineFinished(
                             "Filescan.io",
                             score = fs.threatScore,
                             flagged = if (fs.threatScore >= 50) 1 else 0,
                             total = 1,
                             sourceLabel = "Filescan.io (${fs.verdict})",
-                            family = null
+                            family = null,
+                            details = fsDetails
                         )
                     } else {
                         onEngineFailed("Filescan.io")
@@ -565,46 +644,103 @@ object RealtimeScanCoordinator {
         // Handle any pending engines that timed out
         reportMutex.withLock {
             if (pendingEngines.isNotEmpty()) {
+                pendingEngines.forEach { engineName ->
+                    engineVerdictMap[engineName] = "Unreachable (Timeout)"
+                }
                 failedEngines.addAll(pendingEngines)
                 pendingEngines.clear()
             }
         }
 
-        // 5. AI Threat Explainer (with Instant Offline Fallback)
-        var aiExplanation: String? = null
-        if (currentReport.severity != ThreatSeverity.SAFE) {
-            val hasCustomKey = !openAiKey.isNullOrBlank() || !claudeKey.isNullOrBlank() || !geminiKey.isNullOrBlank() || !groqKey.isNullOrBlank()
-            val explainer = ThreatAiExplainer(
-                openAiKey = openAiKey,
-                claudeKey = claudeKey,
-                geminiApiKey = geminiKey,
-                groqApiKey = groqKey
-            )
-            aiExplanation = explainer.getExplanation(
-                targetName = file.name,
-                threatFamily = currentReport.threatFamily,
-                behaviors = currentReport.detectedBehaviors,
-                permissions = currentReport.dangerousPermissions
-            )
+        // Final overall score fusion
+        val finalWeighted = if (localVerdict.isMalicious || runningLocalScore >= 75) {
+            maxOf(runningLocalScore, runningCloudScore)
+        } else if (successfulEngines.isEmpty()) {
+            runningLocalScore
+        } else if (totalEnginesCount >= 25 && flaggedEnginesCount == 0 && runningLocalScore < 60) {
+            (runningLocalScore * 0.35).toInt()
+        } else {
+            maxOf(runningLocalScore, ((runningLocalScore * 0.40) + (runningCloudScore * 0.60)).toInt())
+        }.coerceIn(0, 100)
+
+        val finalSeverity = when {
+            finalWeighted >= 75 -> ThreatSeverity.MALICIOUS
+            finalWeighted >= 50 -> ThreatSeverity.HIGH_RISK
+            finalWeighted >= 25 -> ThreatSeverity.SUSPICIOUS
+            else -> ThreatSeverity.SAFE
         }
 
-        // 6. Final Result Formulation
-        val finalStatus = when {
-            successfulEngines.isNotEmpty() ->
-                "✓ Multi-Engine Scan Complete (${successfulEngines.joinToString(", ")}) • Score: ${currentReport.currentScore}/100"
-            failedEngines.isNotEmpty() ->
-                "🛡️ On-Device Analysis Complete (Cloud APIs unreachable) • Score: ${currentReport.currentScore}/100"
-            pendingEngines.isNotEmpty() ->
-                "✓ Multi-Engine Cloud & On-Device Scan Complete • Score: ${currentReport.currentScore}/100"
+        val effectiveDetectionType = when {
+            localVerdict.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
+                io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
+            flaggedEnginesCount > 0 ->
+                io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
+            localVerdict.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
+                io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
             else ->
-                "🛡️ On-Device Security Scan Complete • Score: ${currentReport.currentScore}/100"
+                io.threatlens.core.model.DetectionType.CLEAN
+        }
+
+        val finalBreakdown = currentReport.scoreBreakdown?.copy(
+            cloudScore = runningCloudScore,
+            totalScore = finalWeighted,
+            rationale = when (effectiveDetectionType) {
+                io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
+                    "Confirmed Malware: Matched known mobile Trojan or exploit signature in database/bytecode."
+                io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE ->
+                    "Cloud Flagged: Flagged by $flaggedEnginesCount cloud threat intelligence engine(s)."
+                io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
+                    "Heuristic Finding: Declares high-privilege capabilities or unusual permission matrix. (0 confirmed signatures)"
+                else ->
+                    "Verified Safe: 0 malicious signatures or hostile behavioral anomalies found across local and cloud engines."
+            }
+        )
+
+        // 5. Generate Comprehensive Point-by-Point AI Threat Evaluation
+        val explainer = ThreatAiExplainer(
+            openAiKey = openAiKey,
+            claudeKey = claudeKey,
+            geminiApiKey = geminiKey,
+            groqApiKey = groqKey
+        )
+        val finalAiExplanation = explainer.getExplanation(
+            targetName = resolvedAppName ?: file.name,
+            threatFamily = runningFamily,
+            behaviors = currentReport.detectedBehaviors,
+            permissions = currentReport.dangerousPermissions,
+            engineVerdicts = engineVerdictMap.toMap(),
+            engineDetails = engineDetailsMap.toMap()
+        )
+
+        val finalStatus = when {
+            flaggedEnginesCount > 0 ->
+                "⚠️ Flagged by $flaggedEnginesCount engines (${successfulEngines.size} engines responded) • Score: $finalWeighted/100"
+            successfulEngines.isNotEmpty() ->
+                "✓ Multi-Engine Scan Complete (${successfulEngines.size} engines verified) • Score: $finalWeighted/100"
+            failedEngines.isNotEmpty() ->
+                "🛡️ On-Device Analysis Complete (Cloud APIs unreachable) • Score: $finalWeighted/100"
+            else ->
+                "🛡️ On-Device Security Scan Complete • Score: $finalWeighted/100"
         }
 
         val finalReport = currentReport.copy(
+            cloudScore = runningCloudScore,
+            currentScore = finalWeighted,
+            severity = finalSeverity,
+            threatFamily = runningFamily,
+            detectionType = effectiveDetectionType,
+            scoreBreakdown = finalBreakdown,
+            cloudEnginesFlagged = flaggedEnginesCount,
+            cloudEnginesTotal = totalEnginesCount,
+            cloudSources = runningSources.toList(),
+            failedEngines = failedEngines.toList(),
+            successfulEngines = successfulEngines.toList(),
+            engineVerdictMap = engineVerdictMap.toMap(),
+            engineDetailsMap = engineDetailsMap.toMap(),
+            isOfflineMode = successfulEngines.isEmpty(),
             isFinal = true,
             pendingEngines = emptyList(),
-            aiExplanation = aiExplanation,
-            engineVerdictMap = engineVerdictMap.toMap(),
+            aiExplanation = finalAiExplanation,
             statusMessage = finalStatus
         )
 

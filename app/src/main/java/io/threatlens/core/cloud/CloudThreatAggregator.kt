@@ -243,4 +243,21 @@ class CloudThreatAggregator(
             successfulEngines = successfulEngines
         )
     }
+
+    companion object {
+        fun getEngineWebReportUrl(engineName: String, sha256: String): String? {
+            if (sha256.isBlank()) return null
+            return when (engineName) {
+                "VirusTotal" -> "https://www.virustotal.com/gui/file/$sha256"
+                "AlienVault OTX" -> "https://otx.alienvault.com/indicator/file/$sha256"
+                "CIRCL Hashlookup" -> "https://hashlookup.circl.lu/lookup/sha256/$sha256"
+                "MalwareBazaar" -> "https://bazaar.abuse.ch/sample/$sha256/"
+                "Kaspersky OpenTIP" -> "https://opentip.kaspersky.com/$sha256/"
+                "Hybrid Analysis" -> "https://www.hybrid-analysis.com/sample/$sha256"
+                "MetaDefender" -> "https://metadefender.opswat.com/results/file/$sha256/hash/overview"
+                "Filescan.io" -> "https://www.filescan.io/scan/$sha256"
+                else -> null
+            }
+        }
+    }
 }

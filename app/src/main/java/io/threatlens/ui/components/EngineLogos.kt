@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -239,6 +240,146 @@ fun EngineStatusBadge(
                     )
                 }
             }
+        }
+    }
+}
+
+data class VendorBrand(
+    val name: String,
+    val color: Color,
+    val initials: String,
+    val icon: ImageVector = Icons.Default.Shield
+)
+
+object SubEngineRegistry {
+    private val VENDORS = listOf(
+        VendorBrand("Kaspersky", Color(0xFF00A88E), "K"),
+        VendorBrand("Microsoft", Color(0xFF00A4EF), "MS"),
+        VendorBrand("WindowsDefender", Color(0xFF00A4EF), "MS"),
+        VendorBrand("Defender", Color(0xFF00A4EF), "MS"),
+        VendorBrand("Avast", Color(0xFFFF7800), "AV"),
+        VendorBrand("AVG", Color(0xFFFF7800), "AVG"),
+        VendorBrand("Bitdefender", Color(0xFFED1C24), "BD"),
+        VendorBrand("ESET", Color(0xFF00838F), "ESET"),
+        VendorBrand("ESET-NOD32", Color(0xFF00838F), "ESET"),
+        VendorBrand("Sophos", Color(0xFF0058A3), "SPH"),
+        VendorBrand("Google", Color(0xFF4285F4), "G"),
+        VendorBrand("PlayProtect", Color(0xFF4285F4), "G"),
+        VendorBrand("Symantec", Color(0xFFEDB111), "SYM"),
+        VendorBrand("Broadcom", Color(0xFFEDB111), "SYM"),
+        VendorBrand("TrendMicro", Color(0xFFD81B60), "TM"),
+        VendorBrand("McAfee", Color(0xFFC01818), "MC"),
+        VendorBrand("Fortinet", Color(0xFFDA291C), "FT"),
+        VendorBrand("ClamAV", Color(0xFF1E88E5), "CLAM"),
+        VendorBrand("AhnLab", Color(0xFF005BAC), "AHN"),
+        VendorBrand("F-Secure", Color(0xFF0072CE), "FS"),
+        VendorBrand("Malwarebytes", Color(0xFF0073D1), "MB"),
+        VendorBrand("SentinelOne", Color(0xFF4E2A84), "S1"),
+        VendorBrand("CrowdStrike", Color(0xFFE2231A), "CS"),
+        VendorBrand("DrWeb", Color(0xFF43A047), "DRW"),
+        VendorBrand("QuickHeal", Color(0xFFFF6F00), "QH"),
+        VendorBrand("Tencent", Color(0xFF12B7F5), "TC"),
+        VendorBrand("Yandex", Color(0xFFFF0000), "YA"),
+        VendorBrand("WithSecure", Color(0xFF0072CE), "WS"),
+        VendorBrand("Avira", Color(0xFFD32F2F), "AVR"),
+        VendorBrand("Ikarus", Color(0xFF388E3C), "IKR")
+    )
+
+    fun getVendorBrand(name: String): VendorBrand {
+        val clean = name.trim().lowercase()
+        return VENDORS.firstOrNull { clean.contains(it.name.lowercase()) }
+            ?: VendorBrand(
+                name = name.trim(),
+                color = Color(0xFF64748B),
+                initials = name.trim().take(3).uppercase()
+            )
+    }
+}
+
+@Composable
+fun VendorFindingBadge(
+    item: String,
+    isMalicious: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val colonIndex = item.indexOf(':')
+    if (colonIndex > 0) {
+        val vendorName = item.substring(0, colonIndex).trim()
+        val findingText = item.substring(colonIndex + 1).trim()
+        val vendor = SubEngineRegistry.getVendorBrand(vendorName)
+
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            color = CyberDarkSurface,
+            shape = RoundedCornerShape(6.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, vendor.color.copy(alpha = 0.4f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Sub-engine logo badge
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .background(vendor.color.copy(alpha = 0.2f), CircleShape)
+                        .border(1.dp, vendor.color, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (vendor.initials.length <= 2) {
+                        Text(
+                            text = vendor.initials,
+                            color = vendor.color,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Icon(
+                            imageVector = vendor.icon,
+                            contentDescription = vendorName,
+                            tint = vendor.color,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = vendorName,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = findingText,
+                        color = if (isMalicious) NeonCrimson else CyberAmber,
+                        fontSize = 10.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    } else {
+        // Non-vendor line (e.g. general intelligence finding)
+        Row(
+            modifier = modifier.fillMaxWidth().padding(vertical = 2.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = "• ",
+                color = if (isMalicious) NeonCrimson else NeonEmerald,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = item,
+                color = TextPrimary,
+                fontSize = 11.sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                lineHeight = 15.sp
+            )
         }
     }
 }

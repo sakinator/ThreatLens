@@ -215,8 +215,14 @@ fun ThreatItemRow(
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                         }
+                        val effectiveBadgeType = if (report.currentScore < 25 || report.severity == ThreatSeverity.SAFE) {
+                            io.threatlens.core.model.DetectionType.CLEAN
+                        } else {
+                            report.detectionType
+                        }
+
                         Surface(
-                            color = when (report.detectionType) {
+                            color = when (effectiveBadgeType) {
                                 io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson.copy(alpha = 0.18f)
                                 io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE -> NeonCyan.copy(alpha = 0.18f)
                                 io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber.copy(alpha = 0.18f)
@@ -225,13 +231,13 @@ fun ThreatItemRow(
                             shape = RoundedCornerShape(3.dp)
                         ) {
                             Text(
-                                text = when (report.detectionType) {
+                                text = when (effectiveBadgeType) {
                                     io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> "SIGNATURE"
                                     io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE -> "CLOUD"
                                     io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> "HEURISTIC"
                                     io.threatlens.core.model.DetectionType.CLEAN -> "SAFE"
                                 },
-                                color = when (report.detectionType) {
+                                color = when (effectiveBadgeType) {
                                     io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson
                                     io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE -> NeonCyan
                                     io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber
@@ -244,13 +250,26 @@ fun ThreatItemRow(
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
+                        val familyColor = when {
+                            report.severity == ThreatSeverity.MALICIOUS || report.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson
+                            report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS || report.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber
+                            else -> NeonEmerald
+                        }
+
+                        val displayFamily = when {
+                            report.currentScore < 25 || report.severity == ThreatSeverity.SAFE || report.threatFamily == "Clean" -> "Clean"
+                            report.threatFamily.startsWith("Heuristic.", ignoreCase = true) -> report.threatFamily.substringAfter("Heuristic.")
+                            else -> report.threatFamily
+                        }
+
                         Text(
-                            text = report.threatFamily,
-                            color = if (report.threatFamily != "Clean") NeonCrimson else NeonEmerald,
+                            text = displayFamily,
+                            color = familyColor,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                 }

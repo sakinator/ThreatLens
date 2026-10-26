@@ -1,5 +1,7 @@
 package io.threatlens.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,12 +20,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.threatlens.core.cloud.CloudThreatAggregator
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.ui.components.AppIconBadge
 import io.threatlens.ui.components.EngineLogoIcon
 import io.threatlens.ui.components.EngineStatusBadge
 import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ScoreBadge
+import io.threatlens.ui.components.VendorFindingBadge
 import io.threatlens.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -102,9 +106,15 @@ fun ThreatDetailSheet(
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
+                        val familyColor = when {
+                            report.currentScore >= 75 || report.threatFamily.contains("Trojan", ignoreCase = true) || report.threatFamily.contains("Malware", ignoreCase = true) -> NeonCrimson
+                            report.currentScore >= 25 || report.threatFamily.contains("Suspicious", ignoreCase = true) -> CyberAmber
+                            else -> NeonEmerald
+                        }
+                        val cleanFamilyName = if (report.currentScore < 25) "Clean" else report.threatFamily.removePrefix("Heuristic.")
                         Text(
-                            text = report.threatFamily,
-                            color = if (report.threatFamily != "Clean") NeonCrimson else NeonEmerald,
+                            text = cleanFamilyName,
+                            color = familyColor,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -287,7 +297,7 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // AI Explanation Card with Gemini/Groq branding
+            // AI Threat Analysis & Multi-Engine Breakdown Card
             if (!report.aiExplanation.isNullOrBlank()) {
                 Card(
                     modifier = Modifier
@@ -300,7 +310,7 @@ fun ThreatDetailSheet(
                             EngineLogoIcon("Google Gemini", modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "ThreatLens AI Threat Brief (Gemini 1.5 Flash)",
+                                text = if (report.isFinal) "ThreatLens AI Threat Analysis" else "ThreatLens AI Initial Assessment (Live Scanning...)",
                                 color = NeonCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
@@ -313,6 +323,39 @@ fun ThreatDetailSheet(
                             fontSize = 13.sp,
                             lineHeight = 19.sp
                         )
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            } else if (!report.isFinal) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, NeonCyan.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                    colors = CardDefaults.cardColors(containerColor = CyberCardSurface)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = NeonCyan
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "ThreatLens AI Evaluating Telemetry...",
+                                color = NeonCyan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "Synthesizing multi-engine verdicts, vendor findings & permissions...",
+                                color = TextMuted,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -359,8 +402,9 @@ fun ThreatDetailSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     report.engineVerdictMap.forEach { (sourceName, verdict) ->
                         val isPending = report.pendingEngines.contains(sourceName) || verdict.contains("Querying", ignoreCase = true) || verdict.contains("Scanning", ignoreCase = true)
-                        val isFlagged = verdict.startsWith("Flagged", ignoreCase = true) || verdict.contains("Malicious", ignoreCase = true) || verdict.contains("Suspicious", ignoreCase = true)
-                        val isClean = verdict.startsWith("Clean", ignoreCase = true) || verdict.contains("Clean", ignoreCase = true) || verdict.contains("Verified", ignoreCase = true)
+                        val isMaliciousFlag = verdict.startsWith("Flagged", ignoreCase = true) || verdict.contains("Malicious", ignoreCase = true)
+                        val isSuspicious = !isMaliciousFlag && (verdict.startsWith("Suspicious", ignoreCase = true) || verdict.contains("Suspicious", ignoreCase = true))
+                        val isClean = !isMaliciousFlag && !isSuspicious && (verdict.startsWith("Clean", ignoreCase = true) || verdict.contains("Clean", ignoreCase = true) || verdict.contains("Verified", ignoreCase = true))
                         val isExpanded = expandedEngines[sourceName] ?: false
 
                         Surface(
@@ -370,7 +414,8 @@ fun ThreatDetailSheet(
                                 1.dp,
                                 when {
                                     isPending -> NeonCyan.copy(alpha = 0.5f)
-                                    isFlagged -> NeonCrimson.copy(alpha = 0.5f)
+                                    isMaliciousFlag -> NeonCrimson.copy(alpha = 0.5f)
+                                    isSuspicious -> CyberAmber.copy(alpha = 0.5f)
                                     isClean -> NeonEmerald.copy(alpha = 0.25f)
                                     else -> CyberCardBorder
                                 }
@@ -397,7 +442,8 @@ fun ThreatDetailSheet(
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp,
                                                 maxLines = 1,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Surface(
@@ -429,7 +475,8 @@ fun ThreatDetailSheet(
                                             text = verdict,
                                             color = when {
                                                 isPending -> NeonCyan
-                                                isFlagged -> NeonCrimson
+                                                isMaliciousFlag -> NeonCrimson
+                                                isSuspicious -> CyberAmber
                                                 isClean -> NeonEmerald
                                                 else -> TextMuted
                                             },
@@ -445,12 +492,13 @@ fun ThreatDetailSheet(
                                     Surface(
                                         color = when {
                                             isPending -> NeonCyan.copy(alpha = 0.15f)
-                                            isFlagged -> NeonCrimson.copy(alpha = 0.18f)
+                                            isMaliciousFlag -> NeonCrimson.copy(alpha = 0.18f)
+                                            isSuspicious -> CyberAmber.copy(alpha = 0.18f)
                                             isClean -> NeonEmerald.copy(alpha = 0.18f)
                                             else -> CyberCardSurface
                                         },
                                         shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.width(76.dp)
+                                        modifier = Modifier.width(84.dp)
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center,
@@ -475,13 +523,15 @@ fun ThreatDetailSheet(
                                             } else {
                                                 Text(
                                                     text = when {
-                                                        isFlagged -> "FLAGGED"
+                                                        isMaliciousFlag -> "FLAGGED"
+                                                        isSuspicious -> "SUSPICIOUS"
                                                         isClean -> "CLEAN"
                                                         verdict.contains("Auth-Key", ignoreCase = true) -> "KEY REQ"
                                                         else -> "OPTIONAL"
                                                     },
                                                     color = when {
-                                                        isFlagged -> NeonCrimson
+                                                        isMaliciousFlag -> NeonCrimson
+                                                        isSuspicious -> CyberAmber
                                                         isClean -> NeonEmerald
                                                         verdict.contains("Auth-Key", ignoreCase = true) -> CyberAmber
                                                         else -> TextMuted
@@ -518,10 +568,35 @@ fun ThreatDetailSheet(
                                         )
                                         Text(
                                             text = verdict,
-                                            color = if (isFlagged) NeonCrimson else if (isClean) NeonEmerald else TextSecondary,
+                                            color = if (isMaliciousFlag) NeonCrimson else if (isSuspicious) CyberAmber else if (isClean) NeonEmerald else TextSecondary,
                                             fontSize = 12.sp,
                                             fontFamily = FontFamily.Monospace
                                         )
+
+                                        val details = report.engineDetailsMap[sourceName] ?: emptyList()
+                                        if (details.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = if (sourceName == "VirusTotal") "Security Vendor Findings (${details.size} detections):" else "Observed Technical Findings:",
+                                                color = if (isMaliciousFlag) NeonCrimson else if (isSuspicious) CyberAmber else NeonCyan,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(3.dp))
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(CyberBlack, RoundedCornerShape(8.dp))
+                                                    .border(1.dp, CyberCardBorder.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                                    .padding(8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                details.forEach { item ->
+                                                    VendorFindingBadge(item = item, isMalicious = isMaliciousFlag)
+                                                }
+                                            }
+                                        }
+
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = when (sourceName) {
@@ -540,6 +615,39 @@ fun ThreatDetailSheet(
                                             fontSize = 11.sp,
                                             lineHeight = 15.sp
                                         )
+
+                                        val webReportUrl = CloudThreatAggregator.getEngineWebReportUrl(sourceName, report.sha256)
+                                        if (!webReportUrl.isNullOrBlank()) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            OutlinedButton(
+                                                onClick = {
+                                                    try {
+                                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(webReportUrl))
+                                                        context.startActivity(intent)
+                                                    } catch (_: Exception) {}
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(8.dp),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                                                colors = ButtonDefaults.outlinedButtonColors(
+                                                    containerColor = NeonCyan.copy(alpha = 0.08f),
+                                                    contentColor = NeonCyan
+                                                ),
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.OpenInNew,
+                                                    contentDescription = "View Web Results",
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "View Web Results ($sourceName) ↗",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }

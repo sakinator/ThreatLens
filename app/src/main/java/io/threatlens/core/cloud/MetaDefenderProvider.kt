@@ -16,7 +16,8 @@ object MetaDefenderProvider {
         val threatFound: Boolean,
         val enginesFlagged: Int,
         val totalEngines: Int,
-        val threatName: String?
+        val threatName: String?,
+        val detectedVendors: List<String> = emptyList()
     )
 
     fun queryHash(sha256: String, apiKey: String): MetaDefenderResult? {
@@ -30,7 +31,7 @@ object MetaDefenderProvider {
 
             client.newCall(request).execute().use { response ->
                 if (response.code == 404) {
-                    return MetaDefenderResult(false, 0, 0, null)
+                    return MetaDefenderResult(false, 0, 0, null, emptyList())
                 }
                 if (!response.isSuccessful) return null
                 val raw = response.body?.string() ?: return null
@@ -42,6 +43,7 @@ object MetaDefenderProvider {
                 val scanDetails = scanResults.optJSONObject("scan_details")
 
                 var topThreatName: String? = null
+                val flaggedVendors = mutableListOf<String>()
                 if (scanDetails != null && detectedEngines > 0) {
                     val keys = scanDetails.keys()
                     while (keys.hasNext()) {
@@ -49,8 +51,8 @@ object MetaDefenderProvider {
                         val result = scanDetails.getJSONObject(engine)
                         val threat = result.optString("threat_found")
                         if (!threat.isNullOrBlank()) {
-                            topThreatName = threat
-                            break
+                            if (topThreatName == null) topThreatName = threat
+                            flaggedVendors.add("$engine: $threat")
                         }
                     }
                 }
@@ -59,7 +61,8 @@ object MetaDefenderProvider {
                     threatFound = detectedEngines > 0,
                     enginesFlagged = detectedEngines,
                     totalEngines = totalEngines,
-                    threatName = topThreatName
+                    threatName = topThreatName,
+                    detectedVendors = flaggedVendors
                 )
             }
         } catch (e: Exception) {

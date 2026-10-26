@@ -47,8 +47,8 @@ object VirusTotalProvider {
                 val undetected = stats.optInt("undetected", 0)
                 val total = malicious + suspicious + harmless + undetected
 
-                val label = attributes.optJSONObject("popular_threat_classification")
-                    ?.optString("suggested_threat_label")
+                val rawLabel = attributes.optJSONObject("popular_threat_classification")
+                    ?.optString("suggested_threat_label")?.trim()
 
                 val flaggedVendors = mutableListOf<String>()
                 val resultsObj = attributes.optJSONObject("last_analysis_results")
@@ -59,16 +59,33 @@ object VirusTotalProvider {
                         val engineResult = resultsObj.getJSONObject(engineName)
                         val category = engineResult.optString("category")
                         if (category == "malicious" || category == "suspicious") {
-                            flaggedVendors.add("$engineName: ${engineResult.optString("result", "threat")}")
+                            val res = engineResult.optString("result", "Flagged")
+                            flaggedVendors.add("$engineName: $res")
                         }
                     }
+                }
+
+                // Resolve descriptive threat label (replace generic codes like "malct" with concrete family from top engines)
+                val resolvedLabel = if (!rawLabel.isNullOrBlank() && rawLabel.length > 5 && !rawLabel.equals("malct", ignoreCase = true)) {
+                    rawLabel
+                } else {
+                    val topHit = flaggedVendors.firstOrNull { vendor ->
+                        vendor.startsWith("Kaspersky", ignoreCase = true) ||
+                        vendor.startsWith("Microsoft", ignoreCase = true) ||
+                        vendor.startsWith("Avast", ignoreCase = true) ||
+                        vendor.startsWith("ESET", ignoreCase = true) ||
+                        vendor.startsWith("Sophos", ignoreCase = true) ||
+                        vendor.startsWith("Google", ignoreCase = true)
+                    }?.substringAfter(": ")?.trim()
+
+                    topHit ?: flaggedVendors.firstOrNull()?.substringAfter(": ")?.trim() ?: rawLabel?.ifBlank { null }
                 }
 
                 VtResult(
                     maliciousCount = malicious,
                     suspiciousCount = suspicious,
                     totalEngines = total,
-                    suggestedThreatLabel = label,
+                    suggestedThreatLabel = resolvedLabel,
                     detectedVendors = flaggedVendors
                 )
             }

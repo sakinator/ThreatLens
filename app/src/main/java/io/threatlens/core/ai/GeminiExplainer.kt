@@ -19,26 +19,20 @@ object GeminiExplainer {
         targetName: String,
         threatFamily: String,
         behaviors: List<String>,
-        permissions: List<String>
+        permissions: List<String>,
+        engineVerdicts: Map<String, String> = emptyMap(),
+        engineDetails: Map<String, List<String>> = emptyMap()
     ): String? {
         if (apiKey.isBlank()) return null
 
-        val prompt = """
-            You are a cybersecurity expert on ThreatLens mobile security team.
-            Explain the following threat to a regular smartphone user in clear, plain, non-technical language:
-            
-            File Name: $targetName
-            Identified Threat: $threatFamily
-            Observed Behaviors: ${if (behaviors.isEmpty()) "Suspicious signature match" else behaviors.joinToString("; ")}
-            Dangerous Permissions: ${permissions.joinToString(", ")}
-            
-            Structure your response strictly in 3 short sections:
-            1. What is this? (1-2 simple sentences)
-            2. What can it cause? (2-3 bullet points: e.g. bank account drainage, privacy theft, screen lockout)
-            3. What to do now: (1 clear, actionable directive)
-            
-            Keep the total response under 110 words.
-        """.trimIndent()
+        val prompt = "${ThreatAiPromptBuilder.SYSTEM_PROMPT}\n\n" + ThreatAiPromptBuilder.buildUserPrompt(
+            targetName = targetName,
+            threatFamily = threatFamily,
+            behaviors = behaviors,
+            permissions = permissions,
+            engineVerdicts = engineVerdicts,
+            engineDetails = engineDetails
+        )
 
         return try {
             val json = JSONObject().apply {

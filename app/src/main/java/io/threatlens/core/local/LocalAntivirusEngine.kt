@@ -175,11 +175,11 @@ object LocalAntivirusEngine {
                             detectedFamily = "Heuristic.Dropper"
                             category = "Malicious Dropper"
                         }
-                        heuristic.score >= 40 -> {
+                        heuristic.score >= 45 -> {
                             detectedFamily = "Heuristic.HighPrivilege"
                             category = "High Privilege Tool"
                         }
-                        heuristic.score >= 20 -> {
+                        heuristic.score >= 25 -> {
                             detectedFamily = "Heuristic.Suspicious"
                             category = "Potentially Unwanted Application"
                         }
@@ -192,11 +192,16 @@ object LocalAntivirusEngine {
             }
         }
 
-        val isMalicious = highestScore >= 75
+        val isMalicious = highestScore >= 75 || hasBytecodeMatch || sig != null
         val detectionType = when {
             hasBytecodeMatch || sig != null -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
-            highestScore > 0 -> io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
+            highestScore >= 25 -> io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
             else -> io.threatlens.core.model.DetectionType.CLEAN
+        }
+
+        if (detectionType == io.threatlens.core.model.DetectionType.CLEAN) {
+            detectedFamily = "Clean"
+            category = "Clean"
         }
 
         val rationale = when (detectionType) {
@@ -205,7 +210,7 @@ object LocalAntivirusEngine {
             io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
                 "Heuristic Finding: Score based on ${dangerousPermissions.size} sensitive permissions and runtime capabilities. No confirmed Trojan signature matched."
             else ->
-                "Verified Safe: 0 malicious signatures or harmful heuristic patterns identified."
+                "Verified Safe: Normal permission usage. 0 malicious signatures or harmful heuristic patterns identified."
         }
 
         if (sources.isEmpty()) {

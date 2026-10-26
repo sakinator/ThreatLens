@@ -19,23 +19,21 @@ object GroqExplainer {
         targetName: String,
         threatFamily: String,
         behaviors: List<String>,
-        permissions: List<String>
+        permissions: List<String>,
+        engineVerdicts: Map<String, String> = emptyMap(),
+        engineDetails: Map<String, List<String>> = emptyMap()
     ): String? {
         if (apiKey.isBlank()) return null
 
-        val systemPrompt = "You are a cybersecurity expert on ThreatLens mobile security team. Explain Android threats in simple, plain, non-technical language."
-        val userPrompt = """
-            File Name: $targetName
-            Identified Threat: $threatFamily
-            Observed Behaviors: ${behaviors.joinToString("; ")}
-            Dangerous Permissions: ${permissions.joinToString(", ")}
-            
-            Structure in 3 short sections:
-            1. What is this? (1-2 sentences)
-            2. What can it cause? (2 bullet points)
-            3. What to do now: (1 clear directive)
-            Keep under 100 words.
-        """.trimIndent()
+        val systemPrompt = ThreatAiPromptBuilder.SYSTEM_PROMPT
+        val userPrompt = ThreatAiPromptBuilder.buildUserPrompt(
+            targetName = targetName,
+            threatFamily = threatFamily,
+            behaviors = behaviors,
+            permissions = permissions,
+            engineVerdicts = engineVerdicts,
+            engineDetails = engineDetails
+        )
 
         return try {
             val json = JSONObject().apply {
@@ -45,7 +43,7 @@ object GroqExplainer {
                     put(JSONObject().put("role", "user").put("content", userPrompt))
                 })
                 put("temperature", 0.3)
-                put("max_tokens", 250)
+                put("max_tokens", 800)
             }
 
             val request = Request.Builder()

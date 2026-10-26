@@ -19,29 +19,26 @@ object ClaudeExplainer {
         targetName: String,
         threatFamily: String,
         behaviors: List<String>,
-        permissions: List<String>
+        permissions: List<String>,
+        engineVerdicts: Map<String, String> = emptyMap(),
+        engineDetails: Map<String, List<String>> = emptyMap()
     ): String? {
         if (apiKey.isBlank()) return null
 
-        val systemPrompt = "You are a cybersecurity expert on ThreatLens mobile security team. Explain Android malware and APK threats to a regular smartphone user in clear, non-technical plain English."
-        val userPrompt = """
-            File Name: $targetName
-            Identified Threat: $threatFamily
-            Observed Behaviors: ${behaviors.joinToString("; ")}
-            Dangerous Permissions: ${permissions.joinToString(", ")}
-            
-            Structure your response strictly in 3 short sections:
-            1. What is this? (1-2 simple sentences)
-            2. What can it cause? (2-3 bullet points: e.g. bank theft, privacy snooping, screen lockout)
-            3. Recommended Action: (1 direct directive)
-            
-            Keep total response under 100 words.
-        """.trimIndent()
+        val systemPrompt = ThreatAiPromptBuilder.SYSTEM_PROMPT
+        val userPrompt = ThreatAiPromptBuilder.buildUserPrompt(
+            targetName = targetName,
+            threatFamily = threatFamily,
+            behaviors = behaviors,
+            permissions = permissions,
+            engineVerdicts = engineVerdicts,
+            engineDetails = engineDetails
+        )
 
         return try {
             val json = JSONObject().apply {
                 put("model", "claude-3-5-haiku-20241022")
-                put("max_tokens", 250)
+                put("max_tokens", 800)
                 put("system", systemPrompt)
                 put("messages", JSONArray().put(
                     JSONObject().put("role", "user").put("content", userPrompt)

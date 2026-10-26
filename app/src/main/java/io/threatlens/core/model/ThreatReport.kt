@@ -43,6 +43,7 @@ data class ThreatReport(
     val isOfflineMode: Boolean = false,
     val contributingEngines: List<String> = emptyList(),
     val engineVerdictMap: Map<String, String> = emptyMap(),
+    val engineDetailsMap: Map<String, List<String>> = emptyMap(),
     val aiExplanation: String? = null,
     val isFinal: Boolean = false,
     val pendingEngines: List<String> = emptyList(),
