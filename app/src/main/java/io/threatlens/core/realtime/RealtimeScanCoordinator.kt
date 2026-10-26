@@ -177,14 +177,12 @@ object RealtimeScanCoordinator {
         engineVerdictMap["AlienVault OTX"] = "Scanning public threat pulses..."
         engineVerdictMap["CIRCL Hashlookup"] = "Querying NIST NSRL database..."
 
-        if (bazaarKey.isNullOrBlank()) {
-            engineVerdictMap["MalwareBazaar"] = "Auth-Key Required (Free on bazaar.abuse.ch)"
-        }
-        if (virusTotalKey.isNullOrBlank()) engineVerdictMap["VirusTotal"] = "Key Not Configured (Optional)"
-        if (metaDefenderKey.isNullOrBlank()) engineVerdictMap["MetaDefender"] = "Key Not Configured (Optional)"
-        if (hybridAnalysisKey.isNullOrBlank()) engineVerdictMap["Hybrid Analysis"] = "Key Not Configured (Optional)"
-        if (kasperskyKey.isNullOrBlank()) engineVerdictMap["Kaspersky OpenTIP"] = "Key Not Configured (Optional)"
-        if (filescanKey.isNullOrBlank()) engineVerdictMap["Filescan.io"] = "Key Not Configured (Optional)"
+        if (bazaarKey.isNullOrBlank()) engineVerdictMap["MalwareBazaar"] = "No results (API key not configured)"
+        if (virusTotalKey.isNullOrBlank()) engineVerdictMap["VirusTotal"] = "No results (API key not configured)"
+        if (metaDefenderKey.isNullOrBlank()) engineVerdictMap["MetaDefender"] = "No results (API key not configured)"
+        if (hybridAnalysisKey.isNullOrBlank()) engineVerdictMap["Hybrid Analysis"] = "No results (API key not configured)"
+        if (kasperskyKey.isNullOrBlank()) engineVerdictMap["Kaspersky OpenTIP"] = "No results (API key not configured)"
+        if (filescanKey.isNullOrBlank()) engineVerdictMap["Filescan.io"] = "No results (API key not configured)"
 
         var flaggedEnginesCount = 0
         var totalEnginesCount = 0

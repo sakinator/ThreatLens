@@ -18,8 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.threatlens.core.cloud.CloudThreatAggregator
@@ -324,13 +328,8 @@ fun ThreatDetailSheet(
                                 fontSize = 14.sp
                             )
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = report.aiExplanation,
-                            color = TextPrimary,
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp
-                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FormattedAiAnalysisView(markdownText = report.aiExplanation)
                     }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -407,8 +406,13 @@ fun ThreatDetailSheet(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val allEngines = report.engineVerdictMap.toList()
+                val (activeEngines, inactiveEngines) = allEngines.partition { (_, verdict) ->
+                    !verdict.contains("not configured", ignoreCase = true) && !verdict.contains("Auth-Key", ignoreCase = true)
+                }
+
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    report.engineVerdictMap.forEach { (sourceName, verdict) ->
+                    activeEngines.forEach { (sourceName, verdict) ->
                         val isPending = report.pendingEngines.contains(sourceName) || verdict.contains("Querying", ignoreCase = true) || verdict.contains("Scanning", ignoreCase = true)
                         val isMaliciousFlag = verdict.startsWith("Flagged", ignoreCase = true) || verdict.contains("Malicious", ignoreCase = true)
                         val isSuspicious = !isMaliciousFlag && (verdict.startsWith("Suspicious", ignoreCase = true) || verdict.contains("Suspicious", ignoreCase = true))
@@ -534,14 +538,14 @@ fun ThreatDetailSheet(
                                                         isMaliciousFlag -> "FLAGGED"
                                                         isSuspicious -> "SUSPICIOUS"
                                                         isClean -> "CLEAN"
-                                                        verdict.contains("Auth-Key", ignoreCase = true) -> "KEY REQ"
-                                                        else -> "OPTIONAL"
+                                                        verdict.contains("Unreachable", ignoreCase = true) -> "OFFLINE"
+                                                        else -> "UNINDEXED"
                                                     },
                                                     color = when {
                                                         isMaliciousFlag -> NeonCrimson
                                                         isSuspicious -> CyberAmber
                                                         isClean -> NeonEmerald
-                                                        verdict.contains("Auth-Key", ignoreCase = true) -> CyberAmber
+                                                        verdict.contains("Unreachable", ignoreCase = true) -> TextMuted
                                                         else -> TextMuted
                                                     },
                                                     fontSize = 9.sp,
@@ -653,6 +657,102 @@ fun ThreatDetailSheet(
                                                     text = "View Web Results ($sourceName) ↗",
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (inactiveEngines.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        var showInactiveEngines by remember { mutableStateOf(false) }
+
+                        Surface(
+                            color = CyberBlack.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder.copy(alpha = 0.7f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showInactiveEngines = !showInactiveEngines }
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Inactive Engines",
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "${inactiveEngines.size} Engines Inactive (Missing API Key)",
+                                            color = TextSecondary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp
+                                        )
+                                        Text(
+                                            text = "Skipped during scan • Configure keys in Settings",
+                                            color = TextMuted,
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = CyberCardSurface,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "NO KEY",
+                                            color = TextMuted,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = if (showInactiveEngines) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Toggle",
+                                        tint = TextMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                if (showInactiveEngines) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        inactiveEngines.forEach { (name, _) ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(CyberBlack, RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                EngineLogoIcon(name, modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = name,
+                                                    color = TextSecondary,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                Text(
+                                                    text = "No results (API key not configured)",
+                                                    color = TextMuted,
+                                                    fontSize = 10.sp,
+                                                    fontFamily = FontFamily.Monospace
                                                 )
                                             }
                                         }
@@ -1188,5 +1288,292 @@ private fun ScoreComponentRow(name: String, scoreText: String, isElevated: Boole
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace
         )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// High-Legibility Formatted AI Threat Analysis Composable
+// ---------------------------------------------------------------------------
+
+private data class AiSectionBlock(
+    val title: String,
+    val badgeLabel: String,
+    val accentColor: Color,
+    val rawLines: List<String>
+)
+
+@Composable
+fun FormattedAiAnalysisView(
+    markdownText: String,
+    modifier: Modifier = Modifier
+) {
+    val sections = remember(markdownText) { parseAiMarkdownSections(markdownText) }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        sections.forEachIndexed { index, section ->
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Section Header with Neon Category Badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Surface(
+                        color = section.accentColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(4.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, section.accentColor.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = section.badgeLabel,
+                            color = section.accentColor,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = section.title,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                if (section.badgeLabel == "NOTICE") {
+                    // Subtle info box for skipped/inactive unconfigured engines
+                    Surface(
+                        color = CyberBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder.copy(alpha = 0.7f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = TextMuted,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .padding(top = 1.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            val noticeContent = section.rawLines.filter { it.isNotBlank() }.joinToString(" ")
+                            Text(
+                                text = parseMarkdownInline(noticeContent),
+                                fontSize = 11.sp,
+                                lineHeight = 17.sp
+                            )
+                        }
+                    }
+                } else {
+                    // Render lines with generous vertical spacing and stylized indicators
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        section.rawLines.forEach { line ->
+                            val trimmed = line.trim()
+                            if (trimmed.isNotBlank()) {
+                                val isSubBullet = line.startsWith("   -") || line.startsWith("   •") || line.startsWith("  -") || line.startsWith("  •") || line.startsWith("\t-")
+                                val isTopBullet = !isSubBullet && (trimmed.startsWith("•") || trimmed.startsWith("- ") || trimmed.startsWith("* "))
+                                val numberedMatch = Regex("""^(\*\*?\d+\.?\*\*?|\d+\.)\s*(.*)""").find(trimmed)
+
+                                when {
+                                    isSubBullet -> {
+                                        val content = trimmed.removePrefix("-").removePrefix("•").removePrefix("*").trim()
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 14.dp, top = 2.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Text(
+                                                text = "└─",
+                                                color = section.accentColor.copy(alpha = 0.7f),
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                modifier = Modifier.padding(end = 6.dp)
+                                            )
+                                            Text(
+                                                text = parseMarkdownInline(content),
+                                                fontSize = 12.sp,
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                    }
+                                    isTopBullet -> {
+                                        val content = trimmed.removePrefix("•").removePrefix("-").removePrefix("*").trim()
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 2.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Text(
+                                                text = "▸",
+                                                color = section.accentColor,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(end = 8.dp)
+                                            )
+                                            Text(
+                                                text = parseMarkdownInline(content),
+                                                fontSize = 12.sp,
+                                                lineHeight = 19.sp
+                                            )
+                                        }
+                                    }
+                                    numberedMatch != null -> {
+                                        val numRaw = numberedMatch.groupValues[1].replace("*", "").replace(".", "").trim()
+                                        val content = numberedMatch.groupValues[2].trim()
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 2.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Surface(
+                                                color = section.accentColor.copy(alpha = 0.15f),
+                                                shape = RoundedCornerShape(4.dp),
+                                                modifier = Modifier.padding(end = 8.dp, top = 1.dp)
+                                            ) {
+                                                Text(
+                                                    text = numRaw,
+                                                    color = section.accentColor,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                            Text(
+                                                text = parseMarkdownInline(content),
+                                                fontSize = 12.sp,
+                                                lineHeight = 19.sp
+                                            )
+                                        }
+                                    }
+                                    else -> {
+                                        Text(
+                                            text = parseMarkdownInline(trimmed),
+                                            fontSize = 12.sp,
+                                            lineHeight = 19.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Clean divider between sections
+                if (index < sections.size - 1) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Divider(color = CyberCardBorder.copy(alpha = 0.5f))
+                }
+            }
+        }
+    }
+}
+
+private fun parseAiMarkdownSections(rawMarkdown: String): List<AiSectionBlock> {
+    val sections = mutableListOf<AiSectionBlock>()
+    val lines = rawMarkdown.lines()
+
+    var currentHeading = ""
+    var currentLines = mutableListOf<String>()
+
+    fun flushCurrentSection() {
+        if (currentHeading.isNotEmpty() || currentLines.any { it.isNotBlank() }) {
+            val (title, badge, color) = getSectionHeaderStyle(currentHeading)
+            sections.add(
+                AiSectionBlock(
+                    title = title,
+                    badgeLabel = badge,
+                    accentColor = color,
+                    rawLines = currentLines.toList()
+                )
+            )
+            currentLines = mutableListOf()
+        }
+    }
+
+    for (line in lines) {
+        val trimmed = line.trim()
+        if (isSectionHeader(trimmed)) {
+            flushCurrentSection()
+            currentHeading = trimmed
+        } else {
+            currentLines.add(line)
+        }
+    }
+    flushCurrentSection()
+    return sections
+}
+
+private fun isSectionHeader(line: String): Boolean {
+    if (line.startsWith("#")) return true
+    if (line.matches(Regex("""^(\d+\.|\*\*?\d+\.?\*\*?)\s*(🛡️|🔬|⚠️|🛑|ℹ️|[A-Z]).*"""))) return true
+    if (line.startsWith("🛡️") || line.startsWith("🔬") || line.startsWith("⚠️") || line.startsWith("🛑") || line.startsWith("ℹ️")) return true
+    return false
+}
+
+private fun getSectionHeaderStyle(rawHeading: String): Triple<String, String, Color> {
+    val clean = rawHeading
+        .replace(Regex("""^[#\s\d\.\*]+"""), "")
+        .replace(Regex("""^\s*(🛡️|🔬|⚠️|🛑|ℹ️)\s*"""), "")
+        .replace("**", "")
+        .trim()
+
+    val lower = rawHeading.lowercase()
+    return when {
+        lower.contains("executive") || lower.contains("assessment") || lower.contains("verdict") || lower.contains("🛡️") ->
+            Triple(if (clean.isEmpty()) "Executive Threat Assessment" else clean, "EXECUTIVE", NeonCyan)
+        lower.contains("consensus") || lower.contains("vendor") || lower.contains("multi-engine") || lower.contains("🔬") ->
+            Triple(if (clean.isEmpty()) "Multi-Engine Consensus" else clean, "CONSENSUS", Color(0xFF38BDF8))
+        lower.contains("point-by-point") || lower.contains("finding") || lower.contains("technical") || lower.contains("risk") || lower.contains("behavior") || lower.contains("⚠️") ->
+            Triple(if (clean.isEmpty()) "Technical Findings & Risk" else clean, "FINDINGS", CyberAmber)
+        lower.contains("remediation") || lower.contains("action") || lower.contains("plan") || lower.contains("recommended") || lower.contains("🛑") ->
+            Triple(if (clean.isEmpty()) "Recommended Remediation" else clean, "ACTION", NeonCrimson)
+        lower.contains("notice") || lower.contains("coverage") || lower.contains("inactive") || lower.contains("unconfigured") || lower.contains("ℹ️") ->
+            Triple(if (clean.isEmpty()) "Engine Coverage Notice" else clean, "NOTICE", TextMuted)
+        else ->
+            Triple(if (clean.isEmpty()) "Security Analysis" else clean, "ANALYSIS", NeonCyan)
+    }
+}
+
+private fun parseMarkdownInline(
+    text: String,
+    primaryColor: Color = TextPrimary,
+    defaultColor: Color = TextSecondary
+): AnnotatedString {
+    return buildAnnotatedString {
+        var currentIndex = 0
+        val regex = Regex("""\*\*(.*?)\*\*""")
+        val matches = regex.findAll(text)
+
+        for (match in matches) {
+            val range = match.range
+            if (range.first > currentIndex) {
+                withStyle(SpanStyle(color = defaultColor, fontWeight = FontWeight.Normal)) {
+                    append(text.substring(currentIndex, range.first))
+                }
+            }
+            val boldContent = match.groupValues[1]
+            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
+                append(boldContent)
+            }
+            currentIndex = range.last + 1
+        }
+
+        if (currentIndex < text.length) {
+            withStyle(SpanStyle(color = defaultColor, fontWeight = FontWeight.Normal)) {
+                append(text.substring(currentIndex))
+            }
+        }
     }
 }

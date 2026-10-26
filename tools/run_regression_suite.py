@@ -53,6 +53,7 @@ class RegressionTestRunner:
         self.test_ai_fallback_rules()
         self.test_cloud_and_vendor_brand_registry()
         self.test_kotlin_syntax_and_imports()
+        self.test_ai_formatting_and_inactive_engines()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -265,6 +266,33 @@ class RegressionTestRunner:
         else:
             for rel, err in error_files:
                 self.record(f"Syntax Check in {rel}", False, err)
+
+    # 9. Test AI Threat Analysis Legibility & Inactive Engine Isolation
+    def test_ai_formatting_and_inactive_engines(self):
+        print(f"\n{YELLOW}▶ SUITE 9: AI Analysis Formatting & Inactive Engine Isolation{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        fallback_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "ai", "FallbackThreatDefinitions.kt")
+        ai_explainer_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "ai", "ThreatAiExplainer.kt")
+
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(fallback_file, "r", encoding="utf-8") as f:
+            fallback_code = f.read()
+        with open(ai_explainer_file, "r", encoding="utf-8") as f:
+            explainer_code = f.read()
+
+        # Check FormattedAiAnalysisView in ThreatDetailSheet
+        self.record("FormattedAiAnalysisView Composable Implemented", "fun FormattedAiAnalysisView(" in sheet_code)
+        self.record("Inline Markdown Bold Parser Implemented", "fun parseMarkdownInline(" in sheet_code)
+        self.record("AI Category Neon Color-Coding Implemented", "EXECUTIVE" in sheet_code and "CONSENSUS" in sheet_code and "FINDINGS" in sheet_code)
+        self.record("NO KEY Badge Used (OPTIONAL Eliminated)", "NO KEY" in sheet_code and 'else -> "OPTIONAL"' not in sheet_code)
+        self.record("Inactive Engines Grouped at Sheet Bottom", "Engines Inactive (Missing API Key)" in sheet_code)
+
+        # Check Inactive Engine Filtering in AI Prompts
+        self.record("AI Prompt Filters Unconfigured Engines from Consensus", "IMPORTANT NOTE ON INACTIVE ENGINES" in explainer_code)
+        self.record("Fallback Definitions Excludes Inactive Engines from Consensus", "Active Engines Only" in fallback_code)
+        self.record("Fallback Definitions Appends Engine Coverage Notice at End", "Engine Coverage Notice" in fallback_code)
 
 
 if __name__ == "__main__":

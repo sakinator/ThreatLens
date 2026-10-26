@@ -32,8 +32,16 @@ object FallbackThreatDefinitions {
         }
         sb.append(execSummary).append("\n\n")
 
-        // 2. Multi-Engine & Antivirus Vendor Analysis
-        val flaggedEngines = engineVerdicts.filter { (_, v) ->
+        // Filter active vs inactive unconfigured engines
+        val activeVerdicts = engineVerdicts.filter { (_, v) ->
+            !v.contains("not configured", ignoreCase = true) && !v.contains("Auth-Key", ignoreCase = true)
+        }
+        val inactiveEngines = engineVerdicts.filter { (_, v) ->
+            v.contains("not configured", ignoreCase = true) || v.contains("Auth-Key", ignoreCase = true)
+        }.keys.toList()
+
+        // 2. Multi-Engine & Antivirus Vendor Analysis (Active Engines Only)
+        val flaggedEngines = activeVerdicts.filter { (_, v) ->
             v.contains("Flagged", ignoreCase = true) || v.contains("Suspicious", ignoreCase = true) || v.contains("Red", ignoreCase = true)
         }
         if (flaggedEngines.isNotEmpty()) {
@@ -80,6 +88,12 @@ object FallbackThreatDefinitions {
                 "**1.** Do not grant accessibility or device admin privileges to this app.\n**2.** If not recognized or from an unverified source, remove the file/APK immediately."
         }
         sb.append(action)
+
+        // 5. Inactive Engines Coverage Notice at the very end
+        if (inactiveEngines.isNotEmpty()) {
+            sb.append("\n\n### ℹ️ Engine Coverage Notice\n")
+            sb.append("The following engines were not queried due to missing API key configuration: **${inactiveEngines.joinToString(", ")}**. Configure keys in Settings to expand multi-engine coverage.")
+        }
 
         return sb.toString()
     }
