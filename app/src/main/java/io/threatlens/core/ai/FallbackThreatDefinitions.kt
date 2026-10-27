@@ -107,14 +107,19 @@ object FallbackThreatDefinitions {
 
         // 2. Multi-Engine & Antivirus Vendor Analysis (Active Engines Only)
         val flaggedEngines = activeVerdicts.filter { (_, v) ->
-            v.contains("Flagged", ignoreCase = true) || v.contains("Suspicious", ignoreCase = true) || v.contains("Red", ignoreCase = true)
+            val lower = v.trim().lowercase()
+            !lower.startsWith("clean") && !lower.startsWith("verified") && !lower.startsWith("safe") &&
+            !lower.contains("(0/") &&
+            (lower.startsWith("flagged") || lower.startsWith("suspicious") || lower.contains("malicious") ||
+             lower.contains("infected") || lower.contains("threat") || lower.contains("red"))
         }
         if (flaggedEngines.isNotEmpty()) {
             sb.append("### 🔬 Multi-Engine Consensus\n")
             flaggedEngines.forEach { (engine, verdict) ->
+                val lower = verdict.trim().lowercase()
                 val indicator = when {
-                    verdict.contains("Flagged", ignoreCase = true) -> "🔴 [FLAGGED]"
-                    verdict.contains("Suspicious", ignoreCase = true) -> "🟡 [SUSPICIOUS]"
+                    lower.startsWith("flagged") || lower.contains("malicious") || lower.contains("infected") -> "🔴 [FLAGGED]"
+                    lower.startsWith("suspicious") -> "🟡 [SUSPICIOUS]"
                     else -> "⚪ [ALERT]"
                 }
                 sb.append("• $indicator **$engine**: $verdict\n")
@@ -125,13 +130,18 @@ object FallbackThreatDefinitions {
                     }
                 }
             }
+            val cleanCount = activeVerdicts.size - flaggedEngines.size
+            if (cleanCount > 0) {
+                sb.append("• 🟢 **Other Active Engines**: $cleanCount engine(s) verified Clean.\n")
+            }
             sb.append("\n")
         } else if (activeVerdicts.isNotEmpty()) {
             sb.append("### 🔬 Multi-Engine Consensus\n")
             activeVerdicts.forEach { (engine, verdict) ->
+                val lower = verdict.trim().lowercase()
                 val indicator = when {
-                    verdict.contains("Clean", ignoreCase = true) || verdict.contains("Verified", ignoreCase = true) -> "🟢 [CLEAN]"
-                    verdict.contains("Unreachable", ignoreCase = true) || verdict.contains("Timeout", ignoreCase = true) -> "⚪ [UNREACHABLE]"
+                    lower.startsWith("clean") || lower.startsWith("verified") || lower.startsWith("safe") || lower.contains("(0/") -> "🟢 [CLEAN]"
+                    lower.contains("unreachable") || lower.contains("timeout") -> "⚪ [UNREACHABLE]"
                     else -> "🟢 [CLEAN]"
                 }
                 sb.append("• $indicator **$engine**: $verdict\n")

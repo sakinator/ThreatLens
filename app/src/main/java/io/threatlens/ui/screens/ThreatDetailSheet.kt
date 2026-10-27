@@ -232,10 +232,11 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 val breakdown = report.scoreBreakdown ?: io.threatlens.core.model.ScoreBreakdown(
-                    permissionScore = minOf(report.dangerousPermissions.size * 5, 25),
+                    permissionScore = minOf(report.currentScore, 15),
+                    heuristicScore = maxOf(0, report.currentScore - minOf(report.currentScore, 15)),
                     cloudScore = report.cloudScore,
                     totalScore = report.currentScore,
-                    rationale = "Calculated from ${report.dangerousPermissions.size} permissions and ${report.cloudSources.size} cloud signals."
+                    rationale = "Consolidated threat score based on on-device and cloud telemetry."
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -456,45 +457,25 @@ fun ThreatDetailSheet(
                                     else -> TextSecondary
                                 }
 
-                                // Line 1: Header Row (Logo + Full Title + Engine Badge + Status Pill + Chevron)
+                                // Line 1: Header Row (Logo + Full Title + Status Pill + Chevron)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     EngineLogoIcon(sourceName, modifier = Modifier.size(22.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
 
                                     Text(
                                         text = sourceName,
                                         color = TextPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        maxLines = 2,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
 
-                                    // Engine Type Tag (OFFLINE, ZERO-KEY, CLOUD API)
-                                    Surface(
-                                        color = CyberCardSurface,
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            text = engineBadgeText,
-                                            color = engineBadgeColor,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            fontFamily = FontFamily.Monospace,
-                                            maxLines = 1,
-                                            softWrap = false,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(6.dp))
-
-                                    // Status Badge: Uniform fixed-width alignment
+                                    // Status Badge: Uniform pill alignment
                                     Surface(
                                         color = when {
                                             isPending -> NeonCyan.copy(alpha = 0.15f)
@@ -503,12 +484,11 @@ fun ThreatDetailSheet(
                                             isClean -> NeonEmerald.copy(alpha = 0.18f)
                                             else -> CyberCardSurface
                                         },
-                                        shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.width(76.dp)
+                                        shape = RoundedCornerShape(6.dp)
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center,
-                                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
                                             if (isPending) {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -550,7 +530,7 @@ fun ThreatDetailSheet(
                                         }
                                     }
 
-                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                         contentDescription = "Expand",
@@ -559,14 +539,30 @@ fun ThreatDetailSheet(
                                     )
                                 }
 
-                                // Line 2: Full-Width Verdict Summary (spans entire width, no horizontal crowding!)
+                                // Line 2: Engine Type Tag (OFFLINE, ZERO-KEY, CLOUD API) + Full-Width Verdict Summary
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 30.dp),
+                                        .padding(start = 32.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Surface(
+                                        color = CyberCardSurface,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = engineBadgeText,
+                                            color = engineBadgeColor,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = verdict,
                                         color = when {
@@ -578,7 +574,8 @@ fun ThreatDetailSheet(
                                         },
                                         fontSize = 11.sp,
                                         maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
 
@@ -1354,13 +1351,19 @@ private fun ScoreComponentRow(name: String, scoreText: String, isElevated: Boole
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(name, color = TextSecondary, fontSize = 11.sp)
+        Text(
+            text = name,
+            color = TextSecondary,
+            fontSize = 11.sp,
+            modifier = Modifier.weight(1f).padding(end = 8.dp)
+        )
         Text(
             text = scoreText,
             color = if (isElevated) CyberAmber else TextMuted,
             fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
-            fontFamily = FontFamily.Monospace
+            fontFamily = FontFamily.Monospace,
+            softWrap = false
         )
     }
 }

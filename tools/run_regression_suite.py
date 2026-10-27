@@ -65,6 +65,7 @@ class RegressionTestRunner:
         self.test_provenance_and_threat_normalizer()
         self.test_keepalive_and_edgecases()
         self.test_vulnerability_auditor_suite()
+        self.test_v141_critical_fixes()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -520,6 +521,46 @@ class RegressionTestRunner:
         self.record("Audits Linux Kernel Version (/proc/version)", "/proc/version" in auditor_code and "KERNEL_LEGACY_VERSION" in auditor_code)
         self.record("VulnerabilityScreen Implements Posture Grade Dial & Filters", "overallScore" in screen_code and "letterGrade" in screen_code and "VulnerabilityFindingCard" in screen_code)
         self.record("MainActivity Integrates Separate 'Vulns' Navigation Tab", "\"vulns\"" in main_code and "VulnerabilityScreen()" in main_code and "Icons.Default.BugReport" in main_code)
+
+    # 20. Test Critical False Positive, Score Math & Consensus Engine Fixes
+    def test_v141_critical_fixes(self):
+        print(f"\n{YELLOW}▶ SUITE 20: Critical Bug Fixes (False Positives, Consensus Flags & De-truncation){RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        packer_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "PackerEntropyDetector.kt")
+        fallback_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "ai", "FallbackThreatDefinitions.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        local_av_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+        heur_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+
+        with open(packer_file, "r", encoding="utf-8") as f:
+            packer_code = f.read()
+        with open(fallback_file, "r", encoding="utf-8") as f:
+            fallback_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(local_av_file, "r", encoding="utf-8") as f:
+            local_av_code = f.read()
+        with open(heur_file, "r", encoding="utf-8") as f:
+            heur_code = f.read()
+
+        # 1. Packer False Positive Immunity
+        self.record("Packer Detector Ignores Flutter & Framework Assets", "assets/flutter_assets/" in packer_code and "assets/webkit/" in packer_code)
+        self.record("Packer Detector Ignores License & Notice Archives", 'lowerPath.contains("license") || lowerPath.contains("notice")' in packer_code)
+        self.record("Packer Detector Requires Executable Magic or Extension", "isExecutablePayload" in packer_code and "0x64.toByte()" in packer_code)
+        self.record("Packer Detector Exempts Verified Store Applications", "!isVerifiedStore" in packer_code and "isVerifiedStore: Boolean = false" in packer_code)
+
+        # 2. Consensus Engine Clean Verdict Flagging Fix
+        self.record("Consensus Filters '0/66 engines flagged' from [FLAGGED] Badge", '!lower.contains("(0/")' in fallback_code and '!lower.startsWith("clean")' in fallback_code)
+        self.record("Consensus Engine Accurately Attributes Clean & Flagged Engines", "Other Active Engines" in fallback_code and "🟢 [CLEAN]" in fallback_code)
+
+        # 3. Engine Name De-truncation & UI Layout
+        self.record("Engine Card Header Dedicates Line 1 for Unconstrained Title", "maxLines = 2" in sheet_code and "EngineLogoIcon" in sheet_code)
+        self.record("Engine Card Line 2 Hosts Engine Type Tag and Verdict", "padding(start = 32.dp)" in sheet_code and "engineBadgeText" in sheet_code)
+        self.record("ScoreComponentRow Prevents 'pts' Vertical Wrapping", "softWrap = false" in sheet_code and "weight(1f)" in sheet_code)
+
+        # 4. Score Math Reconciliation
+        self.record("Manifest Heuristic Partitions Permission and Behavioral Points", "finalPermissionScore" in heur_code and "finalBehavioralScore" in heur_code)
+        self.record("Local Antivirus Reconciles Heuristics & Signature Score Breakdown", "finalLocalScore" in local_av_code and "permScore" in local_av_code and "heurScore" in local_av_code)
 
 
 if __name__ == "__main__":

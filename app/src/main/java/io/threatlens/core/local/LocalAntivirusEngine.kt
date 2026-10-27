@@ -136,6 +136,18 @@ object LocalAntivirusEngine {
         }
 
         val isApk = file.extension.equals("apk", ignoreCase = true)
+        var detectedPackageName: String? = null
+        var isVerifiedStore = false
+        if (isApk) {
+            try {
+                val archiveInfo = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
+                detectedPackageName = archiveInfo?.packageName
+                if (!detectedPackageName.isNullOrBlank()) {
+                    val provenance = AppProvenanceVerifier.inspectProvenance(context, detectedPackageName)
+                    isVerifiedStore = provenance.isVerifiedStore || provenance.isSystemApp
+                }
+            } catch (_: Exception) {}
+        }
 
         // 3. VirusTotal YARA Mobile Threat Pattern Scan
         val yara = if (isApk) YaraMobileRules.scanApk(file) else null
@@ -151,7 +163,7 @@ object LocalAntivirusEngine {
         }
 
         // 4. ThreatLens Certificate & Repack Shield
-        val cert = if (isApk) ApkCertificateVerifier.verifyApk(context, file, null) else null
+        val cert = if (isApk) ApkCertificateVerifier.verifyApk(context, file, detectedPackageName) else null
         if (cert != null && (cert.isSuspicious || cert.isMalicious)) {
             sources.add("ThreatLens Certificate & Repack Shield")
             behaviors.addAll(cert.details)
@@ -165,7 +177,7 @@ object LocalAntivirusEngine {
         }
 
         // 5. ThreatLens Anti-Analysis & Packer Shield
-        val packer = if (isApk) PackerEntropyDetector.inspectApk(file) else null
+        val packer = if (isApk) PackerEntropyDetector.inspectApk(file, detectedPackageName, isVerifiedStore) else null
         if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) {
             sources.add("ThreatLens Anti-Analysis & Packer Shield")
             behaviors.addAll(packer.details)
@@ -181,29 +193,27 @@ object LocalAntivirusEngine {
         var hasBytecodeMatch = false
 
         // 6. Deep DEX & Bytecode Pattern Scan (Offline YARA-style scanner)
-        if (isApk && file.exists() && file.canRead()) {
-            val bytecodeMatches = scanApkBytecode(file)
-            for (rule in bytecodeMatches) {
-                hasBytecodeMatch = true
-                matchedSignatures.add(rule.family)
-                behaviors.add(rule.description)
-                sources.add("ThreatLens Bytecode Engine")
-                if (rule.score > highestScore) {
-                    highestScore = rule.score
-                    detectedFamily = rule.family
-                    category = rule.category
-                }
+        val bytecodeMatches = if (isApk && file.exists() && file.canRead()) scanApkBytecode(file) else emptyList()
+        for (rule in bytecodeMatches) {
+            hasBytecodeMatch = true
+            matchedSignatures.add(rule.family)
+            behaviors.add(rule.description)
+            sources.add("ThreatLens Bytecode Engine")
+            if (rule.score > highestScore) {
+                highestScore = rule.score
+                detectedFamily = rule.family
+                category = rule.category
             }
         }
 
-        var heuristicScore = 0
+        var heuristicResult: ManifestHeuristicEngine.HeuristicResult? = null
 
         // 7. Static Manifest & Heuristic Permission Matrix
         if (isApk) {
             val heuristic = ManifestHeuristicEngine.analyzeApk(context, file)
+            heuristicResult = heuristic
             behaviors.addAll(heuristic.suspiciousBehaviors)
             dangerousPermissions.addAll(heuristic.dangerousPermissions)
-            heuristicScore = heuristic.score
 
             if (heuristic.score > highestScore) {
                 highestScore = heuristic.score
@@ -238,10 +248,38 @@ object LocalAntivirusEngine {
             }
         }
 
-        val isMalicious = highestScore >= 75 || hasBytecodeMatch || sig != null || clamAv.isMalicious || (yara != null && yara.isMatched) || (cert != null && cert.isMalicious)
+        val sigScore = when {
+            sig != null -> 100
+            clamAv.isMalicious -> clamAv.confidenceScore
+            yara != null && yara.isMatched -> yara.score
+            hasBytecodeMatch -> bytecodeMatches.maxOfOrNull { it.score } ?: 80
+            else -> 0
+        }
+        val hasConfirmedSignature = sigScore > 0
+
+        val permScore: Int
+        val heurScore: Int
+        val finalLocalScore: Int
+
+        if (hasConfirmedSignature) {
+            finalLocalScore = sigScore
+            permScore = 0
+            heurScore = 0
+        } else {
+            val manifestPerm = heuristicResult?.permissionScore ?: 0
+            val manifestHeur = heuristicResult?.behavioralScore ?: (heuristicResult?.score ?: 0)
+            val packerScore = if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) packer.score else 0
+            val certScore = if (cert != null && (cert.isSuspicious || cert.isMalicious)) cert.score else 0
+
+            permScore = manifestPerm
+            heurScore = manifestHeur + packerScore + certScore
+            finalLocalScore = (permScore + heurScore).coerceIn(0, 100)
+        }
+
+        val isMalicious = finalLocalScore >= 75 || hasConfirmedSignature || (cert != null && cert.isMalicious)
         val detectionType = when {
-            hasBytecodeMatch || sig != null -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
-            highestScore >= 25 -> io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
+            hasConfirmedSignature -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
+            finalLocalScore >= 25 -> io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
             else -> io.threatlens.core.model.DetectionType.CLEAN
         }
 
@@ -264,16 +302,16 @@ object LocalAntivirusEngine {
         }
 
         val breakdown = io.threatlens.core.model.ScoreBreakdown(
-            signatureScore = if (hasBytecodeMatch) highestScore else 0,
-            permissionScore = minOf(dangerousPermissions.size * 5, 25),
-            heuristicScore = heuristicScore,
-            totalScore = highestScore.coerceIn(0, 100),
+            signatureScore = if (hasConfirmedSignature) sigScore else 0,
+            permissionScore = permScore,
+            heuristicScore = heurScore,
+            totalScore = finalLocalScore,
             rationale = rationale
         )
 
         return LocalScanVerdict(
             isMalicious = isMalicious,
-            localScore = highestScore.coerceIn(0, 100),
+            localScore = finalLocalScore,
             threatFamily = detectedFamily,
             category = category,
             detectionType = detectionType,

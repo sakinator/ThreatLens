@@ -13,7 +13,9 @@ object ManifestHeuristicEngine {
         val dangerousPermissions: List<String>,
         val isLikelyDropper: Boolean,
         val isLikelyBanker: Boolean,
-        val isLikelySpyware: Boolean
+        val isLikelySpyware: Boolean,
+        val permissionScore: Int = 0,
+        val behavioralScore: Int = 0
     )
 
     private val CRITICAL_ABUSE_PERMISSIONS = setOf(
@@ -40,6 +42,8 @@ object ManifestHeuristicEngine {
 
     fun analyzeApk(context: Context, apkFile: File): HeuristicResult {
         var score = 0
+        var permissionPts = 0
+        var behaviorPts = 0
         val behaviors = mutableListOf<String>()
         val foundDangerousPermissions = mutableListOf<String>()
         var isBanker = false
@@ -59,7 +63,7 @@ object ManifestHeuristicEngine {
 
             if (packageInfo == null) {
                 behaviors.add("Malformed or heavily obfuscated APK header")
-                return HeuristicResult(40, behaviors, emptyList(), false, false, false)
+                return HeuristicResult(40, behaviors, emptyList(), false, false, false, permissionScore = 15, behavioralScore = 25)
             }
 
             val pkg = packageInfo.packageName?.lowercase() ?: ""
@@ -88,14 +92,15 @@ object ManifestHeuristicEngine {
                     if (perm in SENSITIVE_CAPABILITY_PERMISSIONS) {
                         standardSensitiveCount++
                     } else if (perm in CRITICAL_ABUSE_PERMISSIONS) {
-                        score += if (isKnownTrustedVendor) 2 else 5
+                        val pts = if (isKnownTrustedVendor) 2 else 5
+                        permissionPts += pts
                     }
                 }
             }
 
             // Standard sensitive permissions (Camera, Audio, Location) only add minimal weight (1pt each, max 4) for unverified apps, 0 for store apps
             if (!isKnownTrustedVendor) {
-                score += minOf(standardSensitiveCount, 4)
+                permissionPts += minOf(standardSensitiveCount, 4)
             }
 
             val permSet = requestedPermissions.toSet()
@@ -125,16 +130,16 @@ object ManifestHeuristicEngine {
             hasOverlay = permSet.contains("android.permission.SYSTEM_ALERT_WINDOW")
 
             if (hasAccessibility && hasOverlay && isLegitimateAccessibilityUtility) {
-                score += 10
+                behaviorPts += 10
                 behaviors.add("Accessibility Utility with floating UI (Standard for password managers & automation assistants)")
             } else if (hasAccessibility && hasOverlay) {
-                score += 45
+                behaviorPts += 45
                 isBanker = true
                 behaviors.add("Overlay & Accessibility abuse (Injects fake login screens over banking apps)")
             } else if (hasAccessibility && isLegitimateAccessibilityUtility) {
                 behaviors.add("Legitimate Accessibility Utility (Autofill / Automation companion service detected)")
             } else if (hasAccessibility) {
-                score += 25
+                behaviorPts += 25
                 behaviors.add("Requests Accessibility Service (Can monitor screen touches & read credentials)")
             }
 
@@ -142,7 +147,7 @@ object ManifestHeuristicEngine {
             val hasSms = permSet.contains("android.permission.RECEIVE_SMS") || permSet.contains("android.permission.READ_SMS")
             val hasInternet = permSet.contains("android.permission.INTERNET")
             if (hasSms && hasInternet) {
-                score += 30
+                behaviorPts += 30
                 isSpyware = true
                 behaviors.add("Intercepts incoming SMS/OTPs and exfiltrates over the network")
             }
@@ -151,14 +156,14 @@ object ManifestHeuristicEngine {
             val hasBoot = permSet.contains("android.permission.RECEIVE_BOOT_COMPLETED")
             val hasInstall = permSet.contains("android.permission.REQUEST_INSTALL_PACKAGES")
             if (hasBoot && hasInstall) {
-                score += 25
+                behaviorPts += 25
                 isDropper = true
                 behaviors.add("Background Dropper pattern (Can download and install third-party APKs automatically)")
             }
 
             // 5. Device Administrator Abuse
             if (permSet.contains("android.permission.BIND_DEVICE_ADMIN")) {
-                score += 35
+                behaviorPts += 35
                 behaviors.add("Requests Device Administrator privileges (Prevents uninstallation & locks screen)")
             }
 
@@ -166,7 +171,7 @@ object ManifestHeuristicEngine {
             val activities = packageInfo.activities ?: emptyArray()
             hasLauncher = activities.any { it.name.contains("Main", ignoreCase = true) || it.name.contains("Launch", ignoreCase = true) }
             if (activities.isNotEmpty() && !hasLauncher) {
-                score += 20
+                behaviorPts += 20
                 behaviors.add("Stealth application: Disguises icon or hides from app launcher")
             }
 
@@ -183,7 +188,19 @@ object ManifestHeuristicEngine {
             else -> 35 // Standalone permissions alone cannot make an unverified app MALICIOUS
         }
 
-        val finalLocalScore = minOf(score, maxHeuristicCap).coerceIn(0, 100)
+        val rawTotal = permissionPts + behaviorPts
+        val finalLocalScore = minOf(rawTotal, maxHeuristicCap).coerceIn(0, 100)
+
+        // Proportionally scale components so that finalPermissionScore + finalBehavioralScore == finalLocalScore exactly
+        val finalPermissionScore: Int
+        val finalBehavioralScore: Int
+        if (rawTotal > 0 && finalLocalScore < rawTotal) {
+            finalPermissionScore = ((permissionPts.toDouble() / rawTotal) * finalLocalScore).toInt()
+            finalBehavioralScore = finalLocalScore - finalPermissionScore
+        } else {
+            finalPermissionScore = permissionPts
+            finalBehavioralScore = behaviorPts
+        }
 
         return HeuristicResult(
             score = finalLocalScore,
@@ -191,7 +208,9 @@ object ManifestHeuristicEngine {
             dangerousPermissions = foundDangerousPermissions,
             isLikelyDropper = isDropper && !isKnownTrustedVendor,
             isLikelyBanker = isBanker && !isKnownTrustedVendor,
-            isLikelySpyware = isSpyware && !isKnownTrustedVendor
+            isLikelySpyware = isSpyware && !isKnownTrustedVendor,
+            permissionScore = finalPermissionScore,
+            behavioralScore = finalBehavioralScore
         )
     }
 }

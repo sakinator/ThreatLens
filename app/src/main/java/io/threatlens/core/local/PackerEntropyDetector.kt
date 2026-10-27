@@ -42,7 +42,7 @@ object PackerEntropyDetector {
         "ptrace(PTRACE_TRACEME"
     )
 
-    fun inspectApk(apkFile: File): PackerResult {
+    fun inspectApk(apkFile: File, packageName: String? = null, isVerifiedStore: Boolean = false): PackerResult {
         if (!apkFile.exists() || !apkFile.extension.equals("apk", ignoreCase = true)) {
             return cleanResult("Target is not an APK archive")
         }
@@ -56,7 +56,19 @@ object PackerEntropyDetector {
 
         val safeExtensions = setOf(
             "png", "jpg", "jpeg", "webp", "gif", "mp3", "ogg", "wav",
-            "ttf", "otf", "woff", "html", "js", "css", "json", "svg", "xml"
+            "ttf", "otf", "woff", "woff2", "html", "htm", "js", "css", "json", "svg", "xml",
+            "z", "gz", "br", "bz2", "xz", "lz4", "bin", "dat", "proto", "pb",
+            "txt", "md", "csv", "properties", "conf", "pem", "crt", "der", "pak", "res", "tflite"
+        )
+
+        val ignoredPrefixes = listOf(
+            "assets/flutter_assets/",
+            "assets/webkit/",
+            "assets/locales/",
+            "assets/dexopt/",
+            "assets/tflite/",
+            "assets/models/",
+            "assets/fonts/"
         )
 
         try {
@@ -65,6 +77,16 @@ object PackerEntropyDetector {
                 val entries = zip.entries()
                 while (entries.hasMoreElements()) {
                     val entry = entries.nextElement()
+                    val lowerPath = entry.name.lowercase()
+
+                    // Skip standard framework, localization, and license/notice files
+                    if (ignoredPrefixes.any { lowerPath.startsWith(it) } ||
+                        lowerPath.contains("license") || lowerPath.contains("notice") ||
+                        lowerPath.contains("cacert") || lowerPath.contains("tzdata")
+                    ) {
+                        continue
+                    }
+
                     val filename = entry.name.substringAfterLast("/")
                     val lowerName = filename.lowercase()
                     val ext = lowerName.substringAfterLast(".", "")
@@ -91,7 +113,16 @@ object PackerEntropyDetector {
                                 if (read == buf.size) buf else buf.copyOf(read)
                             }
                             val entropy = calculateShannonEntropy(assetBytes)
-                            if (entropy >= 7.82f && entropy > highEntropyAssetScore) {
+
+                            // Asset must be an executable binary payload or abnormal raw executable
+                            val isExecutablePayload = ext in setOf("dex", "jar", "apk", "so", "") ||
+                                (assetBytes.size >= 4 && (
+                                    (assetBytes[0] == 0x64.toByte() && assetBytes[1] == 0x65.toByte() && assetBytes[2] == 0x78.toByte()) ||
+                                    (assetBytes[0] == 0x50.toByte() && assetBytes[1] == 0x4b.toByte() && assetBytes[2] == 0x03.toByte() && assetBytes[3] == 0x04.toByte()) ||
+                                    (assetBytes[0] == 0x7f.toByte() && assetBytes[1] == 0x45.toByte() && assetBytes[2] == 0x4c.toByte() && assetBytes[3] == 0x46.toByte())
+                                ))
+
+                            if (isExecutablePayload && entropy >= 7.82f && entropy > highEntropyAssetScore) {
                                 highEntropyAsset = entry.name
                                 highEntropyAssetScore = entropy
                             }
@@ -122,7 +153,8 @@ object PackerEntropyDetector {
             }
 
             // High-Confidence Dynamic Dropper detection (DCL loader + Encrypted Asset payload)
-            if (detectedDclLoader != null && highEntropyAsset != null) {
+            // Verified store applications (Google Play / System) are exempt from standalone dropper heuristics
+            if (detectedDclLoader != null && highEntropyAsset != null && !isVerifiedStore) {
                 return PackerResult(
                     isPacked = true,
                     isAntiAnalysis = true,
@@ -139,23 +171,25 @@ object PackerEntropyDetector {
             }
 
             if (detectedPacker != null) {
+                val packerScore = if (isVerifiedStore) 15 else 65
                 return PackerResult(
                     isPacked = true,
-                    isAntiAnalysis = detectedHooks.isNotEmpty(),
+                    isAntiAnalysis = detectedHooks.isNotEmpty() && !isVerifiedStore,
                     packerName = detectedPacker,
                     dexEntropy = maxDexEntropy,
-                    score = 65,
+                    score = packerScore,
                     details = listOf(
                         "Packer Detected: $detectedPacker",
-                        "The application uses heavy runtime code encryption to conceal bytecode from static AV scanners.",
+                        if (isVerifiedStore) "Application Shielding / RASP protection present in verified store application."
+                        else "The application uses heavy runtime code encryption to conceal bytecode from static AV scanners.",
                         "Shannon Entropy: %.2f bits/byte (High Obfuscation)".format(maxDexEntropy),
-                        if (detectedHooks.isNotEmpty()) "Anti-Analysis Evasion: ${detectedHooks.joinToString(", ")}" else "Standard unpacker stub"
+                        if (detectedHooks.isNotEmpty()) "Anti-Tamper / Integrity Checks: ${detectedHooks.joinToString(", ")}" else "Standard unpacker stub"
                     )
                 )
             }
 
             // High Entropy Flag (entropy > 7.4 in classes.dex is abnormal for plain DEX bytecode)
-            if (maxDexEntropy >= 7.45f) {
+            if (maxDexEntropy >= 7.45f && !isVerifiedStore) {
                 return PackerResult(
                     isPacked = true,
                     isAntiAnalysis = detectedHooks.isNotEmpty(),
@@ -169,16 +203,18 @@ object PackerEntropyDetector {
                 )
             }
 
+            val antiAnalysisEffective = detectedHooks.isNotEmpty() && !isVerifiedStore
             return PackerResult(
                 isPacked = false,
-                isAntiAnalysis = detectedHooks.isNotEmpty(),
+                isAntiAnalysis = antiAnalysisEffective,
                 packerName = null,
                 dexEntropy = maxDexEntropy,
-                score = if (detectedHooks.isNotEmpty()) 20 else 0,
+                score = if (antiAnalysisEffective) 20 else 0,
                 details = listOf(
                     "Bytecode Structure: Standard uncompressed Dalvik DEX",
                     "Shannon Entropy: %.2f bits/byte (Normal plain bytecode)".format(maxDexEntropy),
-                    "No commercial crypters or anti-analysis evasion stubs detected"
+                    if (isVerifiedStore && detectedHooks.isNotEmpty()) "Root & tamper defense hooks observed in verified store application (Safe)"
+                    else "No commercial crypters or anti-analysis evasion stubs detected"
                 )
             )
 
