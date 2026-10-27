@@ -64,6 +64,7 @@ class RegressionTestRunner:
         self.test_in_app_diagnostic_logger()
         self.test_provenance_and_threat_normalizer()
         self.test_keepalive_and_edgecases()
+        self.test_vulnerability_auditor_suite()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -492,6 +493,33 @@ class RegressionTestRunner:
         self.record("Packer Detector Scans Dynamic Code Loading (InMemoryDexClassLoader)", "InMemoryDexClassLoader" in packer_code and "DexClassLoader" in packer_code)
         self.record("Packer Detector Scans Embedded Secondary Assets Shannon Entropy", "calculateShannonEntropy" in packer_code and "highEntropyAsset" in packer_code and "7.82" in packer_code)
         self.record("Packer Detector Flags Trojan.Dropper.DynamicPayload", "Trojan.Dropper.DynamicPayload" in packer_code)
+
+    # 19. Test Exploit & Vulnerability Auditor Module & UI Tab
+    def test_vulnerability_auditor_suite(self):
+        print(f"\n{YELLOW}▶ SUITE 19: Device Exploit & Vulnerability Auditor Module & UI{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        auditor_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "vulnerability", "DeviceVulnerabilityAuditor.kt")
+        screen_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "VulnerabilityScreen.kt")
+        main_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "MainActivity.kt")
+
+        self.record("DeviceVulnerabilityAuditor.kt Exists", os.path.exists(auditor_file))
+        self.record("VulnerabilityScreen.kt Exists", os.path.exists(screen_file))
+
+        with open(auditor_file, "r", encoding="utf-8") as f:
+            auditor_code = f.read()
+        with open(screen_file, "r", encoding="utf-8") as f:
+            screen_code = f.read()
+        with open(main_file, "r", encoding="utf-8") as f:
+            main_code = f.read()
+
+        self.record("Audits Security Patch Level (SPL) & Day Gap", "Build.VERSION.SECURITY_PATCH" in auditor_code and "daysSince" in auditor_code)
+        self.record("Audits USB Debugging / ADB Status", "Settings.Global.ADB_ENABLED" in auditor_code and "SETTING_ADB_ENABLED" in auditor_code)
+        self.record("Audits Lock Screen / Keyguard Security", "KeyguardManager" in auditor_code and "isDeviceSecure" in auditor_code and "SETTING_NO_LOCKSCREEN" in auditor_code)
+        self.record("Audits SELinux Mandatory Access Control Mode", "/sys/fs/selinux/enforce" in auditor_code and "FIRMWARE_SELINUX_PERMISSIVE" in auditor_code)
+        self.record("Audits Superuser / Root Binary Paths", "/system/bin/su" in auditor_code and "FIRMWARE_ROOT_DETECTED" in auditor_code)
+        self.record("Audits Linux Kernel Version (/proc/version)", "/proc/version" in auditor_code and "KERNEL_LEGACY_VERSION" in auditor_code)
+        self.record("VulnerabilityScreen Implements Posture Grade Dial & Filters", "overallScore" in screen_code and "letterGrade" in screen_code and "VulnerabilityFindingCard" in screen_code)
+        self.record("MainActivity Integrates Separate 'Vulns' Navigation Tab", "\"vulns\"" in main_code and "VulnerabilityScreen()" in main_code and "Icons.Default.BugReport" in main_code)
 
 
 if __name__ == "__main__":

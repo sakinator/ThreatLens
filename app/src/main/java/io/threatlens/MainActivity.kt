@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
@@ -84,6 +85,20 @@ class MainActivity : ComponentActivity() {
                             )
 
                             NavigationBarItem(
+                                selected = currentTab == "vulns",
+                                onClick = { currentTab = "vulns" },
+                                icon = { Icon(Icons.Default.BugReport, contentDescription = "Vulnerabilities") },
+                                label = { Text("Vulns") },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = CyberBlack,
+                                    selectedTextColor = NeonCyan,
+                                    indicatorColor = NeonCyan,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted
+                                )
+                            )
+
+                            NavigationBarItem(
                                 selected = currentTab == "news",
                                 onClick = { currentTab = "news" },
                                 icon = { Icon(Icons.Default.Article, contentDescription = "Threat Pulse") },
@@ -137,6 +152,9 @@ class MainActivity : ComponentActivity() {
                             }
                             "scan" -> {
                                 FullScanScreen(viewModel = viewModel)
+                            }
+                            "vulns" -> {
+                                io.threatlens.ui.screens.VulnerabilityScreen()
                             }
                             "news" -> {
                                 NewsScreen(viewModel = viewModel)
