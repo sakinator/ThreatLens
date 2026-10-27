@@ -16,14 +16,17 @@ object ManifestHeuristicEngine {
         val isLikelySpyware: Boolean
     )
 
-    private val HIGH_RISK_PERMISSIONS = setOf(
+    private val CRITICAL_ABUSE_PERMISSIONS = setOf(
         "android.permission.BIND_ACCESSIBILITY_SERVICE",
         "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.BIND_DEVICE_ADMIN",
+        "android.permission.REQUEST_INSTALL_PACKAGES"
+    )
+
+    private val SENSITIVE_CAPABILITY_PERMISSIONS = setOf(
         "android.permission.RECEIVE_SMS",
         "android.permission.READ_SMS",
         "android.permission.SEND_SMS",
-        "android.permission.REQUEST_INSTALL_PACKAGES",
-        "android.permission.BIND_DEVICE_ADMIN",
         "android.permission.READ_CALL_LOG",
         "android.permission.PROCESS_OUTGOING_CALLS",
         "android.permission.RECORD_AUDIO",
@@ -32,6 +35,8 @@ object ManifestHeuristicEngine {
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.READ_CONTACTS"
     )
+
+    private val HIGH_RISK_PERMISSIONS = CRITICAL_ABUSE_PERMISSIONS + SENSITIVE_CAPABILITY_PERMISSIONS
 
     fun analyzeApk(context: Context, apkFile: File): HeuristicResult {
         var score = 0
@@ -58,7 +63,11 @@ object ManifestHeuristicEngine {
             }
 
             val pkg = packageInfo.packageName?.lowercase() ?: ""
-            isKnownTrustedVendor = pkg.startsWith("com.google.") ||
+            val provenance = AppProvenanceVerifier.inspectProvenance(context, pkg)
+            val isVerifiedStore = provenance.isVerifiedStore || provenance.isSystemApp
+
+            isKnownTrustedVendor = isVerifiedStore ||
+                    pkg.startsWith("com.google.") ||
                     pkg.startsWith("com.android.") ||
                     pkg.startsWith("com.microsoft.") ||
                     pkg.startsWith("com.whatsapp") ||
@@ -70,13 +79,23 @@ object ManifestHeuristicEngine {
 
             val requestedPermissions = packageInfo.requestedPermissions?.toList() ?: emptyList()
 
-            // 1. Audit dangerous permissions
+            // 1. Audit permissions: sensitive capabilities (Camera, Mic, GPS) vs critical system overrides
+            var standardSensitiveCount = 0
             for (perm in requestedPermissions) {
                 if (perm in HIGH_RISK_PERMISSIONS) {
                     val simpleName = perm.substringAfterLast(".")
                     foundDangerousPermissions.add(simpleName)
-                    score += 6
+                    if (perm in SENSITIVE_CAPABILITY_PERMISSIONS) {
+                        standardSensitiveCount++
+                    } else if (perm in CRITICAL_ABUSE_PERMISSIONS) {
+                        score += if (isKnownTrustedVendor) 2 else 5
+                    }
                 }
+            }
+
+            // Standard sensitive permissions (Camera, Audio, Location) only add minimal weight (1pt each, max 4) for unverified apps, 0 for store apps
+            if (!isKnownTrustedVendor) {
+                score += minOf(standardSensitiveCount, 4)
             }
 
             val permSet = requestedPermissions.toSet()
@@ -129,13 +148,13 @@ object ManifestHeuristicEngine {
             behaviors.add("Analysis error: ${e.message}")
         }
 
-        // Static permission heuristics alone should NEVER exceed 45 (SUSPICIOUS/HIGH PRIVILEGE),
+        // Static permission heuristics alone should NEVER push a verified app into SUSPICIOUS (>=25),
         // unless there is an aggressive stealth Trojan combination (Accessibility + Overlay + Hidden Icon).
         // True MALICIOUS (>=75) requires verified bytecode malware or cloud engine consensus.
         val maxHeuristicCap = when {
-            isKnownTrustedVendor -> 25 // Trusted vendors capped at Low Risk / High Privilege
+            isKnownTrustedVendor -> 12 // Verified store & trusted vendors capped at 12 (Safe, <25)
             hasAccessibility && hasOverlay && (!hasLauncher) -> 65 // Strong stealth banker pattern
-            else -> 45 // Permissions alone cannot make an app MALICIOUS
+            else -> 35 // Standalone permissions alone cannot make an unverified app MALICIOUS
         }
 
         val finalLocalScore = minOf(score, maxHeuristicCap).coerceIn(0, 100)

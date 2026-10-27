@@ -62,6 +62,7 @@ class RegressionTestRunner:
         self.test_relative_time_formatting_and_ui()
         self.test_per_brand_error_isolation()
         self.test_in_app_diagnostic_logger()
+        self.test_provenance_and_threat_normalizer()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -403,6 +404,46 @@ class RegressionTestRunner:
         self.record("Share Log File Intent Implemented", "shareLogFile" in logger_code and "AppDiagnosticLogger.shareLogFile" in settings_code)
         self.record("FileProvider Registered in AndroidManifest.xml", "androidx.core.content.FileProvider" in manifest_code)
         self.record("Diagnostics Card Added to Settings UI", "Diagnostics & Error Logs" in settings_code)
+
+    # 17. Test App Provenance, Threat Normalizer & Tiered Risk Matrix
+    def test_provenance_and_threat_normalizer(self):
+        print(f"\n{YELLOW}▶ SUITE 17: App Provenance, Threat Normalizer & Tiered Risk Matrix{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        prov_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "AppProvenanceVerifier.kt")
+        norm_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "ThreatFamilyNormalizer.kt")
+        heur_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        scan_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+
+        self.record("AppProvenanceVerifier.kt Exists", os.path.exists(prov_file))
+        self.record("ThreatFamilyNormalizer.kt Exists", os.path.exists(norm_file))
+
+        with open(prov_file, "r", encoding="utf-8") as f:
+            prov_code = f.read()
+        with open(norm_file, "r", encoding="utf-8") as f:
+            norm_code = f.read()
+        with open(heur_file, "r", encoding="utf-8") as f:
+            heur_code = f.read()
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(scan_file, "r", encoding="utf-8") as f:
+            scan_code = f.read()
+
+        self.record("Provenance Recognizes Google Play Store (com.android.vending)", "com.android.vending" in prov_code)
+        self.record("Provenance Recognizes Samsung Galaxy Store", "com.sec.android.app.samsungapps" in prov_code)
+        self.record("Provenance Recognizes Factory System Apps", "FLAG_SYSTEM" in prov_code)
+        self.record("Manifest Heuristics Distinguishes Sensitive vs Critical Abuse", "CRITICAL_ABUSE_PERMISSIONS" in heur_code and "SENSITIVE_CAPABILITY_PERMISSIONS" in heur_code)
+        self.record("Manifest Heuristics Caps Verified Apps at Safe (max 12 pts)", "isKnownTrustedVendor -> 12" in heur_code)
+        self.record("Threat Normalizer Handles Isolated Divergence (1/65 engines)", "ISOLATED_DIVERGENCE" in norm_code and "cleanVendorString" in norm_code)
+        self.record("Threat Normalizer Cleans Internal Numeric IDs and Vendor Junk", "[0-9]{5,}" in norm_code)
+        self.record("Coordinator Applies Provenance Safe Baseline Discount", "isVerifiedStoreApp && flaggedEnginesCount <= 1" in coord_code)
+        self.record("ThreatDetailSheet Uses 'Permissions That May Be Misused'", "Permissions That May Be Misused" in sheet_code)
+        self.record("ThreatDetailSheet Categorizes Offline Engines as OFFLINE", "isOfflineEngine" in sheet_code and "OFFLINE" in sheet_code)
+        self.record("FullScanScreen Implements Amber Tier for Suspicious-Only", "DEVICE MAY BE AT RISK" in scan_code and "CyberAmber" in scan_code)
+        self.record("FullScanScreen Updates Signature Sources with ClamAV and YARA", "ClamAV CVD, VirusTotal YARA" in scan_code)
 
 
 if __name__ == "__main__":

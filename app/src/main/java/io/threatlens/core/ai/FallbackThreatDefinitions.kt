@@ -24,15 +24,15 @@ object FallbackThreatDefinitions {
         // 1. Executive Threat Assessment (Heuristic + Family + Vendor Synthesis)
         sb.append("### 🛡️ Executive Threat Assessment\n")
 
-        val isBanker = combinedDetectionText.contains("bankchameleon") || combinedDetectionText.contains("banker") ||
-                       combinedDetectionText.contains("cerberus") || combinedDetectionText.contains("anatsa") ||
-                       combinedDetectionText.contains("sharkbot") || combinedDetectionText.contains("teabot")
-        val isSpyware = combinedDetectionText.contains("spy") || combinedDetectionText.contains("spynote") ||
-                        combinedDetectionText.contains("smsstealer") || combinedDetectionText.contains("craxs")
-        val isDropper = combinedDetectionText.contains("dropper") || combinedDetectionText.contains("hiddad")
-        val isTollFraud = combinedDetectionText.contains("joker") || combinedDetectionText.contains("toll") || combinedDetectionText.contains("billing")
+        val isBanker = combinedDetectionText.contains("bankchameleon") || combinedDetectionText.contains("cerberus") ||
+                       combinedDetectionText.contains("anatsa") || combinedDetectionText.contains("sharkbot") ||
+                       combinedDetectionText.contains("teabot") || (combinedDetectionText.contains("banker") && !combinedDetectionText.contains("pup"))
+        val isSpyware = combinedDetectionText.contains("spynote") || combinedDetectionText.contains("smsstealer") ||
+                        combinedDetectionText.contains("craxs") || (combinedDetectionText.contains("spyware") && !combinedDetectionText.contains("pup"))
+        val isDropper = combinedDetectionText.contains("hiddad") || (combinedDetectionText.contains("dropper") && !combinedDetectionText.contains("pup"))
+        val isTollFraud = combinedDetectionText.contains("joker") || combinedDetectionText.contains("toll fraud") || combinedDetectionText.contains("billing")
         val isMalctOrRiskware = combinedDetectionText.contains("malct") || combinedDetectionText.contains("riskware") || combinedDetectionText.contains("repack")
-        val isAdware = combinedDetectionText.contains("adware") || combinedDetectionText.contains("hiddenads")
+        val isAdware = combinedDetectionText.contains("adware") || combinedDetectionText.contains("hiddenads") || combinedDetectionText.contains("pup") || combinedDetectionText.contains("pua")
 
         // Heuristic Behavioral Analysis
         val hasSmsTheft = behaviors.any { it.contains("sms", ignoreCase = true) || it.contains("otp", ignoreCase = true) } ||
@@ -46,7 +46,7 @@ object FallbackThreatDefinitions {
         val assessmentSummary = buildString {
             when {
                 isBanker -> {
-                    append("**Critical Financial Threat**: Classified as a **Banking Trojan** (${if (combinedDetectionText.contains("bankchameleon")) "BankChameleon / Malct" else family}). ")
+                    append("**Critical Financial Threat**: Classified as a **Banking Trojan** (${if (combinedDetectionText.contains("bankchameleon")) "BankChameleon" else family}). ")
                     append("Engineered to superimpose deceptive login overlay screens above genuine banking and payment apps. ")
                     if (hasSmsTheft) {
                         append("It actively intercepts SMS broadcasts to siphon two-factor authentication (2FA) OTP tokens and bypass transaction verification.")
@@ -60,8 +60,8 @@ object FallbackThreatDefinitions {
                     }
                 }
                 isMalctOrRiskware -> {
-                    append("**Malicious Riskware / PUP**: Flagged under the **Malct / Riskware Repack** family. ")
-                    append("Indicates a modified or repackaged application embedding aggressive ad injection, unauthorized telemetry, or secondary downloader stubs into genuine app code.")
+                    append("**Low-Confidence Heuristic / Potential Unwanted Component**: Flagged by isolated security rules under generic heuristics. ")
+                    append("Often associated with integrated advertising SDKs, analytic libraries, or repackaged binaries. Not a confirmed destructive Trojan.")
                 }
                 isDropper -> {
                     append("**Malicious Dropper**: Classified as a **Secondary Payload Dropper**. ")
@@ -112,7 +112,12 @@ object FallbackThreatDefinitions {
         if (flaggedEngines.isNotEmpty()) {
             sb.append("### 🔬 Multi-Engine Consensus\n")
             flaggedEngines.forEach { (engine, verdict) ->
-                sb.append("• **$engine**: $verdict\n")
+                val indicator = when {
+                    verdict.contains("Flagged", ignoreCase = true) -> "🔴 [FLAGGED]"
+                    verdict.contains("Suspicious", ignoreCase = true) -> "🟡 [SUSPICIOUS]"
+                    else -> "⚪ [ALERT]"
+                }
+                sb.append("• $indicator **$engine**: $verdict\n")
                 val details = engineDetails[engine]
                 if (!details.isNullOrEmpty()) {
                     details.take(4).forEach { detail ->
@@ -124,7 +129,12 @@ object FallbackThreatDefinitions {
         } else if (activeVerdicts.isNotEmpty()) {
             sb.append("### 🔬 Multi-Engine Consensus\n")
             activeVerdicts.forEach { (engine, verdict) ->
-                sb.append("• **$engine**: $verdict\n")
+                val indicator = when {
+                    verdict.contains("Clean", ignoreCase = true) || verdict.contains("Verified", ignoreCase = true) -> "🟢 [CLEAN]"
+                    verdict.contains("Unreachable", ignoreCase = true) || verdict.contains("Timeout", ignoreCase = true) -> "⚪ [UNREACHABLE]"
+                    else -> "🟢 [CLEAN]"
+                }
+                sb.append("• $indicator **$engine**: $verdict\n")
             }
             sb.append("\n")
         }

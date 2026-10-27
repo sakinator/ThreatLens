@@ -5,6 +5,7 @@ import io.threatlens.core.ai.FallbackThreatDefinitions
 import io.threatlens.core.ai.ThreatAiExplainer
 import io.threatlens.core.cloud.*
 import io.threatlens.core.diagnostics.AppDiagnosticLogger
+import io.threatlens.core.local.AppProvenanceVerifier
 import io.threatlens.core.local.HashUtil
 import io.threatlens.core.local.LocalAntivirusEngine
 import io.threatlens.core.local.LocalSignatureDatabase
@@ -129,6 +130,8 @@ object RealtimeScanCoordinator {
         }
 
         val isApk = file.extension.equals("apk", ignoreCase = true)
+        val provenance = if (isApk) AppProvenanceVerifier.inspectProvenance(context, packageName) else null
+        val isVerifiedStoreApp = provenance?.isVerifiedStore == true || provenance?.isSystemApp == true
 
         // 3. Local Phase: 100% Free Autonomous On-Device Engine (0ms latency, zero internet required)
         val localVerdict = LocalAntivirusEngine.scan(context, file, sha256)
@@ -292,6 +295,9 @@ object RealtimeScanCoordinator {
             } else if (successfulEngines.isEmpty()) {
                 // When offline or all cloud APIs fail: Local engine is 100% authoritative!
                 runningLocalScore
+            } else if (isVerifiedStoreApp && flaggedEnginesCount <= 1 && runningCloudScore <= 15) {
+                // Safe baseline suppression for verified Google Play / System apps (e.g. JioTV with 1/65 isolated flag or clean)
+                minOf(15, runningLocalScore)
             } else if (totalEnginesCount >= 25 && flaggedEnginesCount == 0 && runningLocalScore < 60) {
                 // Cloud verified safe: mitigates mild false positive heuristic noise
                 (runningLocalScore * 0.35).toInt()
@@ -310,12 +316,18 @@ object RealtimeScanCoordinator {
             val effectiveDetectionType = when {
                 localVerdict.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
                     io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
-                flaggedEnginesCount > 0 ->
+                flaggedEnginesCount > 0 && highestSeverity != ThreatSeverity.SAFE ->
                     io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
-                localVerdict.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
+                localVerdict.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN && highestSeverity != ThreatSeverity.SAFE ->
                     io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
                 else ->
                     io.threatlens.core.model.DetectionType.CLEAN
+            }
+
+            val effectiveThreatFamily = if (highestSeverity == ThreatSeverity.SAFE && !localVerdict.isMalicious) {
+                "Clean"
+            } else {
+                runningFamily
             }
 
             val currentBreakdown = currentReport.scoreBreakdown?.copy(
@@ -337,7 +349,7 @@ object RealtimeScanCoordinator {
                 cloudScore = runningCloudScore,
                 currentScore = weighted,
                 severity = highestSeverity,
-                threatFamily = runningFamily,
+                threatFamily = effectiveThreatFamily,
                 detectionType = effectiveDetectionType,
                 scoreBreakdown = currentBreakdown,
                 cloudEnginesFlagged = flaggedEnginesCount,
@@ -525,9 +537,16 @@ object RealtimeScanCoordinator {
                 try {
                     val vt = VirusTotalProvider.queryHash(sha256, virusTotalKey!!)
                     if (vt != null && vt.totalEngines > 0) {
-                        val score = if (vt.maliciousCount >= 4) 100 else if (vt.maliciousCount >= 1) 45 else 0
+                        val normalized = ThreatFamilyNormalizer.normalize(
+                            maliciousCount = vt.maliciousCount,
+                            totalEngines = vt.totalEngines,
+                            rawFamilyLabels = vt.detectedVendors,
+                            isVerifiedStoreApp = isVerifiedStoreApp
+                        )
+                        val score = normalized.adjustedScore
+                        val family = if (normalized.isFalsePositiveRisk) normalized.normalizedFamily else (vt.suggestedThreatLabel ?: normalized.displayCategory)
                         val details = if (vt.detectedVendors.isNotEmpty()) {
-                            vt.detectedVendors
+                            listOf(normalized.consensusSummary) + vt.detectedVendors
                         } else {
                             listOf("0/${vt.totalEngines} security vendors flagged this file across VirusTotal.")
                         }
@@ -537,7 +556,7 @@ object RealtimeScanCoordinator {
                             flagged = vt.maliciousCount,
                             total = vt.totalEngines,
                             sourceLabel = "VirusTotal (${vt.maliciousCount}/${vt.totalEngines})",
-                            family = vt.suggestedThreatLabel,
+                            family = family,
                             details = details
                         )
                     } else if (vt != null) {
@@ -565,9 +584,16 @@ object RealtimeScanCoordinator {
                 try {
                     val md = MetaDefenderProvider.queryHash(sha256, metaDefenderKey!!)
                     if (md != null && md.totalEngines > 0) {
-                        val score = if (md.enginesFlagged >= 3) 95 else if (md.threatFound) 40 else 0
+                        val normalized = ThreatFamilyNormalizer.normalize(
+                            maliciousCount = md.enginesFlagged,
+                            totalEngines = md.totalEngines,
+                            rawFamilyLabels = md.detectedVendors,
+                            isVerifiedStoreApp = isVerifiedStoreApp
+                        )
+                        val score = normalized.adjustedScore
+                        val family = if (normalized.isFalsePositiveRisk) normalized.normalizedFamily else (md.threatName ?: normalized.displayCategory)
                         val mdDetails = if (md.detectedVendors.isNotEmpty()) {
-                            md.detectedVendors
+                            listOf(normalized.consensusSummary) + md.detectedVendors
                         } else {
                             listOf("0/${md.totalEngines} commercial AV engines flagged in OPSWAT MetaDefender.")
                         }
@@ -577,7 +603,7 @@ object RealtimeScanCoordinator {
                             flagged = md.enginesFlagged,
                             total = md.totalEngines,
                             sourceLabel = "MetaDefender (${md.enginesFlagged}/${md.totalEngines})",
-                            family = md.threatName,
+                            family = family,
                             details = mdDetails
                         )
                     } else if (md != null) {

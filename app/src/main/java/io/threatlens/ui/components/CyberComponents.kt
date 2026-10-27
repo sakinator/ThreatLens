@@ -256,20 +256,21 @@ fun ThreatItemRow(
                             else -> NeonEmerald
                         }
 
-                        val displayFamily = when {
+                        val rawDisplay = when {
                             report.currentScore < 25 || report.severity == ThreatSeverity.SAFE || report.threatFamily == "Clean" -> "Clean"
                             report.threatFamily.startsWith("Heuristic.", ignoreCase = true) -> report.threatFamily.substringAfter("Heuristic.")
                             report.threatFamily.startsWith("Heuristic: ", ignoreCase = true) -> report.threatFamily.substringAfter("Heuristic: ")
                             report.threatFamily.startsWith("Heuristic-", ignoreCase = true) -> report.threatFamily.substringAfter("Heuristic-")
                             else -> report.threatFamily
                         }
+                        val displayFamily = io.threatlens.core.cloud.ThreatFamilyNormalizer.cleanVendorString(rawDisplay)
 
                         Text(
                             text = displayFamily,
                             color = familyColor,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            maxLines = 2,
+                            maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )

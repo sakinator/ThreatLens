@@ -214,14 +214,18 @@ fun ThreatDetailSheet(
                         text = "Threat Score Calculation & Rationale",
                         color = TextPrimary,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${report.currentScore}/100",
                         color = if (report.currentScore >= 75) NeonCrimson else if (report.currentScore >= 25) CyberAmber else NeonEmerald,
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        softWrap = false,
+                        maxLines = 1
                     )
                 }
 
@@ -437,70 +441,60 @@ fun ThreatDetailSheet(
                                 .clickable { expandedEngines[sourceName] = !isExpanded }
                         ) {
                             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                                val isOfflineEngine = sourceName.contains("ThreatLens", ignoreCase = true) ||
+                                                      sourceName.contains("ClamAV", ignoreCase = true) ||
+                                                      sourceName.contains("YARA", ignoreCase = true)
+                                val isZeroKeyEngine = sourceName == "AlienVault OTX" || sourceName == "CIRCL Hashlookup"
+                                val engineBadgeText = when {
+                                    isOfflineEngine -> "OFFLINE"
+                                    isZeroKeyEngine -> "ZERO-KEY"
+                                    else -> "CLOUD API"
+                                }
+                                val engineBadgeColor = when {
+                                    isOfflineEngine -> NeonCyan
+                                    isZeroKeyEngine -> NeonEmerald
+                                    else -> TextSecondary
+                                }
+
+                                // Line 1: Header Row (Logo + Full Title + Engine Badge + Status Pill + Chevron)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Engine Logo
-                                    EngineLogoIcon(sourceName, modifier = Modifier.size(24.dp))
-                                    Spacer(modifier = Modifier.width(10.dp))
+                                    EngineLogoIcon(sourceName, modifier = Modifier.size(22.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
 
-                                    // Center Content: Source Name, Tag, Verdict
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = sourceName,
-                                                color = TextPrimary,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                maxLines = 1,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f, fill = false)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Surface(
-                                                color = CyberCardSurface,
-                                                shape = RoundedCornerShape(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = when (sourceName) {
-                                                        "ThreatLens Local Engine" -> "ON-DEVICE"
-                                                        "AlienVault OTX", "CIRCL Hashlookup" -> "ZERO-KEY"
-                                                        else -> "CLOUD API"
-                                                    },
-                                                    color = when (sourceName) {
-                                                        "ThreatLens Local Engine" -> NeonCyan
-                                                        "AlienVault OTX", "CIRCL Hashlookup" -> NeonEmerald
-                                                        else -> TextSecondary
-                                                    },
-                                                    fontSize = 8.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontFamily = FontFamily.Monospace,
-                                                    maxLines = 1,
-                                                    softWrap = false,
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = sourceName,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    // Engine Type Tag (OFFLINE, ZERO-KEY, CLOUD API)
+                                    Surface(
+                                        color = CyberCardSurface,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
                                         Text(
-                                            text = verdict,
-                                            color = when {
-                                                isPending -> NeonCyan
-                                                isMaliciousFlag -> NeonCrimson
-                                                isSuspicious -> CyberAmber
-                                                isClean -> NeonEmerald
-                                                else -> TextMuted
-                                            },
-                                            fontSize = 11.sp,
-                                            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                                            overflow = if (isExpanded) androidx.compose.ui.text.style.TextOverflow.Clip else androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            text = engineBadgeText,
+                                            color = engineBadgeColor,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
 
-                                    // Right Status Badge: Uniform fixed-width alignment
+                                    // Status Badge: Uniform fixed-width alignment
                                     Surface(
                                         color = when {
                                             isPending -> NeonCyan.copy(alpha = 0.15f)
@@ -510,7 +504,7 @@ fun ThreatDetailSheet(
                                             else -> CyberCardSurface
                                         },
                                         shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.width(84.dp)
+                                        modifier = Modifier.width(76.dp)
                                     ) {
                                         Box(
                                             contentAlignment = Alignment.Center,
@@ -562,6 +556,29 @@ fun ThreatDetailSheet(
                                         contentDescription = "Expand",
                                         tint = TextMuted,
                                         modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                // Line 2: Full-Width Verdict Summary (spans entire width, no horizontal crowding!)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 30.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = verdict,
+                                        color = when {
+                                            isPending -> NeonCyan
+                                            isMaliciousFlag -> NeonCrimson
+                                            isSuspicious -> CyberAmber
+                                            isClean -> NeonEmerald
+                                            else -> TextMuted
+                                        },
+                                        fontSize = 11.sp,
+                                        maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
 
@@ -1013,14 +1030,20 @@ fun ThreatDetailSheet(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Dangerous Permissions
+            // Permissions That May Be Misused
             if (report.dangerousPermissions.isNotEmpty()) {
                 GlassCard {
                     Text(
-                        text = "Dangerous Permissions Flagged",
+                        text = "Permissions That May Be Misused",
                         color = TextPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Standard sensitive capabilities and privileged system permissions declared by this application.",
+                        color = TextMuted,
+                        fontSize = 11.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -1028,19 +1051,39 @@ fun ThreatDetailSheet(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        val criticalPerms = setOf(
+                            "BIND_ACCESSIBILITY_SERVICE", "SYSTEM_ALERT_WINDOW", "BIND_DEVICE_ADMIN", "REQUEST_INSTALL_PACKAGES"
+                        )
                         report.dangerousPermissions.forEach { perm ->
+                            val isCritical = criticalPerms.any { perm.endsWith(it, ignoreCase = true) || perm.equals(it, ignoreCase = true) }
+                            val chipBg = if (isCritical) NeonCrimson.copy(alpha = 0.15f) else CyberAmber.copy(alpha = 0.12f)
+                            val chipBorder = if (isCritical) NeonCrimson.copy(alpha = 0.45f) else CyberAmber.copy(alpha = 0.35f)
+                            val chipText = if (isCritical) NeonCrimson else CyberAmber
                             Surface(
-                                color = NeonCrimson.copy(alpha = 0.15f),
+                                color = chipBg,
                                 shape = RoundedCornerShape(6.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCrimson.copy(alpha = 0.4f))
+                                border = androidx.compose.foundation.BorderStroke(1.dp, chipBorder)
                             ) {
-                                Text(
-                                    text = perm,
-                                    color = NeonCrimson,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (isCritical) {
+                                        Text(
+                                            text = "CRITICAL ",
+                                            color = NeonCrimson,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = FontFamily.Monospace
+                                        )
+                                    }
+                                    Text(
+                                        text = perm,
+                                        color = chipText,
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
                             }
                         }
                     }
@@ -1061,6 +1104,32 @@ fun ThreatDetailSheet(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Application Name:", color = TextMuted, fontSize = 12.sp)
                     Text(report.appName ?: "Unknown", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+
+                val provenance = remember(report.packageName) {
+                    io.threatlens.core.local.AppProvenanceVerifier.inspectProvenance(context, report.packageName)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("App Provenance / Store:", color = TextMuted, fontSize = 12.sp)
+                    Surface(
+                        color = if (provenance.isVerifiedStore || provenance.isSystemApp) NeonEmerald.copy(alpha = 0.15f) else CyberDarkSurface,
+                        shape = RoundedCornerShape(4.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (provenance.isVerifiedStore || provenance.isSystemApp) NeonEmerald.copy(alpha = 0.5f) else CyberCardBorder)
+                    ) {
+                        Text(
+                            text = provenance.badgeLabel,
+                            color = if (provenance.isVerifiedStore || provenance.isSystemApp) NeonEmerald else TextSecondary,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -1536,20 +1605,22 @@ private fun getSectionHeaderStyle(rawHeading: String): Triple<String, String, Co
 
     val lower = rawHeading.lowercase()
     return when {
-        lower.contains("executive") || lower.contains("assessment") || lower.contains("verdict") || lower.contains("🛡️") ->
+        lower.contains("remediation") || lower.contains("action") || lower.contains("guidance") || lower.contains("recommended") || lower.contains("🛑") ->
+            Triple(if (clean.isEmpty()) "Recommended Action & Guidance" else clean, "RECOMMENDATION", NeonCrimson)
+        lower.contains("executive") || lower.contains("assessment") || lower.contains("verdict") ->
             Triple(if (clean.isEmpty()) "Executive Threat Assessment" else clean, "EXECUTIVE", NeonCyan)
         lower.contains("consensus") || lower.contains("vendor") || lower.contains("multi-engine") || lower.contains("🔬") ->
             Triple(if (clean.isEmpty()) "Multi-Engine Consensus" else clean, "CONSENSUS", Color(0xFF38BDF8))
         lower.contains("observed") || lower.contains("behavior") || lower.contains("⚡") ->
             Triple(if (clean.isEmpty()) "Observed Malicious Behaviors" else clean, "BEHAVIORS", NeonOrange)
         lower.contains("permission") || lower.contains("capability") || lower.contains("🔑") ->
-            Triple(if (clean.isEmpty()) "High-Risk Capabilities & Permissions" else clean, "PERMISSIONS", CyberAmber)
+            Triple(if (clean.isEmpty()) "Permissions That May Be Misused" else clean, "PERMISSIONS", CyberAmber)
         lower.contains("point-by-point") || lower.contains("finding") || lower.contains("technical") || lower.contains("risk") || lower.contains("⚠️") ->
             Triple(if (clean.isEmpty()) "Technical Findings & Risk" else clean, "FINDINGS", CyberAmber)
-        lower.contains("remediation") || lower.contains("action") || lower.contains("plan") || lower.contains("recommended") || lower.contains("guidance") || lower.contains("🛑") ->
-            Triple(if (clean.isEmpty()) "Recommended Action & Guidance" else clean, "RECOMMENDATION", NeonCrimson)
         lower.contains("notice") || lower.contains("coverage") || lower.contains("inactive") || lower.contains("unconfigured") || lower.contains("ℹ️") ->
             Triple(if (clean.isEmpty()) "Engine Coverage Notice" else clean, "COVERAGE", TextMuted)
+        lower.contains("🛡️") ->
+            Triple(if (clean.isEmpty()) "Threat Analysis" else clean, "ANALYSIS", NeonCyan)
         else ->
             Triple(if (clean.isEmpty()) "Security Analysis" else clean, "ANALYSIS", NeonCyan)
     }

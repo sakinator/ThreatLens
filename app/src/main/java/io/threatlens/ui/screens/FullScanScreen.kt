@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.scanner.FullScanStatus
 import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ThreatItemRow
@@ -129,18 +130,31 @@ fun FullScanScreen(
                                 )
                             }
                             FullScanStatus.COMPLETED -> {
-                                val hasThreats = scanState.threatsFound.isNotEmpty()
+                                val hasMalicious = scanState.threatsFound.any { it.severity == ThreatSeverity.MALICIOUS }
+                                val hasSuspiciousOnly = scanState.threatsFound.isNotEmpty() && !hasMalicious
+                                val hasThreats = hasMalicious || hasSuspiciousOnly
+                                val gaugeColor = when {
+                                    hasMalicious -> NeonCrimson
+                                    hasSuspiciousOnly -> CyberAmber
+                                    else -> NeonEmerald
+                                }
+                                val gaugeText = when {
+                                    hasMalicious -> "Device at Risk!"
+                                    hasSuspiciousOnly -> "Device May Be at Risk"
+                                    else -> "Device Clean"
+                                }
+
                                 Icon(
                                     imageVector = if (hasThreats) Icons.Default.Warning else Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = if (hasThreats) NeonCrimson else NeonEmerald,
+                                    tint = gaugeColor,
                                     modifier = Modifier.size(54.dp)
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = if (hasThreats) "Device at Risk!" else "Device Clean",
-                                    color = if (hasThreats) NeonCrimson else NeonEmerald,
-                                    fontSize = 16.sp,
+                                    text = gaugeText,
+                                    color = gaugeColor,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -160,10 +174,17 @@ fun FullScanScreen(
 
             // IN-PROGRESS WARNING MESSAGE UNDER PROGRESS GAUGE (only when scan not yet complete)
             if ((isScanning || isPaused) && scanState.threatsFound.isNotEmpty()) {
+                val hasMalicious = scanState.threatsFound.any { it.severity == ThreatSeverity.MALICIOUS }
+                val bannerColor = if (hasMalicious) NeonCrimson else CyberAmber
+                val bannerTitle = if (hasMalicious) {
+                    "DEVICE AT RISK (${scanState.threatsFound.size} Threat${if (scanState.threatsFound.size > 1) "s" else ""} Detected)"
+                } else {
+                    "DEVICE MAY BE AT RISK (${scanState.threatsFound.size} Suspicious App${if (scanState.threatsFound.size > 1) "s" else ""} Detected)"
+                }
                 item {
                     Surface(
-                        color = NeonCrimson.copy(alpha = 0.15f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCrimson.copy(alpha = 0.6f)),
+                        color = bannerColor.copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, bannerColor.copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -171,12 +192,12 @@ fun FullScanScreen(
                             modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = NeonCrimson, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = bannerColor, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "DEVICE AT RISK (${scanState.threatsFound.size} Threat${if (scanState.threatsFound.size > 1) "s" else ""} Detected)",
-                                    color = NeonCrimson,
+                                    text = bannerTitle,
+                                    color = bannerColor,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp
                                 )
@@ -236,7 +257,7 @@ fun FullScanScreen(
                                     fontSize = 12.sp
                                 )
                                 Text(
-                                    text = "Sources: MalwareBazaar, CIRCL, ATT&CK, VX-Underground",
+                                    text = "Sources: ClamAV CVD, VirusTotal YARA, MalwareBazaar, CIRCL, ATT&CK",
                                     color = TextMuted,
                                     fontSize = 9.sp
                                 )
@@ -446,6 +467,19 @@ fun FullScanScreen(
 
             // Threats Found List
             if (scanState.threatsFound.isNotEmpty()) {
+                val hasMalicious = scanState.threatsFound.any { it.severity == ThreatSeverity.MALICIOUS }
+                val sectionTitle = if (hasMalicious) {
+                    "CRITICAL THREATS REQUIRING ATTENTION (${scanState.threatsFound.size})"
+                } else {
+                    "SUSPICIOUS APPS REQUIRING REVIEW (${scanState.threatsFound.size})"
+                }
+                val sectionColor = if (hasMalicious) NeonCrimson else CyberAmber
+                val buttonText = if (hasMalicious) {
+                    "UNINSTALL / DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS"
+                } else {
+                    "REVIEW / REMOVE ALL ${scanState.threatsFound.size} SUSPICIOUS APPS"
+                }
+
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -453,8 +487,8 @@ fun FullScanScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "THREATS REQUIRING ATTENTION (${scanState.threatsFound.size})",
-                            color = NeonCrimson,
+                            text = sectionTitle,
+                            color = sectionColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -464,17 +498,28 @@ fun FullScanScreen(
                 item {
                     Button(
                         onClick = { showConfirmDeleteAllDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (hasMalicious) NeonCrimson else CyberAmber.copy(alpha = 0.2f),
+                            contentColor = if (hasMalicious) Color.White else CyberAmber
+                        ),
+                        border = if (hasMalicious) null else androidx.compose.foundation.BorderStroke(1.dp, CyberAmber.copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .padding(vertical = 2.dp)
                     ) {
-                        Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Color.White)
+                        Icon(
+                            imageVector = Icons.Default.DeleteForever,
+                            contentDescription = null,
+                            tint = if (hasMalicious) Color.White else CyberAmber
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "UNINSTALL / DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS",
+                            text = buttonText,
                             fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            maxLines = 1
                         )
                     }
                 }

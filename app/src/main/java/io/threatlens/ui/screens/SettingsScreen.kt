@@ -315,6 +315,12 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Sources: ClamAV CVD, VirusTotal YARA, MalwareBazaar, CIRCL",
+                                color = TextMuted,
+                                fontSize = 9.sp
+                            )
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
