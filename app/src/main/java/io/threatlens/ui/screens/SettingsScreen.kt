@@ -249,6 +249,97 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Background Shield Health & Persistence Card
+            val isBatteryOptIgnored = remember { mutableStateOf(io.threatlens.core.system.OemTaskKillerHelper.isIgnoringBatteryOptimizations(context)) }
+            val isAggressiveOem = remember { io.threatlens.core.system.OemTaskKillerHelper.isKnownAggressiveOem() }
+            val oemBrand = remember { io.threatlens.core.system.OemTaskKillerHelper.getOemBrand().replaceFirstChar { it.uppercase() } }
+
+            GlassCard {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Security, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Shield Keep-Alive & Health", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("Prevents OS & task killers from terminating protection", color = TextMuted, fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    Divider(color = CyberCardBorder.copy(alpha = 0.5f))
+
+                    // Battery Optimization Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Battery Optimization Exemption", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            Text(
+                                text = if (isBatteryOptIgnored.value) "Unrestricted • Active shield immune to deep sleep / Doze mode" else "Optimized • System may suspend download watcher during sleep",
+                                color = if (isBatteryOptIgnored.value) NeonEmerald else CyberAmber,
+                                fontSize = 11.sp
+                            )
+                        }
+                        if (!isBatteryOptIgnored.value) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    io.threatlens.core.system.OemTaskKillerHelper.requestIgnoreBatteryOptimizations(context)
+                                    isBatteryOptIgnored.value = io.threatlens.core.system.OemTaskKillerHelper.isIgnoringBatteryOptimizations(context)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CyberAmber),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("FIX", color = CyberBlack, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        } else {
+                            Icon(Icons.Default.CheckCircle, contentDescription = "Active", tint = NeonEmerald, modifier = Modifier.size(20.dp))
+                        }
+                    }
+
+                    // OEM Autostart Row (if aggressive OEM detected)
+                    if (isAggressiveOem) {
+                        Divider(color = CyberCardBorder.copy(alpha = 0.3f))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("$oemBrand Auto-Start Management", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                Text(
+                                    text = "Allow ThreatLens in $oemBrand settings so it survives Recent Apps swipe-away",
+                                    color = TextMuted,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    io.threatlens.core.system.OemTaskKillerHelper.openOemAutostartSettings(context)
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = NeonCyan.copy(alpha = 0.1f)),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("OEM SETTINGS ↗", color = NeonCyan, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             // VIRUS SIGNATURE DATABASE & OFFLINE ENGINE SECTION
             GlassCard {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {

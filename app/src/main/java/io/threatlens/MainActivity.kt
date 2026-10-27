@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
 
         checkAndRequestPermissions()
         handleThreatIntent(intent)
+        io.threatlens.core.system.ShieldWatchdogJobService.ensureShieldRunning(this)
+        io.threatlens.core.system.ShieldWatchdogJobService.scheduleWatchdog(this)
 
         setContent {
             ThreatLensTheme {

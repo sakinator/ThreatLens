@@ -21,14 +21,59 @@ class RealtimeDownloadShieldService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = ThreatNotificationManager.buildForegroundShieldNotification(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(
+                    ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                )
+            } else {
+                startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification)
+            }
+        } catch (_: Exception) {
             startForeground(ThreatNotificationManager.FOREGROUND_NOTIFICATION_ID, notification)
         }
 
         startUltraLowPowerWatchers()
+        io.threatlens.core.system.ShieldWatchdogJobService.scheduleWatchdog(applicationContext)
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Auto-resuscitate immediately if the app is cleared from Recent Apps
+        try {
+            val restartIntent = Intent(applicationContext, RealtimeDownloadShieldService::class.java).apply {
+                setPackage(packageName)
+            }
+            val pendingIntent = android.app.PendingIntent.getService(
+                applicationContext,
+                1001,
+                restartIntent,
+                android.app.PendingIntent.FLAG_ONE_SHOT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = getSystemService(android.content.Context.ALARM_SERVICE) as? android.app.AlarmManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager?.setExactAndAllowWhileIdle(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 1000L,
+                    pendingIntent
+                )
+            } else {
+                alarmManager?.set(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 1000L,
+                    pendingIntent
+                )
+            }
+        } catch (_: Exception) {}
     }
 
     private fun startUltraLowPowerWatchers() {

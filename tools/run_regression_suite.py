@@ -63,6 +63,7 @@ class RegressionTestRunner:
         self.test_per_brand_error_isolation()
         self.test_in_app_diagnostic_logger()
         self.test_provenance_and_threat_normalizer()
+        self.test_keepalive_and_edgecases()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -444,6 +445,53 @@ class RegressionTestRunner:
         self.record("ThreatDetailSheet Categorizes Offline Engines as OFFLINE", "isOfflineEngine" in sheet_code and "OFFLINE" in sheet_code)
         self.record("FullScanScreen Implements Amber Tier for Suspicious-Only", "DEVICE MAY BE AT RISK" in scan_code and "CyberAmber" in scan_code)
         self.record("FullScanScreen Updates Signature Sources with ClamAV and YARA", "ClamAV CVD, VirusTotal YARA" in scan_code)
+
+    # 18. Test Shield Keep-Alive, OEM Resilience & Edge Cases 1 & 2A
+    def test_keepalive_and_edgecases(self):
+        print(f"\n{YELLOW}▶ SUITE 18: Shield Keep-Alive, OEM Resilience & Edge Cases 1 & 2A{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        oem_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "system", "OemTaskKillerHelper.kt")
+        watchdog_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "system", "ShieldWatchdogJobService.kt")
+        shield_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeDownloadShieldService.kt")
+        heur_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        packer_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "PackerEntropyDetector.kt")
+        manifest_file = os.path.join(script_dir, "..", "app", "src", "main", "AndroidManifest.xml")
+        settings_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
+
+        self.record("OemTaskKillerHelper.kt Exists", os.path.exists(oem_file))
+        self.record("ShieldWatchdogJobService.kt Exists", os.path.exists(watchdog_file))
+
+        with open(oem_file, "r", encoding="utf-8") as f:
+            oem_code = f.read()
+        with open(watchdog_file, "r", encoding="utf-8") as f:
+            watchdog_code = f.read()
+        with open(shield_file, "r", encoding="utf-8") as f:
+            shield_code = f.read()
+        with open(heur_file, "r", encoding="utf-8") as f:
+            heur_code = f.read()
+        with open(packer_file, "r", encoding="utf-8") as f:
+            packer_code = f.read()
+        with open(manifest_file, "r", encoding="utf-8") as f:
+            manifest_code = f.read()
+        with open(settings_file, "r", encoding="utf-8") as f:
+            settings_code = f.read()
+
+        # Keep-Alive checks
+        self.record("OEM Helper Detects Xiaomi, Samsung, OnePlus, Vivo, Huawei", "xiaomi" in oem_code and "samsung" in oem_code and "vivo" in oem_code)
+        self.record("OEM Helper Implements Battery Optimization Exemption", "isIgnoringBatteryOptimizations" in oem_code and "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" in oem_code)
+        self.record("ShieldWatchdogJobService Declared in AndroidManifest.xml", "ShieldWatchdogJobService" in manifest_code and "android.permission.BIND_JOB_SERVICE" in manifest_code)
+        self.record("Shield Implements onTaskRemoved Auto-Resuscitate Alarm", "override fun onTaskRemoved" in shield_code and "setExactAndAllowWhileIdle" in shield_code)
+        self.record("Shield Registered with Android 14 specialUse & Property Subtype", "PROPERTY_SPECIAL_USE_FGS_SUBTYPE" in manifest_code and "specialUse" in manifest_code)
+        self.record("SettingsScreen Includes Shield Keep-Alive & Health Card", "Shield Keep-Alive & Health" in settings_code and "Battery Optimization Exemption" in settings_code)
+
+        # Edge Case 1: Accessibility Utility Whitelisting
+        self.record("Heuristics Checks for Autofill / Keyboard / Automation Companion", "isAutofillCompanion" in heur_code and "isInputMethodCompanion" in heur_code and "isAutomationCompanion" in heur_code)
+        self.record("Heuristics Whitelists Legitimate Accessibility Tools (0 pts penalty)", "isLegitimateAccessibilityUtility" in heur_code and "Legitimate Accessibility Utility" in heur_code)
+
+        # Edge Case 2A: Static DCL & High-Entropy Asset Payload Detection
+        self.record("Packer Detector Scans Dynamic Code Loading (InMemoryDexClassLoader)", "InMemoryDexClassLoader" in packer_code and "DexClassLoader" in packer_code)
+        self.record("Packer Detector Scans Embedded Secondary Assets Shannon Entropy", "calculateShannonEntropy" in packer_code and "highEntropyAsset" in packer_code and "7.82" in packer_code)
+        self.record("Packer Detector Flags Trojan.Dropper.DynamicPayload", "Trojan.Dropper.DynamicPayload" in packer_code)
 
 
 if __name__ == "__main__":

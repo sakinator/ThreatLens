@@ -50,21 +50,56 @@ object PackerEntropyDetector {
         var detectedPacker: String? = null
         var maxDexEntropy = 0f
         val detectedHooks = mutableListOf<String>()
+        var detectedDclLoader: String? = null
+        var highEntropyAsset: String? = null
+        var highEntropyAssetScore = 0f
+
+        val safeExtensions = setOf(
+            "png", "jpg", "jpeg", "webp", "gif", "mp3", "ogg", "wav",
+            "ttf", "otf", "woff", "html", "js", "css", "json", "svg", "xml"
+        )
 
         try {
             ZipFile(apkFile).use { zip ->
-                // 1. Scan for commercial packer dynamic libraries in lib/ and assets/
+                // 1. Scan for commercial packer dynamic libraries and encrypted secondary assets
                 val entries = zip.entries()
                 while (entries.hasMoreElements()) {
                     val entry = entries.nextElement()
                     val filename = entry.name.substringAfterLast("/")
-                    val packerMatch = KNOWN_PACKERS[filename.lowercase()]
+                    val lowerName = filename.lowercase()
+                    val ext = lowerName.substringAfterLast(".", "")
+
+                    // Check commercial packers
+                    val packerMatch = KNOWN_PACKERS[lowerName]
                     if (packerMatch != null) {
                         detectedPacker = packerMatch
                     }
+
+                    // Check suspicious encrypted secondary assets in assets/ or res/raw/
+                    if ((entry.name.startsWith("assets/") || entry.name.startsWith("res/raw/")) &&
+                        !entry.isDirectory && entry.size in 4096..5242880 && ext !in safeExtensions
+                    ) {
+                        try {
+                            val assetBytes = zip.getInputStream(entry).use { stream ->
+                                val buf = ByteArray(minOf(entry.size.toInt(), 65536))
+                                var read = 0
+                                while (read < buf.size) {
+                                    val r = stream.read(buf, read, buf.size - read)
+                                    if (r == -1) break
+                                    read += r
+                                }
+                                if (read == buf.size) buf else buf.copyOf(read)
+                            }
+                            val entropy = calculateShannonEntropy(assetBytes)
+                            if (entropy >= 7.82f && entropy > highEntropyAssetScore) {
+                                highEntropyAsset = entry.name
+                                highEntropyAssetScore = entropy
+                            }
+                        } catch (_: Exception) {}
+                    }
                 }
 
-                // 2. Measure Shannon Entropy on classes.dex
+                // 2. Measure Shannon Entropy on classes.dex and check for DCL & Anti-Debug hooks
                 val dexEntry = zip.getEntry("classes.dex")
                 if (dexEntry != null) {
                     val dexBytes = zip.getInputStream(dexEntry).use { it.readBytes() }
@@ -76,7 +111,31 @@ object PackerEntropyDetector {
                             detectedHooks.add(hook)
                         }
                     }
+
+                    // Dynamic Code Loading (DCL) bytecode pattern checks
+                    when {
+                        dexString.contains("InMemoryDexClassLoader") -> detectedDclLoader = "dalvik.system.InMemoryDexClassLoader"
+                        dexString.contains("DexClassLoader") -> detectedDclLoader = "dalvik.system.DexClassLoader"
+                        dexString.contains("dalvik/system/PathClassLoader") && dexString.contains("loadClass") -> detectedDclLoader = "Dynamic ClassLoader Reflection"
+                    }
                 }
+            }
+
+            // High-Confidence Dynamic Dropper detection (DCL loader + Encrypted Asset payload)
+            if (detectedDclLoader != null && highEntropyAsset != null) {
+                return PackerResult(
+                    isPacked = true,
+                    isAntiAnalysis = true,
+                    packerName = "Trojan.Dropper.DynamicPayload",
+                    dexEntropy = maxDexEntropy,
+                    score = 80,
+                    details = listOf(
+                        "Dropper Alert: Dynamic Code Loading (DCL) combined with encrypted secondary payload",
+                        "Dynamic Loader Symbol: $detectedDclLoader",
+                        "Encrypted Secondary Asset: $highEntropyAsset (Shannon Entropy: %.2f bits/byte)".format(highEntropyAssetScore),
+                        "Evasion Footprint: Decrypts and dynamically loads bytecode at runtime to evade static antivirus scanners"
+                    )
+                )
             }
 
             if (detectedPacker != null) {

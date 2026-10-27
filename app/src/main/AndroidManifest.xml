@@ -22,6 +22,7 @@
     <!-- Inspect installed apps & allow user to uninstall dangerous APKs -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".ThreatLensApplication"
@@ -49,7 +50,11 @@
             android:name=".core.realtime.RealtimeDownloadShieldService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Real-time malicious download and sideload interception shield" />
+        </service>
 
         <!-- Instant Package Install / Sideload Interceptor -->
         <receiver
@@ -98,6 +103,12 @@
         <!-- Nightly Auto-Update JobService (Scheduled on Wi-Fi + Charging) -->
         <service
             android:name=".core.update.SignatureUpdateJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
+        <!-- Shield Watchdog Supervisor JobService -->
+        <service
+            android:name=".core.system.ShieldWatchdogJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false" />
 

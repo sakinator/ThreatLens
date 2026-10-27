@@ -16,6 +16,7 @@ class BootReceiver : BroadcastReceiver() {
                 val serviceIntent = Intent(context, RealtimeDownloadShieldService::class.java)
                 ContextCompat.startForegroundService(context, serviceIntent)
             }
+            io.threatlens.core.system.ShieldWatchdogJobService.scheduleWatchdog(context)
         }
     }
 }

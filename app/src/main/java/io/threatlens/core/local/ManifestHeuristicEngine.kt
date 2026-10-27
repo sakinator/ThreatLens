@@ -100,13 +100,39 @@ object ManifestHeuristicEngine {
 
             val permSet = requestedPermissions.toSet()
 
+            // Check for companion utility services (Autofill, Keyboard, Automation) to whitelist legitimate accessibility tools
+            val declaredServices = packageInfo.services ?: emptyArray()
+            val isAutofillCompanion = declaredServices.any { 
+                it.permission == "android.permission.BIND_AUTOFILL_SERVICE" || 
+                it.name.contains("Autofill", ignoreCase = true) 
+            }
+            val isInputMethodCompanion = declaredServices.any { 
+                it.permission == "android.permission.BIND_INPUT_METHOD" || 
+                it.name.contains("InputMethod", ignoreCase = true) || 
+                it.name.contains("Keyboard", ignoreCase = true) 
+            }
+            val isAutomationCompanion = declaredServices.any { 
+                it.permission == "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" || 
+                it.name.contains("NotificationListener", ignoreCase = true) 
+            }
+            val isKnownUtilityPackage = pkg.contains("bitwarden") || pkg.contains("keepass") || 
+                    pkg.contains("tasker") || pkg.contains("macrodroid") || pkg.contains("autofill")
+
+            val isLegitimateAccessibilityUtility = isAutofillCompanion || isInputMethodCompanion || isAutomationCompanion || isKnownUtilityPackage
+
             // 2. Toxic Combo 1: Overlay + Accessibility Service (Banking Trojan / Keylogger pattern)
             hasAccessibility = permSet.contains("android.permission.BIND_ACCESSIBILITY_SERVICE")
             hasOverlay = permSet.contains("android.permission.SYSTEM_ALERT_WINDOW")
-            if (hasAccessibility && hasOverlay) {
+
+            if (hasAccessibility && hasOverlay && isLegitimateAccessibilityUtility) {
+                score += 10
+                behaviors.add("Accessibility Utility with floating UI (Standard for password managers & automation assistants)")
+            } else if (hasAccessibility && hasOverlay) {
                 score += 45
                 isBanker = true
                 behaviors.add("Overlay & Accessibility abuse (Injects fake login screens over banking apps)")
+            } else if (hasAccessibility && isLegitimateAccessibilityUtility) {
+                behaviors.add("Legitimate Accessibility Utility (Autofill / Automation companion service detected)")
             } else if (hasAccessibility) {
                 score += 25
                 behaviors.add("Requests Accessibility Service (Can monitor screen touches & read credentials)")

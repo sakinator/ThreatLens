@@ -171,9 +171,9 @@ object LocalAntivirusEngine {
             behaviors.addAll(packer.details)
             if (packer.score > highestScore) {
                 highestScore = packer.score
-                if (detectedFamily == "Clean") {
+                if (detectedFamily == "Clean" || detectedFamily.startsWith("Heuristic.")) {
                     detectedFamily = packer.packerName ?: "Obfuscated.Packer"
-                    category = "Packer / Obfuscation"
+                    category = if (packer.packerName?.contains("Dropper") == true) "Malicious Dropper" else "Packer / Obfuscation"
                 }
             }
         }
