@@ -90,6 +90,34 @@ object LocalAntivirusEngine {
             category = "Privilege Escalation",
             score = 85,
             description = "Spawns unauthorized background root daemon to bypass Android security sandbox"
+        ),
+        BytecodeRule(
+            pattern = "DoubleLocker",
+            family = "Ransomware.AndroidOS.DoubleLocker",
+            category = "Mobile Ransomware",
+            score = 100,
+            description = "DoubleLocker ransomware encryption stub and PIN reset mechanism"
+        ),
+        BytecodeRule(
+            pattern = "SimpleLocker",
+            family = "Ransomware.AndroidOS.SimpleLocker",
+            category = "Mobile Ransomware",
+            score = 100,
+            description = "SimpleLocker AES file encryption and extortion note generator"
+        ),
+        BytecodeRule(
+            pattern = "WannaLocker",
+            family = "Ransomware.AndroidOS.WannaLocker",
+            category = "Mobile Ransomware",
+            score = 100,
+            description = "WannaLocker mobile crypto-ransomware payload"
+        ),
+        BytecodeRule(
+            pattern = "DevicePolicyManager;->lockNow",
+            family = "Heuristic.Ransomware.ScreenLocker",
+            category = "Potential Screen Locker",
+            score = 55,
+            description = "Direct programmatic invocation of DevicePolicyManager lockNow to enforce screen lockout"
         )
     )
 
@@ -242,17 +270,21 @@ object LocalAntivirusEngine {
                 highestScore = heuristic.score
                 if (detectedFamily == "Clean") {
                     when {
+                        heuristic.isLikelyRansomware -> {
+                            detectedFamily = "Heuristic.Ransomware.Potential"
+                            category = "Potential Ransomware"
+                        }
                         heuristic.isLikelyBanker -> {
-                            detectedFamily = "Heuristic.TrojanBanker"
-                            category = "Banking Trojan"
+                            detectedFamily = "Heuristic.Banker.Potential"
+                            category = "Potential Banking Trojan"
                         }
                         heuristic.isLikelySpyware -> {
-                            detectedFamily = "Heuristic.Spyware"
-                            category = "Spyware / RAT"
+                            detectedFamily = "Heuristic.Spyware.Potential"
+                            category = "Potential Spyware / RAT"
                         }
                         heuristic.isLikelyDropper -> {
-                            detectedFamily = "Heuristic.Dropper"
-                            category = "Malicious Dropper"
+                            detectedFamily = "Heuristic.Dropper.Potential"
+                            category = "Potential Dropper"
                         }
                         heuristic.score >= 45 -> {
                             detectedFamily = "Heuristic.HighPrivilege"
@@ -296,9 +328,10 @@ object LocalAntivirusEngine {
             val packerScore = if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) packer.score else 0
             val certScore = if (cert != null && (cert.isSuspicious || cert.isMalicious)) cert.score else 0
 
-            permScore = manifestPerm.coerceIn(0, 100)
-            heurScore = maxOf(manifestHeur + packerScore, certScore).coerceIn(0, 100 - permScore)
-            finalLocalScore = (permScore + heurScore).coerceIn(0, 100)
+            permScore = manifestPerm.coerceIn(0, 30)
+            // Heuristics without confirmed Trojan signature must NEVER reach 75+ (Malicious threshold)
+            heurScore = maxOf(manifestHeur + packerScore, certScore).coerceIn(0, 100 - permScore).coerceAtMost(45)
+            finalLocalScore = (permScore + heurScore).coerceIn(0, 55)
         }
 
         val isMalicious = finalLocalScore >= 75 || hasConfirmedSignature || (cert != null && cert.isMalicious)
@@ -317,7 +350,7 @@ object LocalAntivirusEngine {
             io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
                 "Confirmed Malware: Trojan or RAT payload signature discovered embedded in application bytecode."
             io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
-                "Heuristic Finding: Score based on ${dangerousPermissions.size} sensitive permissions and runtime capabilities. No confirmed Trojan signature matched."
+                "Potential Threat Pattern ($category): Score based on ${dangerousPermissions.size} capabilities and runtime patterns. 0 confirmed signatures."
             else ->
                 "Verified Safe: Normal permission usage. 0 malicious signatures or harmful heuristic patterns identified."
         }

@@ -24,6 +24,14 @@ object FallbackThreatDefinitions {
         // 1. Executive Threat Assessment (Heuristic + Family + Vendor Synthesis)
         sb.append("### 🛡️ Executive Threat Assessment\n")
 
+        val isConfirmedSignature = !family.startsWith("Heuristic", ignoreCase = true) &&
+                                   !family.startsWith("Low-Confidence", ignoreCase = true) &&
+                                   !family.equals("Clean", ignoreCase = true) &&
+                                   (allDetections.size >= 5 || family.contains("Trojan") || family.contains("Spyware") || family.contains("Ransomware"))
+
+        val isRansomware = combinedDetectionText.contains("ransomware") || combinedDetectionText.contains("simplelocker") ||
+                           combinedDetectionText.contains("doublelocker") || combinedDetectionText.contains("wannalocker") ||
+                           combinedDetectionText.contains("screenlocker") || (combinedDetectionText.contains("locker") && !combinedDetectionText.contains("applock"))
         val isBanker = combinedDetectionText.contains("bankchameleon") || combinedDetectionText.contains("cerberus") ||
                        combinedDetectionText.contains("anatsa") || combinedDetectionText.contains("sharkbot") ||
                        combinedDetectionText.contains("teabot") || (combinedDetectionText.contains("banker") && !combinedDetectionText.contains("pup"))
@@ -45,27 +53,47 @@ object FallbackThreatDefinitions {
 
         val assessmentSummary = buildString {
             when {
-                isBanker -> {
+                isRansomware && isConfirmedSignature -> {
+                    append("**Critical Ransomware Threat**: Classified as **Mobile Ransomware / Screen Locker** ($family). ")
+                    append("Engineered to encrypt device storage or hijack device lock privileges with intent to extort financial ransom.")
+                }
+                isRansomware -> {
+                    append("**Potential Ransomware Pattern**: Flagged by on-device heuristics for combining wide storage access and device lockout / administrative privileges. ")
+                    append("Not a confirmed ransomware payload. ThreatLens flags the pattern so you can inspect granted permissions.")
+                }
+                isBanker && isConfirmedSignature -> {
                     append("**Critical Financial Threat**: Classified as a **Banking Trojan** (${if (combinedDetectionText.contains("bankchameleon")) "BankChameleon" else family}). ")
                     append("Engineered to superimpose deceptive login overlay screens above genuine banking and payment apps. ")
                     if (hasSmsTheft) {
                         append("It actively intercepts SMS broadcasts to siphon two-factor authentication (2FA) OTP tokens and bypass transaction verification.")
                     }
                 }
-                isSpyware -> {
+                isBanker -> {
+                    append("**Potential Banking Overlay Pattern**: Flagged by on-device heuristics for combining overlay projection with accessibility or sensitive privileges. ")
+                    append("Not a confirmed destructive Trojan. Common in modded utilities or custom interfaces.")
+                }
+                isSpyware && isConfirmedSignature -> {
                     append("**High-Risk Surveillance Threat**: Classified as **Mobile Spyware / Remote Access Trojan (RAT)**. ")
                     append("Designed to covertly exfiltrate personal data. ")
                     if (hasSurveillance || hasSmsTheft) {
                         append("It combines background audio/camera access and SMS monitoring to harvest conversations, private messages, and keystrokes.")
                     }
                 }
+                isSpyware -> {
+                    append("**Potential Surveillance Pattern**: Flagged by on-device heuristics for declaring background recording or exfiltration capabilities. ")
+                    append("Not a confirmed spyware binary.")
+                }
                 isMalctOrRiskware -> {
                     append("**Low-Confidence Heuristic / Potential Unwanted Component**: Flagged by isolated security rules under generic heuristics. ")
                     append("Often associated with integrated advertising SDKs, analytic libraries, or repackaged binaries. Not a confirmed destructive Trojan.")
                 }
-                isDropper -> {
+                isDropper && isConfirmedSignature -> {
                     append("**Malicious Dropper**: Classified as a **Secondary Payload Dropper**. ")
                     append("Serves as an evasive initial stager engineered to bypass standard application filters and silently download secondary malicious binaries into device storage.")
+                }
+                isDropper -> {
+                    append("**Potential Dynamic Dropper Pattern**: Flagged by on-device heuristics for declaring background installation capabilities or dynamic code loading. ")
+                    append("Not a confirmed dropper Trojan.")
                 }
                 isTollFraud -> {
                     append("**Toll Fraud / Billing Malware**: Classified under the **Joker / Toll Fraud** family. ")
@@ -173,14 +201,12 @@ object FallbackThreatDefinitions {
         // 5. Recommended Action & Guidance
         sb.append("### 🛡️ Recommended Action & Guidance\n")
         val action = when {
-            isBanker || isSpyware || isDropper ->
-                "**1.** Immediately uninstall this application without opening it.\n**2.** Check Device Administrators in Android Settings to ensure it has not granted itself persistence.\n**3.** If recently launched, change online banking and email passwords from another secure device."
-            isTollFraud ->
-                "**1.** Uninstall the application immediately.\n**2.** Check your mobile carrier statement for unrecognized subscription charges.\n**3.** Revoke SMS permissions for unknown apps."
-            isAdware || isMalctOrRiskware ->
-                "**1.** Remove the application from Android Settings > Apps.\n**2.** Clear browser cache and restart your device to terminate background advertising services."
+            isConfirmedSignature && (isBanker || isSpyware || isDropper || isRansomware) ->
+                "**1. Immediate Threat Removal:** Uninstall this application from your device.\n**2. Check Device Administrators:** Verify in Android Settings that no persistent administrative privileges were granted.\n**3. Protect Financial Accounts:** If this application was recently launched, change online banking and sensitive passwords from another secure device."
+            isConfirmedSignature && isTollFraud ->
+                "**1. Uninstall Application:** Remove the application immediately.\n**2. Review Carrier Statement:** Check your mobile bill for unrecognized premium SMS subscription charges."
             else ->
-                "**1.** Do not grant accessibility or device admin privileges to this app.\n**2.** If not recognized or from an unverified source, remove the file/APK immediately."
+                "**1. Review Source & Purpose:** This application was flagged under generic heuristic capability patterns or minor vendor divergence. It is not a confirmed destructive malware binary.\n**2. Check Sensitive Privileges:** Verify in Android Settings > Apps that this application has only been granted strictly necessary permissions.\n**3. Trust or Remove:** If you installed this mod or utility intentionally from a trusted source, you can add it to your Trusted Applications in Settings to suppress future alerts. If unrecognized, uninstall it at your convenience."
         }
         sb.append(action)
 

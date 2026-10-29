@@ -68,6 +68,7 @@ class RegressionTestRunner:
         self.test_v141_critical_fixes()
         self.test_v142_critical_fixes()
         self.test_v150_provenance_and_features()
+        self.test_v151_brand_logos_and_pattern_features()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -664,6 +665,76 @@ class RegressionTestRunner:
         # 5. UI Provenance Tag Placement
         self.record("ThreatItemRow displays store provenance tag badge", "AppProvenanceVerifier.inspectProvenance" in components_code and "provenance.badgeLabel" in components_code)
         self.record("ThreatDetailSheet displays store provenance tag badge in header", "AppProvenanceVerifier.inspectProvenance" in sheet_code and "provenance.badgeLabel" in sheet_code)
+
+    # 23. Test v1.5.1 Authentic Brand Logos, Heuristic Score Reconciliation, Offline Ransomware Pattern & Card Redesign
+    def test_v151_brand_logos_and_pattern_features(self):
+        print(f"\n{YELLOW}▶ SUITE 23: v1.5.1 Authentic Brand Logos, Heuristic Score Reconciliation, Offline Ransomware & Card Redesign{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logos_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "EngineLogos.kt")
+        packer_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "PackerEntropyDetector.kt")
+        cert_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ApkCertificateVerifier.kt")
+        manifest_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        local_av_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+        sig_db_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalSignatureDatabase.kt")
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        fallback_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "ai", "FallbackThreatDefinitions.kt")
+        components_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "CyberComponents.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+
+        with open(logos_file, "r", encoding="utf-8") as f:
+            logos_code = f.read()
+        with open(packer_file, "r", encoding="utf-8") as f:
+            packer_code = f.read()
+        with open(cert_file, "r", encoding="utf-8") as f:
+            cert_code = f.read()
+        with open(manifest_file, "r", encoding="utf-8") as f:
+            manifest_code = f.read()
+        with open(local_av_file, "r", encoding="utf-8") as f:
+            local_av_code = f.read()
+        with open(sig_db_file, "r", encoding="utf-8") as f:
+            sig_db_code = f.read()
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(fallback_file, "r", encoding="utf-8") as f:
+            fallback_code = f.read()
+        with open(components_file, "r", encoding="utf-8") as f:
+            components_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+
+        # 1. Authentic Brand Logos & Vendor Matching Resolution
+        self.record("VirusTotalLogo composable renders original VT ribbon loop", "fun VirusTotalLogo" in logos_code and "0xFF0058FF" in logos_code)
+        self.record("NortonLogo composable renders golden circle with black checkmark", "fun NortonLogo" in logos_code and "0xFFFDB813" in logos_code)
+        self.record("BitdefenderLogo composable renders iconic red dragon flame badge", "fun BitdefenderLogo" in logos_code and "0xFFED1C24" in logos_code)
+        self.record("MicrosoftDefenderLogo composable renders 4-color squares", "fun MicrosoftDefenderLogo" in logos_code and "0xFFF25022" in logos_code and "0xFF7FBA00" in logos_code)
+        self.record("SubEngineRegistry resolves BitDefenderFalx to Bitdefender brand", 'clean.contains("bitdefender") -> return VendorBrand(name, "Bitdefender"' in logos_code)
+        self.record("SubEngineRegistry resolves SymantecMobileInsight to Norton brand", 'clean.contains("norton") || clean.contains("symantec")' in logos_code)
+        self.record("VendorFindingBadge renders vector BrandLogoBadge instead of generic initials", "BrandLogoBadge(" in logos_code and "vendor.brandKey" in logos_code)
+
+        # 2. Packer False Positive Fix (.lottie excluded)
+        self.record("Packer Detector ignores lottie animation archives in assets", '"lottie"' in packer_code and 'lowerPath.contains("lottie")' in packer_code)
+        self.record("Packer Detector requires true compiled executable payload", 'ext in setOf("dex", "so")' in packer_code and 'ext in setOf("apk", "jar")' in packer_code)
+
+        # 3. Certificate Verifier Play Store Scheme v2/v3 Fix
+        self.record("ApkCertificateVerifier bypasses Unsigned Binary for Verified Store apps", 'if (isVerifiedStore)' in cert_code and 'Verified Google Play / Platform Release' in cert_code)
+        self.record("ApkCertificateVerifier queries PackageManager and APK Signing Block", 'extractCertFromPackageManager' in cert_code and 'checkApkSigningBlock' in cert_code and '"APK Sig Block 42"' in cert_code)
+
+        # 4. Score Capping & Executive Assessment Reconciliation
+        self.record("LocalAntivirusEngine caps unconfirmed heuristic score at 45 and total at 55", "heurScore = maxOf(manifestHeur + packerScore, certScore).coerceIn(0, 100 - permScore).coerceAtMost(45)" in local_av_code and "finalLocalScore = (permScore + heurScore).coerceIn(0, 55)" in local_av_code)
+        self.record("RealtimeScanCoordinator requires confirmed malware or high consensus for 75+ score", "val hasConfirmedMalware" in coord_code and "maxOf(runningLocalScore, runningCloudScore).coerceIn(75, 100)" in coord_code and "blended.coerceIn(25, 55)" in coord_code)
+
+        # 5. Offline Ransomware Behavioral Pattern Detection
+        self.record("ManifestHeuristicEngine detects isLikelyRansomware pattern offline", "isLikelyRansomware" in manifest_code and "Potential Ransomware pattern" in manifest_code)
+        self.record("LocalAntivirusEngine maps Potential Ransomware pattern", "heuristic.isLikelyRansomware" in local_av_code and "Heuristic.Ransomware.Potential" in local_av_code)
+        self.record("LocalSignatureDatabase includes offline mobile ransomware definitions", "Ransomware.AndroidOS.DoubleLocker" in sig_db_code and "Ransomware.AndroidOS.SimpleLocker" in sig_db_code)
+
+        # 6. Reassuring Non-Scary Guidance
+        self.record("FallbackThreatDefinitions gives reassuring advisory for unconfirmed heuristic patterns", "isConfirmedSignature" in fallback_code and "Review Source & Purpose" in fallback_code)
+        self.record("ThreatDetailSheet uses ADVISORY badge and calm action button for non-malicious apps", '"ADVISORY"' in sheet_code and "isConfirmedMalicious = report.currentScore >= 75" in sheet_code)
+
+        # 7. Scanner Tab Card Redesign
+        self.record("ThreatItemRow uses softWrap=false preventing single-letter word wrapping", "softWrap = false" in components_code and "report.appName ?: report.targetName" in components_code)
+        self.record("ThreatItemRow displays meaningful 1-line finding rationale surface", "findingSummary" in components_code and "CyberDarkSurface" in components_code)
 
 
 if __name__ == "__main__":

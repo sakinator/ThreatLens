@@ -727,15 +727,28 @@ object RealtimeScanCoordinator {
             }
         }
 
-        // Final overall score fusion
-        val finalWeighted = if (localVerdict.isMalicious || runningLocalScore >= 75) {
-            maxOf(runningLocalScore, runningCloudScore)
+        // Final overall score fusion:
+        // Confirmed malware requires verified database signature, CVD rule, or strong cloud consensus (>= 8 engines).
+        // Behavioral heuristic patterns identify potential threats (Bankers, Spyware, Droppers, Ransomware)
+        // without signatures, but cap score at 50..60 (HIGH_RISK/SUSPICIOUS) so they are never confirmed as 100/100 MALICIOUS
+        // without engine/signature confirmation.
+        val hasConfirmedMalware = localVerdict.matchedSignatures.isNotEmpty() ||
+            (localVerdict.clamAvResult != null && localVerdict.clamAvResult.isMalicious) ||
+            (localVerdict.yaraResult != null && localVerdict.yaraResult.isMatched) ||
+            (flaggedEnginesCount >= 8)
+
+        val finalWeighted = if (hasConfirmedMalware) {
+            maxOf(runningLocalScore, runningCloudScore).coerceIn(75, 100)
+        } else if (flaggedEnginesCount in 1..4) {
+            // Low cloud divergence (e.g. 1-3 engines on VirusTotal)
+            val blended = ((runningLocalScore * 0.40) + (minOf(runningCloudScore, 35) * 0.60)).toInt()
+            blended.coerceIn(25, 55)
         } else if (successfulEngines.isEmpty()) {
-            runningLocalScore
+            runningLocalScore.coerceIn(0, 55)
         } else if (totalEnginesCount >= 25 && flaggedEnginesCount == 0 && runningLocalScore < 60) {
-            (runningLocalScore * 0.35).toInt()
+            (runningLocalScore * 0.35).toInt().coerceIn(0, 25)
         } else {
-            maxOf(runningLocalScore, ((runningLocalScore * 0.40) + (runningCloudScore * 0.60)).toInt())
+            ((runningLocalScore * 0.40) + (runningCloudScore * 0.60)).toInt().coerceIn(0, 60)
         }.coerceIn(0, 100)
 
         val finalSeverity = when {
@@ -746,14 +759,11 @@ object RealtimeScanCoordinator {
         }
 
         val effectiveDetectionType = when {
-            localVerdict.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
-                io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
-            flaggedEnginesCount > 0 ->
-                io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
+            hasConfirmedMalware -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
+            flaggedEnginesCount > 0 -> io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
             localVerdict.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
                 io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
-            else ->
-                io.threatlens.core.model.DetectionType.CLEAN
+            else -> io.threatlens.core.model.DetectionType.CLEAN
         }
 
         val finalBreakdown = currentReport.scoreBreakdown?.copy(

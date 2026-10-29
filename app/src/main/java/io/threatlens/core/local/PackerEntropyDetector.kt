@@ -55,10 +55,10 @@ object PackerEntropyDetector {
         var highEntropyAssetScore = 0f
 
         val safeExtensions = setOf(
-            "png", "jpg", "jpeg", "webp", "gif", "mp3", "ogg", "wav",
-            "ttf", "otf", "woff", "woff2", "html", "htm", "js", "css", "json", "svg", "xml",
+            "png", "jpg", "jpeg", "webp", "gif", "mp3", "ogg", "wav", "m4a", "mp4", "webm", "opus", "flac", "aac",
+            "ttf", "otf", "woff", "woff2", "html", "htm", "js", "css", "json", "svg", "xml", "lottie",
             "z", "gz", "br", "bz2", "xz", "lz4", "bin", "dat", "proto", "pb",
-            "txt", "md", "csv", "properties", "conf", "pem", "crt", "der", "pak", "res", "tflite"
+            "txt", "md", "csv", "properties", "conf", "pem", "crt", "der", "pak", "res", "tflite", "cur", "ico", "bmp", "map"
         )
 
         val ignoredPrefixes = listOf(
@@ -68,7 +68,14 @@ object PackerEntropyDetector {
             "assets/dexopt/",
             "assets/tflite/",
             "assets/models/",
-            "assets/fonts/"
+            "assets/fonts/",
+            "assets/lottie/",
+            "assets/animations/",
+            "assets/images/",
+            "assets/audio/",
+            "assets/video/",
+            "assets/raw/",
+            "assets/media/"
         )
 
         try {
@@ -79,10 +86,11 @@ object PackerEntropyDetector {
                     val entry = entries.nextElement()
                     val lowerPath = entry.name.lowercase()
 
-                    // Skip standard framework, localization, and license/notice files
+                    // Skip standard framework, localization, animation, and license/notice files
                     if (ignoredPrefixes.any { lowerPath.startsWith(it) } ||
                         lowerPath.contains("license") || lowerPath.contains("notice") ||
-                        lowerPath.contains("cacert") || lowerPath.contains("tzdata")
+                        lowerPath.contains("cacert") || lowerPath.contains("tzdata") ||
+                        lowerPath.contains("lottie") || lowerPath.contains("animation")
                     ) {
                         continue
                     }
@@ -114,13 +122,14 @@ object PackerEntropyDetector {
                             }
                             val entropy = calculateShannonEntropy(assetBytes)
 
-                            // Asset must be an executable binary payload or abnormal raw executable
-                            val isExecutablePayload = ext in setOf("dex", "jar", "apk", "so", "") ||
-                                (assetBytes.size >= 4 && (
-                                    (assetBytes[0] == 0x64.toByte() && assetBytes[1] == 0x65.toByte() && assetBytes[2] == 0x78.toByte()) ||
-                                    (assetBytes[0] == 0x50.toByte() && assetBytes[1] == 0x4b.toByte() && assetBytes[2] == 0x03.toByte() && assetBytes[3] == 0x04.toByte()) ||
-                                    (assetBytes[0] == 0x7f.toByte() && assetBytes[1] == 0x45.toByte() && assetBytes[2] == 0x4c.toByte() && assetBytes[3] == 0x46.toByte())
-                                ))
+                            val isDex = assetBytes.size >= 4 && (assetBytes[0] == 0x64.toByte() && assetBytes[1] == 0x65.toByte() && assetBytes[2] == 0x78.toByte())
+                            val isZip = assetBytes.size >= 4 && (assetBytes[0] == 0x50.toByte() && assetBytes[1] == 0x4b.toByte() && assetBytes[2] == 0x03.toByte() && assetBytes[3] == 0x04.toByte())
+                            val isElf = assetBytes.size >= 4 && (assetBytes[0] == 0x7f.toByte() && assetBytes[1] == 0x45.toByte() && assetBytes[2] == 0x4c.toByte() && assetBytes[3] == 0x46.toByte())
+
+                            // Asset must be an actual executable binary payload (compiled DEX, ELF .so, or APK/JAR)
+                            val isExecutablePayload = (ext in setOf("dex", "so") && (isDex || isElf)) ||
+                                (ext in setOf("apk", "jar") && isZip) ||
+                                (ext.isBlank() && (isDex || isElf))
 
                             if (isExecutablePayload && entropy >= 7.82f && entropy > highEntropyAssetScore) {
                                 highEntropyAsset = entry.name

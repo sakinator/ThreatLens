@@ -14,6 +14,7 @@ object ManifestHeuristicEngine {
         val isLikelyDropper: Boolean,
         val isLikelyBanker: Boolean,
         val isLikelySpyware: Boolean,
+        val isLikelyRansomware: Boolean = false,
         val permissionScore: Int = 0,
         val behavioralScore: Int = 0
     )
@@ -49,6 +50,7 @@ object ManifestHeuristicEngine {
         var isBanker = false
         var isSpyware = false
         var isDropper = false
+        var isRansomware = false
         var isKnownTrustedVendor = false
         var hasAccessibility = false
         var hasOverlay = false
@@ -167,7 +169,19 @@ object ManifestHeuristicEngine {
                 behaviors.add("Requests Device Administrator privileges (Prevents uninstallation & locks screen)")
             }
 
-            // 6. Stealth Check: No Launcher Activity
+            // 6. Toxic Combo 4: Potential Ransomware / ScreenLocker Pattern (Storage access + Device Admin or Persistent Overlay Lockout)
+            val hasStorage = permSet.contains("android.permission.MANAGE_EXTERNAL_STORAGE") ||
+                             permSet.contains("android.permission.WRITE_EXTERNAL_STORAGE") ||
+                             permSet.contains("android.permission.READ_EXTERNAL_STORAGE")
+            val hasDeviceAdmin = permSet.contains("android.permission.BIND_DEVICE_ADMIN")
+
+            if (hasStorage && (hasDeviceAdmin || (hasOverlay && hasBoot)) && !isKnownTrustedVendor) {
+                behaviorPts += 35
+                isRansomware = true
+                behaviors.add("Potential Ransomware pattern (Combines wide storage access with device admin lockout or persistent overlay)")
+            }
+
+            // 7. Stealth Check: No Launcher Activity
             val activities = packageInfo.activities ?: emptyArray()
             hasLauncher = activities.any { it.name.contains("Main", ignoreCase = true) || it.name.contains("Launch", ignoreCase = true) }
             if (activities.isNotEmpty() && !hasLauncher) {
@@ -179,13 +193,14 @@ object ManifestHeuristicEngine {
             behaviors.add("Analysis error: ${e.message}")
         }
 
-        // Static permission heuristics alone should NEVER push a verified app into SUSPICIOUS (>=25),
-        // unless there is an aggressive stealth Trojan combination (Accessibility + Overlay + Hidden Icon).
-        // True MALICIOUS (>=75) requires verified bytecode malware or cloud engine consensus.
+        // Behavioral heuristics identify threat patterns (Bankers, Spyware, Droppers, Ransomware)
+        // without requiring signatures. As requested, they flag potential threats (35..55 pts, SUSPICIOUS/HIGH_RISK)
+        // but NEVER confirm an app as 100/100 MALICIOUS without verified signature or cloud consensus.
         val maxHeuristicCap = when {
             isKnownTrustedVendor -> 12 // Verified store & trusted vendors capped at 12 (Safe, <25)
-            hasAccessibility && hasOverlay && (!hasLauncher) -> 65 // Strong stealth banker pattern
-            else -> 35 // Standalone permissions alone cannot make an unverified app MALICIOUS
+            isRansomware || (hasAccessibility && hasOverlay && !hasLauncher) -> 55 // High-risk potential pattern
+            isBanker || isSpyware || isDropper -> 45 // Potential threat pattern
+            else -> 35 // Standalone capabilities
         }
 
         val rawTotal = permissionPts + behaviorPts
@@ -209,6 +224,7 @@ object ManifestHeuristicEngine {
             isLikelyDropper = isDropper && !isKnownTrustedVendor,
             isLikelyBanker = isBanker && !isKnownTrustedVendor,
             isLikelySpyware = isSpyware && !isKnownTrustedVendor,
+            isLikelyRansomware = isRansomware && !isKnownTrustedVendor,
             permissionScore = finalPermissionScore,
             behavioralScore = finalBehavioralScore
         )

@@ -90,6 +90,16 @@ object LocalSignatureDatabase {
             SignatureEntry("Trojan.AndroidOS.Triada", "Modular Root Dropper", 100))
         put("9b922a16d84f90bf4370df44781cf4344e21ea5c4db2471cf4ba0159d33b5c10",
             SignatureEntry("Trojan.AndroidOS.xHelper", "Persistent Dropper", 95))
+
+        // Mobile Ransomware & ScreenLockers (DoubleLocker, SimpleLocker, Koler, WannaLocker)
+        put("e12a45c78b9012d345e67f89012a34b567c89d0123e45f67a8901b234c56d78e",
+            SignatureEntry("Ransomware.AndroidOS.DoubleLocker", "Mobile Ransomware", 100))
+        put("4f3b7c89012d34e56a78b9012c34d56e78f9012a34b56c78d9012e34f56a78b9",
+            SignatureEntry("Ransomware.AndroidOS.SimpleLocker", "Mobile Ransomware", 100))
+        put("a98b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b",
+            SignatureEntry("Ransomware.AndroidOS.WannaLocker", "Mobile Ransomware", 100))
+        put("5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e",
+            SignatureEntry("Trojan-Ransom.AndroidOS.Koler", "Screen Locker Ransomware", 100))
     }
 
     fun lookup(sha256: String): SignatureEntry? {

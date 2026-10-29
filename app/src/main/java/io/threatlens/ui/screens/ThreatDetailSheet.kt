@@ -1216,20 +1216,32 @@ fun ThreatDetailSheet(
             }
 
             // Primary Action Button (Uninstall for installed apps, Delete for downloaded files)
+            val isConfirmedMalicious = report.currentScore >= 75
             Button(
                 onClick = { showConfirmDeleteDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = NeonCrimson),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isConfirmedMalicious) NeonCrimson else CyberDarkSurface
+                ),
+                border = if (!isConfirmedMalicious) androidx.compose.foundation.BorderStroke(1.dp, CyberAmber.copy(alpha = 0.6f)) else null,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
-                Icon(if (isInstalled) Icons.Default.DeleteForever else Icons.Default.Delete, contentDescription = null, tint = Color.White)
+                Icon(
+                    if (isInstalled) Icons.Default.DeleteForever else Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = if (isConfirmedMalicious) Color.White else CyberAmber
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isInstalled) "UNINSTALL APPLICATION" else "PERMANENTLY DELETE FILE",
+                    text = when {
+                        isConfirmedMalicious -> if (isInstalled) "UNINSTALL MALICIOUS THREAT" else "DELETE MALICIOUS FILE"
+                        report.currentScore >= 25 -> if (isInstalled) "UNINSTALL APPLICATION (OPTIONAL)" else "DELETE FILE"
+                        else -> if (isInstalled) "UNINSTALL APPLICATION" else "DELETE FILE"
+                    },
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = if (isConfirmedMalicious) Color.White else CyberAmber
                 )
             }
 
@@ -1661,7 +1673,7 @@ private fun getSectionHeaderStyle(rawHeading: String): Triple<String, String, Co
     val lower = rawHeading.lowercase()
     return when {
         lower.contains("remediation") || lower.contains("action") || lower.contains("guidance") || lower.contains("recommended") || lower.contains("🛑") ->
-            Triple(if (clean.isEmpty()) "Recommended Action & Guidance" else clean, "RECOMMENDATION", NeonCrimson)
+            Triple(if (clean.isEmpty()) "Recommended Action & Guidance" else clean, "ADVISORY", CyberAmber)
         lower.contains("executive") || lower.contains("assessment") || lower.contains("verdict") ->
             Triple(if (clean.isEmpty()) "Executive Threat Assessment" else clean, "EXECUTIVE", NeonCyan)
         lower.contains("consensus") || lower.contains("vendor") || lower.contains("multi-engine") || lower.contains("🔬") ->

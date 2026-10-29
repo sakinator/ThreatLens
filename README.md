@@ -10,7 +10,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg" alt="License"/></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android_8.0+-00E5FF.svg" alt="Platform"/></a>
   <a href="#zero-idle-battery-performance"><img src="https://img.shields.io/badge/Battery-Zero--Idle_Drain-brightgreen.svg" alt="Battery Mode"/></a>
-  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-200%2F200_Passing-brightgreen.svg" alt="Regression Tests"/></a>
+  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-220%2F220_Passing-brightgreen.svg" alt="Regression Tests"/></a>
 </p>
 
 **ThreatLens** is an open-source, hybrid Android cybersecurity system combining:
@@ -119,9 +119,18 @@ When an untrusted link or malicious APK host is intercepted:
 
 ### 🔬 11. Multi-Engine Cloud Intelligence & NIST NSRL Verification
 * **NIST NSRL & CIRCL Zero-Key Verification**: Connects with CIRCL's National Software Reference Library to cross-reference known-good benign package hashes with 0 risk.
-* **Sub-Engine Commercial AV Logos**: Renders authentic commercial AV logos and findings (Kaspersky, Microsoft Defender, Bitdefender, ESET, Sophos, TrendMicro).
+* **Authentic Commercial AV Brand Logos**: Custom vector canvas-rendered emblems for 70+ industry vendors: VirusTotal, Norton, Bitdefender, Microsoft Defender, Kaspersky, Avast, ESET, McAfee, Sophos, Google Play Protect, ClamAV, Trend Micro, Dr.Web, Quick Heal, AhnLab, and more.
 * **Live Web Report Hyperlinks**: One-click "View Web Results ↗" buttons opening direct analysis on VirusTotal, AlienVault OTX, CIRCL, Hybrid Analysis, and MetaDefender.
 * **Multi-LLM Threat Explainers**: Structured point-by-point security breakdown available online via Google Gemini, Anthropic Claude, OpenAI ChatGPT, Groq Cloud, or 100% offline via local heuristics.
+
+---
+
+### 🔒 12. Offline Ransomware Detection & Score Reconciliation (v1.5.1)
+* **Offline Ransomware Pattern Recognition**: Flags crypto-ransomware and screen-locker patterns (combining storage traversal, cryptographic file encryption, and device admin / lockout overrides) locally without requiring cloud engines.
+* **Heuristic Score Capping & AI Assessment Alignment**: Unconfirmed behavioral patterns and minor cloud vendor divergence (e.g. 1-3 engines on VirusTotal) are capped at 50..55/100 (`SUSPICIOUS` / `HIGH_RISK`), strictly aligning with the AI Executive Threat Assessment (*"Not a confirmed destructive Trojan"*). True `MALICIOUS (75..100)` is reserved for confirmed Trojan signatures or strong multi-vendor consensus.
+* **Reassuring, Calm Remediation Guidance**: Non-alarmist, informative advisories for modded utilities and unconfirmed heuristics; urgent removal steps reserved exclusively for confirmed malware.
+* **Redesigned Scanner Tab Cards**: Generous, unconstrained horizontal space eliminating awkward single-letter word wrapping, accompanied by dedicated provenance/detection badge rows and a meaningful 1-line finding rationale.
+* **Enhanced Virus Signature Database Card**: Structured layout with authentic brand logos for all integrated offline engines (ClamAV, YARA, ThreatLens DB, CIRCL).
 
 ---
 
