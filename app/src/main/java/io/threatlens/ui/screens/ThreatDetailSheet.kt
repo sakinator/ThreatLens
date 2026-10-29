@@ -103,7 +103,38 @@ fun ThreatDetailSheet(
                         Spacer(modifier = Modifier.height(2.dp))
                     }
 
+                    val provenance = remember(report.packageName) {
+                        if (!report.packageName.isNullOrBlank()) {
+                            io.threatlens.core.local.AppProvenanceVerifier.inspectProvenance(context, report.packageName)
+                        } else null
+                    }
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (provenance != null && provenance.source != io.threatlens.core.local.AppProvenanceVerifier.ProvenanceSource.SIDELOAD_OR_UNKNOWN) {
+                            val provColor = when {
+                                provenance.isHighRiskVector -> NeonCrimson
+                                provenance.isFossStore -> NeonCyan
+                                provenance.isVerifiedStore -> NeonEmerald
+                                else -> TextSecondary
+                            }
+                            Surface(
+                                color = provColor.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(4.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, provColor.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = provenance.badgeLabel,
+                                    color = provColor,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+
                         Surface(
                             color = CyberCardSurface,
                             shape = RoundedCornerShape(4.dp)
@@ -1204,24 +1235,45 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Add to Exclusions / Whitelist Button
+            // User Trust / Whitelist Button (Toggleable)
+            var isWhitelisted by remember {
+                mutableStateOf(io.threatlens.core.local.ThreatWhitelistManager.isWhitelisted(context, report.packageName, report.sha256))
+            }
+
             OutlinedButton(
                 onClick = {
-                    io.threatlens.core.exclusions.ExclusionManager.addAvPath(report.targetPath)
-                    io.threatlens.core.exclusions.ExclusionManager.addAvHash(report.sha256, report.targetName)
-                    android.widget.Toast.makeText(context, "✓ Added ${report.appName ?: report.targetName} to Whitelist", android.widget.Toast.LENGTH_SHORT).show()
-                    onDismiss()
+                    if (isWhitelisted) {
+                        if (!report.packageName.isNullOrBlank()) {
+                            io.threatlens.core.local.ThreatWhitelistManager.removeApp(context, report.packageName)
+                        }
+                        isWhitelisted = false
+                        android.widget.Toast.makeText(context, "Removed ${report.appName ?: report.targetName} from Trusted Whitelist", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        if (!report.packageName.isNullOrBlank()) {
+                            io.threatlens.core.local.ThreatWhitelistManager.addApp(context, report.packageName, report.appName ?: report.targetName, report.sha256)
+                        }
+                        io.threatlens.core.exclusions.ExclusionManager.addAvPath(report.targetPath)
+                        io.threatlens.core.exclusions.ExclusionManager.addAvHash(report.sha256, report.targetName)
+                        isWhitelisted = true
+                        android.widget.Toast.makeText(context, "✓ Trusted ${report.appName ?: report.targetName} (Added to Whitelist)", android.widget.Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    }
                 },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
-                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = if (isWhitelisted) CyberAmber else NeonEmerald),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isWhitelisted) CyberAmber.copy(alpha = 0.6f) else NeonEmerald.copy(alpha = 0.6f)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
             ) {
-                Icon(Icons.Default.Shield, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                Icon(if (isWhitelisted) Icons.Default.CheckCircle else Icons.Default.Shield, contentDescription = null, tint = if (isWhitelisted) CyberAmber else NeonEmerald, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Add to Whitelist (Exclude from Future Scans)", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (isWhitelisted) "Trusted Application (Tap to Revoke Trust)" else "Trust This App (Add to Whitelist)",
+                    color = if (isWhitelisted) CyberAmber else NeonEmerald,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

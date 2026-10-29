@@ -138,15 +138,40 @@ object LocalAntivirusEngine {
         val isApk = file.extension.equals("apk", ignoreCase = true)
         var detectedPackageName: String? = null
         var isVerifiedStore = false
+        var provenance: AppProvenanceVerifier.ProvenanceResult? = null
         if (isApk) {
             try {
                 val archiveInfo = context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)
                 detectedPackageName = archiveInfo?.packageName
                 if (!detectedPackageName.isNullOrBlank()) {
-                    val provenance = AppProvenanceVerifier.inspectProvenance(context, detectedPackageName)
-                    isVerifiedStore = provenance.isVerifiedStore || provenance.isSystemApp
+                    val prov = AppProvenanceVerifier.inspectProvenance(context, detectedPackageName)
+                    provenance = prov
+                    isVerifiedStore = prov.isVerifiedStore || prov.isSystemApp
                 }
             } catch (_: Exception) {}
+        }
+
+        // 0. User Whitelist Check
+        if (ThreatWhitelistManager.isWhitelisted(context, detectedPackageName, sha256)) {
+            val breakdown = io.threatlens.core.model.ScoreBreakdown(
+                signatureScore = 0,
+                permissionScore = 0,
+                heuristicScore = 0,
+                totalScore = 0,
+                rationale = "User Trusted Application: Whitelisted in ThreatLens settings. All security alerts silenced."
+            )
+            return LocalScanVerdict(
+                isMalicious = false,
+                localScore = 0,
+                threatFamily = "Clean",
+                category = "User Whitelisted",
+                detectionType = io.threatlens.core.model.DetectionType.CLEAN,
+                scoreBreakdown = breakdown,
+                detectedBehaviors = emptyList(),
+                dangerousPermissions = emptyList(),
+                matchedSignatures = emptyList(),
+                engineSources = listOf("ThreatLens User Whitelist (Trusted)")
+            )
         }
 
         // 3. VirusTotal YARA Mobile Threat Pattern Scan
@@ -264,8 +289,10 @@ object LocalAntivirusEngine {
             permScore = 0
             heurScore = 0
         } else {
+            val provDiscount = provenance?.trustDiscount ?: 0
             val manifestPerm = heuristicResult?.permissionScore ?: 0
-            val manifestHeur = heuristicResult?.behavioralScore ?: (heuristicResult?.score ?: 0)
+            val rawManifestHeur = heuristicResult?.behavioralScore ?: (heuristicResult?.score ?: 0)
+            val manifestHeur = maxOf(0, rawManifestHeur - (if (rawManifestHeur > 0) provDiscount / 2 else 0))
             val packerScore = if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) packer.score else 0
             val certScore = if (cert != null && (cert.isSuspicious || cert.isMalicious)) cert.score else 0
 

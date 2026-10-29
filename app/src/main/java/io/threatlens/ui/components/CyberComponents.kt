@@ -14,12 +14,14 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -216,11 +218,42 @@ fun ThreatItemRow(
                         Spacer(modifier = Modifier.height(3.dp))
                     }
 
-                    // Line 3: Threat Family & Detected File Badge (Full width)
+                    val context = LocalContext.current
+                    val provenance = remember(report.packageName) {
+                        if (!report.packageName.isNullOrBlank()) {
+                            io.threatlens.core.local.AppProvenanceVerifier.inspectProvenance(context, report.packageName)
+                        } else null
+                    }
+
+                    // Line 3: Threat Family, Store Provenance & Detected File Badge (Full width)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (provenance != null && provenance.source != io.threatlens.core.local.AppProvenanceVerifier.ProvenanceSource.SIDELOAD_OR_UNKNOWN) {
+                            val provColor = when {
+                                provenance.isHighRiskVector -> NeonCrimson
+                                provenance.isFossStore -> NeonCyan
+                                provenance.isVerifiedStore -> NeonEmerald
+                                else -> TextSecondary
+                            }
+                            Surface(
+                                color = provColor.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(3.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, provColor.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = provenance.badgeLabel,
+                                    color = provColor,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+
                         if (!report.targetName.equals("base.apk", ignoreCase = true) && !report.targetName.equals(report.appName, ignoreCase = true)) {
                             Surface(
                                 color = CyberDarkSurface,

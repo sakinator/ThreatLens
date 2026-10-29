@@ -1195,6 +1195,141 @@ fun SettingsScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Trusted Applications (User Whitelist) Card
+            var whitelistedApps by remember {
+                mutableStateOf(io.threatlens.core.local.ThreatWhitelistManager.getWhitelistedApps(context))
+            }
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Trusted Applications (Whitelist)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Applications exempt from heuristic & repack alerts",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Surface(
+                            color = CyberDarkSurface,
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = "${whitelistedApps.size} Trusted",
+                                color = NeonEmerald,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    if (whitelistedApps.isEmpty()) {
+                        Text(
+                            text = "No custom trusted applications added yet. You can mark legitimate developer tools or corporate apps as trusted directly from their scan details sheet.",
+                            color = TextMuted,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            whitelistedApps.forEach { app ->
+                                Surface(
+                                    color = CyberDarkSurface,
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder.copy(alpha = 0.6f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(app.appName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(app.packageName, color = TextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                io.threatlens.core.local.ThreatWhitelistManager.removeApp(context, app.packageName)
+                                                whitelistedApps = io.threatlens.core.local.ThreatWhitelistManager.getWhitelistedApps(context)
+                                                android.widget.Toast.makeText(context, "Removed ${app.appName} from Whitelist", android.widget.Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Remove", tint = NeonCrimson, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Scan Acceleration & Incremental Cache Card
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Speed, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Scan Acceleration & Smart Cache",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Caches clean APK byte-hashes for <3s full device re-scans",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            io.threatlens.core.scanner.ScanCacheManager.clearCache(context)
+                            android.widget.Toast.makeText(context, "✓ Scan cache cleared. Next scan will perform deep disassembly.", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("CLEAR SCAN CACHE (FORCE DEEP RESCAN)", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(30.dp))
         }
     }

@@ -3,6 +3,7 @@ package io.threatlens.core.scanner
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Environment
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
@@ -78,6 +79,16 @@ object FullSystemScanner {
                     cleanCount = clean
                 )
 
+                // 1. Fast Cache Check: If already verified clean and un-updated, instant skip deep parsing
+                if (target.packageName != null && target.lastUpdateTime > 0L) {
+                    val cached = ScanCacheManager.getCachedVerdict(context, target.packageName, target.versionCode, target.lastUpdateTime)
+                    if (cached != null) {
+                        clean++
+                        scanned++
+                        continue
+                    }
+                }
+
                 try {
                     val report = RealtimeScanCoordinator.performScan(
                         context = context,
@@ -89,6 +100,24 @@ object FullSystemScanner {
                         threats.add(report)
                     } else {
                         clean++
+                        if (target.packageName != null && target.lastUpdateTime > 0L) {
+                            ScanCacheManager.putCachedVerdict(
+                                context,
+                                target.packageName,
+                                target.versionCode,
+                                target.lastUpdateTime,
+                                io.threatlens.core.local.LocalAntivirusEngine.LocalScanVerdict(
+                                    isMalicious = false,
+                                    localScore = report.currentScore,
+                                    threatFamily = report.threatFamily,
+                                    category = "Clean",
+                                    detectedBehaviors = emptyList(),
+                                    dangerousPermissions = emptyList(),
+                                    matchedSignatures = emptyList(),
+                                    engineSources = listOf("ThreatLens Local Engine (Cached Safe)")
+                                )
+                            )
+                        }
                     }
                 } catch (_: Exception) {}
 
@@ -151,7 +180,10 @@ object FullSystemScanner {
                     val apkFile = File(app.publicSourceDir)
                     if (apkFile.exists() && !io.threatlens.core.exclusions.ExclusionManager.isPathExcluded(apkFile.absolutePath)) {
                         val appName = pm.getApplicationLabel(app).toString()
-                        list.add(ScanItem(appName, apkFile, app.packageName))
+                        val pInfo = try { pm.getPackageInfo(app.packageName, 0) } catch (_: Exception) { null }
+                        val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (pInfo?.versionCode?.toLong() ?: 0L)
+                        val uTime = pInfo?.lastUpdateTime ?: 0L
+                        list.add(ScanItem(appName, apkFile, app.packageName, vCode, uTime))
                     }
                 }
             }
@@ -187,5 +219,11 @@ object FullSystemScanner {
         return list.distinctBy { it.file.absolutePath }
     }
 
-    private data class ScanItem(val name: String, val file: File, val packageName: String? = null)
+    private data class ScanItem(
+        val name: String,
+        val file: File,
+        val packageName: String? = null,
+        val versionCode: Long = 0L,
+        val lastUpdateTime: Long = 0L
+    )
 }

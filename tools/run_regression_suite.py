@@ -67,6 +67,7 @@ class RegressionTestRunner:
         self.test_vulnerability_auditor_suite()
         self.test_v141_critical_fixes()
         self.test_v142_critical_fixes()
+        self.test_v150_provenance_and_features()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -609,6 +610,60 @@ class RegressionTestRunner:
 
         # 5. Coordinator: Behavioral Heuristics Engine Autonomy
         self.record("RealtimeScanCoordinator evaluates Behavioral Heuristics independently", "val hasBehaviors = localVerdict.detectedBehaviors.isNotEmpty()" in coord_code and "Clean (0 heuristic patterns • Safe)" in coord_code)
+
+    # 22. Test v1.5.0 Multi-Store Provenance, F-Droid & NIST Signer Verification, Whitelist & Scan Cache
+    def test_v150_provenance_and_features(self):
+        print(f"\n{YELLOW}▶ SUITE 22: v1.5.0 Multi-Store Provenance, Whitelist & Fast Scan Cache{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        prov_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "AppProvenanceVerifier.kt")
+        cert_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ApkCertificateVerifier.kt")
+        whitelist_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ThreatWhitelistManager.kt")
+        cache_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "ScanCacheManager.kt")
+        scanner_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        components_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "CyberComponents.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        settings_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
+
+        with open(prov_file, "r", encoding="utf-8") as f:
+            prov_code = f.read()
+        with open(cert_file, "r", encoding="utf-8") as f:
+            cert_code = f.read()
+        with open(whitelist_file, "r", encoding="utf-8") as f:
+            whitelist_code = f.read()
+        with open(cache_file, "r", encoding="utf-8") as f:
+            cache_code = f.read()
+        with open(scanner_file, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        with open(components_file, "r", encoding="utf-8") as f:
+            components_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(settings_file, "r", encoding="utf-8") as f:
+            settings_code = f.read()
+
+        # 1. Multi-Store Provenance & Sideload Vector Tracking
+        self.record("Provenance detects F-Droid ecosystem (F-Droid, Droid-ify, Neo Store)", "FDROID_ECOSYSTEM" in prov_code and "F-DROID (FOSS)" in prov_code and "isFossStore" in prov_code)
+        self.record("Provenance detects Aurora Store Play mirror", "AURORA_STORE" in prov_code and "AURORA STORE (PLAY MIRROR)" in prov_code)
+        self.record("Provenance detects Xiaomi GetApps & Huawei AppGallery", "XIAOMI_GETAPPS" in prov_code and "HUAWEI_APPGALLERY" in prov_code)
+        self.record("Provenance flags high-risk Telegram & WhatsApp distribution vectors", "TELEGRAM_SIDELOAD" in prov_code and "WHATSAPP_SIDELOAD" in prov_code and "isHighRiskVector" in prov_code)
+        self.record("Provenance detects direct browser web download sideloads", "BROWSER_DOWNLOAD" in prov_code and "WEB DOWNLOAD" in prov_code)
+
+        # 2. Open-Source Signer Verification (F-Droid Master Key)
+        self.record("Certificate Verifier detects official F-Droid build cluster keys", "isFDroidSigner" in cert_code and "Verified F-Droid Build Cluster Key" in cert_code)
+
+        # 3. User Whitelist Manager
+        self.record("ThreatWhitelistManager implements persistent add/remove/check", "isWhitelisted" in whitelist_code and "addApp" in whitelist_code and "removeApp" in whitelist_code)
+        self.record("ThreatDetailSheet includes toggleable Trust/Whitelist button", "ThreatWhitelistManager" in sheet_code and "Trust This App (Add to Whitelist)" in sheet_code)
+        self.record("SettingsScreen includes Trusted Applications management card", "ThreatWhitelistManager" in settings_code and "Trusted Applications (Whitelist)" in settings_code)
+
+        # 4. Fast Incremental Scan Cache
+        self.record("ScanCacheManager implements lastUpdateTime cache lookup", "getCachedVerdict" in cache_code and "putCachedVerdict" in cache_code and "clearCache" in cache_code)
+        self.record("FullSystemScanner integrates ScanCacheManager for <3s full re-scans", "ScanCacheManager.getCachedVerdict" in scanner_code and "ScanCacheManager.putCachedVerdict" in scanner_code)
+        self.record("SettingsScreen includes Clear Scan Cache action", "ScanCacheManager.clearCache" in settings_code and "CLEAR SCAN CACHE" in settings_code)
+
+        # 5. UI Provenance Tag Placement
+        self.record("ThreatItemRow displays store provenance tag badge", "AppProvenanceVerifier.inspectProvenance" in components_code and "provenance.badgeLabel" in components_code)
+        self.record("ThreatDetailSheet displays store provenance tag badge in header", "AppProvenanceVerifier.inspectProvenance" in sheet_code and "provenance.badgeLabel" in sheet_code)
 
 
 if __name__ == "__main__":
