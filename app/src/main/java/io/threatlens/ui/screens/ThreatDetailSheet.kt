@@ -85,7 +85,7 @@ fun ThreatDetailSheet(
                         color = TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
@@ -457,7 +457,7 @@ fun ThreatDetailSheet(
                                     else -> TextSecondary
                                 }
 
-                                // Line 1: Header Row (Logo + Full Title + Status Pill + Chevron)
+                                // Line 1: Header Row (Logo + Full Title + Chevron)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -473,63 +473,6 @@ fun ThreatDetailSheet(
                                         maxLines = 2,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // Status Badge: Uniform pill alignment
-                                    Surface(
-                                        color = when {
-                                            isPending -> NeonCyan.copy(alpha = 0.15f)
-                                            isMaliciousFlag -> NeonCrimson.copy(alpha = 0.18f)
-                                            isSuspicious -> CyberAmber.copy(alpha = 0.18f)
-                                            isClean -> NeonEmerald.copy(alpha = 0.18f)
-                                            else -> CyberCardSurface
-                                        },
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Box(
-                                            contentAlignment = Alignment.Center,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                        ) {
-                                            if (isPending) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(10.dp),
-                                                        strokeWidth = 1.5.dp,
-                                                        color = NeonCyan
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        text = "SCAN",
-                                                        color = NeonCyan,
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontFamily = FontFamily.Monospace
-                                                    )
-                                                }
-                                            } else {
-                                                Text(
-                                                    text = when {
-                                                        isMaliciousFlag -> "FLAGGED"
-                                                        isSuspicious -> "SUSPICIOUS"
-                                                        isClean -> "CLEAN"
-                                                        verdict.contains("Unreachable", ignoreCase = true) -> "OFFLINE"
-                                                        else -> "UNINDEXED"
-                                                    },
-                                                    color = when {
-                                                        isMaliciousFlag -> NeonCrimson
-                                                        isSuspicious -> CyberAmber
-                                                        isClean -> NeonEmerald
-                                                        verdict.contains("Unreachable", ignoreCase = true) -> TextMuted
-                                                        else -> TextMuted
-                                                    },
-                                                    fontSize = 9.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontFamily = FontFamily.Monospace
-                                                )
-                                            }
-                                        }
-                                    }
-
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -539,7 +482,7 @@ fun ThreatDetailSheet(
                                     )
                                 }
 
-                                // Line 2: Engine Type Tag (OFFLINE, ZERO-KEY, CLOUD API) + Full-Width Verdict Summary
+                                // Line 2: Engine Type Tag (OFFLINE, ZERO-KEY, CLOUD API) + Status Badge Pill + Verdict Summary
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(
                                     modifier = Modifier
@@ -562,7 +505,64 @@ fun ThreatDetailSheet(
                                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    // Status Badge: Uniform pill alignment
+                                    Surface(
+                                        color = when {
+                                            isPending -> NeonCyan.copy(alpha = 0.15f)
+                                            isMaliciousFlag -> NeonCrimson.copy(alpha = 0.18f)
+                                            isSuspicious -> CyberAmber.copy(alpha = 0.18f)
+                                            isClean -> NeonEmerald.copy(alpha = 0.18f)
+                                            else -> CyberCardSurface
+                                        },
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                        ) {
+                                            if (isPending) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(9.dp),
+                                                        strokeWidth = 1.5.dp,
+                                                        color = NeonCyan
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = "SCAN",
+                                                        color = NeonCyan,
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontFamily = FontFamily.Monospace
+                                                    )
+                                                }
+                                            } else {
+                                                Text(
+                                                    text = when {
+                                                        isMaliciousFlag -> "FLAGGED"
+                                                        isSuspicious -> "SUSPICIOUS"
+                                                        isClean -> "CLEAN"
+                                                        verdict.contains("Unreachable", ignoreCase = true) -> "OFFLINE"
+                                                        else -> "UNINDEXED"
+                                                    },
+                                                    color = when {
+                                                        isMaliciousFlag -> NeonCrimson
+                                                        isSuspicious -> CyberAmber
+                                                        isClean -> NeonEmerald
+                                                        verdict.contains("Unreachable", ignoreCase = true) -> TextMuted
+                                                        else -> TextMuted
+                                                    },
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontFamily = FontFamily.Monospace
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = verdict,
                                         color = when {

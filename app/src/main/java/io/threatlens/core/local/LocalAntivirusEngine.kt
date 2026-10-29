@@ -163,10 +163,9 @@ object LocalAntivirusEngine {
         }
 
         // 4. ThreatLens Certificate & Repack Shield
-        val cert = if (isApk) ApkCertificateVerifier.verifyApk(context, file, detectedPackageName) else null
+        val cert = if (isApk) ApkCertificateVerifier.verifyApk(context, file, detectedPackageName, isVerifiedStore) else null
         if (cert != null && (cert.isSuspicious || cert.isMalicious)) {
             sources.add("ThreatLens Certificate & Repack Shield")
-            behaviors.addAll(cert.details)
             if (cert.score > highestScore) {
                 highestScore = cert.score
                 if (detectedFamily == "Clean") {
@@ -180,7 +179,6 @@ object LocalAntivirusEngine {
         val packer = if (isApk) PackerEntropyDetector.inspectApk(file, detectedPackageName, isVerifiedStore) else null
         if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) {
             sources.add("ThreatLens Anti-Analysis & Packer Shield")
-            behaviors.addAll(packer.details)
             if (packer.score > highestScore) {
                 highestScore = packer.score
                 if (detectedFamily == "Clean" || detectedFamily.startsWith("Heuristic.")) {
@@ -271,8 +269,8 @@ object LocalAntivirusEngine {
             val packerScore = if (packer != null && (packer.isPacked || packer.isAntiAnalysis)) packer.score else 0
             val certScore = if (cert != null && (cert.isSuspicious || cert.isMalicious)) cert.score else 0
 
-            permScore = manifestPerm
-            heurScore = manifestHeur + packerScore + certScore
+            permScore = manifestPerm.coerceIn(0, 100)
+            heurScore = maxOf(manifestHeur + packerScore, certScore).coerceIn(0, 100 - permScore)
             finalLocalScore = (permScore + heurScore).coerceIn(0, 100)
         }
 

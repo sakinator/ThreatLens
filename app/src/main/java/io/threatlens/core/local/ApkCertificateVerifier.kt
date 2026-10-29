@@ -41,7 +41,7 @@ object ApkCertificateVerifier {
         "com.axis.mobile"
     )
 
-    fun verifyApk(context: Context, apkFile: File, packageName: String?): CertResult {
+    fun verifyApk(context: Context, apkFile: File, packageName: String?, isVerifiedStore: Boolean = false): CertResult {
         if (!apkFile.exists() || !apkFile.extension.equals("apk", ignoreCase = true)) {
             return cleanResult("Target is not an APK file")
         }
@@ -99,9 +99,31 @@ object ApkCertificateVerifier {
             // 3. Detect Repackaging of High-Value Financial / Messaging Apps
             val pkg = packageName?.lowercase()?.trim()
             if (!pkg.isNullOrBlank() && HIGH_VALUE_PACKAGES.contains(pkg)) {
+                // Verified store (Google Play / System) binaries have platform-verified provenance
+                if (isVerifiedStore) {
+                    return CertResult(
+                        isSuspicious = false,
+                        isMalicious = false,
+                        issueType = null,
+                        score = 0,
+                        issuer = cert.issuerDN.name,
+                        details = listOf(
+                            "Release Certificate: Verified X.509 signature",
+                            "Platform Provenance: Verified store application (Play Protect / System)",
+                            "No unauthorized certificate tampering or imposter repackaging"
+                        )
+                    )
+                }
+
                 val isLegitimateVendor = issuer.contains("google") || issuer.contains("whatsapp") ||
                                          issuer.contains("facebook") || issuer.contains("telegram") ||
-                                         issuer.contains("paytm") || issuer.contains("phonepe")
+                                         issuer.contains("paytm") || issuer.contains("phonepe") ||
+                                         issuer.contains("sbi") || issuer.contains("lotus") ||
+                                         issuer.contains("state bank") || issuer.contains("axis") ||
+                                         issuer.contains("kotak") || issuer.contains("icici") ||
+                                         issuer.contains("hdfc") || issuer.contains("baroda") ||
+                                         issuer.contains("samsung") || issuer.contains("microsoft") ||
+                                         issuer.contains("amazon") || issuer.contains("xiaomi")
                 if (!isLegitimateVendor) {
                     return CertResult(
                         isSuspicious = true,

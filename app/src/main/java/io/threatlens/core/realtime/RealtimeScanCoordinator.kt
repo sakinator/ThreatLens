@@ -163,14 +163,14 @@ object RealtimeScanCoordinator {
         val engineDetailsMap = mutableMapOf<String, List<String>>()
 
         // 1. ThreatLens Behavioral Heuristics
-        engineVerdictMap["ThreatLens Behavioral Heuristics"] = if (localVerdict.isMalicious) {
-            "Flagged: ${localVerdict.threatFamily} (${localVerdict.detectedBehaviors.size} patterns)"
-        } else if (runningLocalScore >= 25) {
-            "Suspicious: Score $runningLocalScore/100 (${localVerdict.dangerousPermissions.size} permissions)"
-        } else {
-            "Clean (Score $runningLocalScore/100 • Safe)"
+        val hasBehaviors = localVerdict.detectedBehaviors.isNotEmpty()
+        val heurScore = localVerdict.scoreBreakdown?.heuristicScore ?: 0
+        engineVerdictMap["ThreatLens Behavioral Heuristics"] = when {
+            hasBehaviors && heurScore >= 60 -> "Flagged: Heuristic Detection (${localVerdict.detectedBehaviors.size} patterns)"
+            hasBehaviors || heurScore >= 25 -> "Suspicious: Heuristic Pattern (${localVerdict.detectedBehaviors.size} patterns, ${localVerdict.dangerousPermissions.size} permissions)"
+            else -> "Clean (0 heuristic patterns • Safe)"
         }
-        engineDetailsMap["ThreatLens Behavioral Heuristics"] = if (localVerdict.isMalicious || localVerdict.detectedBehaviors.isNotEmpty()) {
+        engineDetailsMap["ThreatLens Behavioral Heuristics"] = if (hasBehaviors) {
             localVerdict.detectedBehaviors
         } else if (localVerdict.dangerousPermissions.isNotEmpty()) {
             listOf("Requested sensitive permissions: ${localVerdict.dangerousPermissions.joinToString(", ")}", "Bytecode pattern scan: Clean", "Normal permission matrix")

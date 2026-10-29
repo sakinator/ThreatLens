@@ -160,31 +160,49 @@ fun ThreatItemRow(
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                // App Logo / APK Icon
+                // App Logo / APK Icon aligned with top
                 AppIconBadge(
                     packageName = report.packageName,
                     apkPath = report.targetPath,
                     isApk = report.isApk,
-                    size = 46.dp
+                    size = 46.dp,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    // App Name (Prominent)
-                    Text(
-                        text = report.appName ?: report.targetName,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    // Line 1: App Name & Score Badge + Chevron
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = report.appName ?: report.targetName,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        ScoreBadge(report.currentScore, report.severity, report.isFinal)
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Details",
+                            tint = TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
-                    // Package Name on its own row with full width and ellipsis
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    // Line 2: Package Name on its own row with full width and ellipsis
                     if (!report.packageName.isNullOrBlank() && report.packageName != report.appName) {
                         Text(
                             text = report.packageName,
@@ -192,13 +210,17 @@ fun ThreatItemRow(
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                     }
 
-                    // Threat Family & Detected File Badge (if downloaded file)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Line 3: Threat Family & Detected File Badge (Full width)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         if (!report.targetName.equals("base.apk", ignoreCase = true) && !report.targetName.equals(report.appName, ignoreCase = true)) {
                             Surface(
                                 color = CyberDarkSurface,
@@ -276,16 +298,6 @@ fun ThreatItemRow(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-                ScoreBadge(report.currentScore, report.severity, report.isFinal)
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Details",
-                    tint = TextMuted,
-                    modifier = Modifier.size(18.dp)
-                )
             }
 
             // Live status message or pending engines line

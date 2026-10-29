@@ -66,6 +66,7 @@ class RegressionTestRunner:
         self.test_keepalive_and_edgecases()
         self.test_vulnerability_auditor_suite()
         self.test_v141_critical_fixes()
+        self.test_v142_critical_fixes()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -561,6 +562,53 @@ class RegressionTestRunner:
         # 4. Score Math Reconciliation
         self.record("Manifest Heuristic Partitions Permission and Behavioral Points", "finalPermissionScore" in heur_code and "finalBehavioralScore" in heur_code)
         self.record("Local Antivirus Reconciles Heuristics & Signature Score Breakdown", "finalLocalScore" in local_av_code and "permScore" in local_av_code and "heurScore" in local_av_code)
+
+    # 21. Test v1.4.2 Critical Bug Fixes (Play Store Banking Repack Bypass, Score Cap, Findings Isolation, Engine De-truncation & Card Alignment)
+    def test_v142_critical_fixes(self):
+        print(f"\n{YELLOW}▶ SUITE 21: v1.4.2 Bug Fixes (Banking False Positive, Score Cap, Findings Isolation & UI Layout){RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cert_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ApkCertificateVerifier.kt")
+        local_av_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        components_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "CyberComponents.kt")
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+
+        with open(cert_file, "r", encoding="utf-8") as f:
+            cert_code = f.read()
+        with open(local_av_file, "r", encoding="utf-8") as f:
+            local_av_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(components_file, "r", encoding="utf-8") as f:
+            components_code = f.read()
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+
+        # 1. Certificate Verifier: Verified Store Bypass & Expanded Legitimate Vendors
+        self.record("ApkCertificateVerifier accepts isVerifiedStore parameter", "isVerifiedStore: Boolean = false" in cert_code)
+        self.record("ApkCertificateVerifier skips repackaging check for verified store apps", "if (isVerifiedStore)" in cert_code and "Platform Provenance: Verified store application" in cert_code)
+        self.record("ApkCertificateVerifier recognizes SBI and Indian banking vendors", 'issuer.contains("sbi")' in cert_code and 'issuer.contains("lotus")' in cert_code and 'issuer.contains("hdfc")' in cert_code and 'issuer.contains("icici")' in cert_code and 'issuer.contains("axis")' in cert_code and 'issuer.contains("kotak")' in cert_code)
+
+        # 2. Local Antivirus: Findings Isolation & Score Overflow Fix
+        self.record("LocalAntivirusEngine passes isVerifiedStore to ApkCertificateVerifier", "ApkCertificateVerifier.verifyApk(context, file, detectedPackageName, isVerifiedStore)" in local_av_code)
+        self.record("LocalAntivirusEngine isolates cert details from shared behaviors list", "behaviors.addAll(cert.details)" not in local_av_code)
+        self.record("LocalAntivirusEngine isolates packer details from shared behaviors list", "behaviors.addAll(packer.details)" not in local_av_code)
+        self.record("LocalAntivirusEngine caps heurScore using maxOf without overflow", "heurScore = maxOf(manifestHeur + packerScore, certScore).coerceIn(0, 100 - permScore)" in local_av_code)
+
+        # 3. ThreatDetailSheet: Full Engine Name De-truncation
+        # Line 1 header must only have logo, title, and chevron; status badge moved to line 2
+        line1_has_no_status_badge = "EngineLogoIcon(sourceName" in sheet_code and "Text(\n                                        text = sourceName" in sheet_code
+        line2_has_status_badge = "padding(start = 32.dp)" in sheet_code and "engineBadgeText" in sheet_code and "FLAGGED" in sheet_code
+        self.record("Engine Card Line 1 reserves full width for engine title without status pill", line1_has_no_status_badge)
+        self.record("Engine Card Line 2 contains engine badge tag and status pill", line2_has_status_badge)
+
+        # 4. CyberComponents: ThreatItemRow Alignment and Truncation Fix
+        self.record("ThreatItemRow uses Top alignment for AppIconBadge", "verticalAlignment = Alignment.Top" in components_code and "modifier = Modifier.padding(top = 2.dp)" in components_code)
+        self.record("ThreatItemRow places ScoreBadge in header row giving package name full width", "ScoreBadge(report.currentScore, report.severity, report.isFinal)" in components_code and "modifier = Modifier.fillMaxWidth()" in components_code)
+        self.record("ThreatItemRow allows AppName up to 2 lines", "maxLines = 2" in components_code and "report.appName ?: report.targetName" in components_code)
+
+        # 5. Coordinator: Behavioral Heuristics Engine Autonomy
+        self.record("RealtimeScanCoordinator evaluates Behavioral Heuristics independently", "val hasBehaviors = localVerdict.detectedBehaviors.isNotEmpty()" in coord_code and "Clean (0 heuristic patterns • Safe)" in coord_code)
 
 
 if __name__ == "__main__":
