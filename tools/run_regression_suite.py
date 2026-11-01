@@ -795,6 +795,12 @@ class RegressionTestRunner:
         self.record("ScanReportExporter serializes metadata, posture, and per-app telemetry", "ThreatLens Autonomous Mobile EDR" in exporter_code and "serializeReport" in exporter_code and "shareReportFile" in exporter_code)
         self.record("file_paths.xml grants external storage access for report sharing", "<external-path name=\"external_storage\" path=\".\" />" in filepaths_code)
 
+        # 5. Malware -> Suspicious -> Clean Sort Functionality
+        self.record("FullScanScreen defines ScanSortOption with MALWARE_FIRST, SCORE_DESC, NAME_ASC", "enum class ScanSortOption" in scan_screen_code and "MALWARE_FIRST" in scan_screen_code)
+        self.record("FullScanScreen implements Malware -> Suspicious -> Clean severity comparator", "compareBy<ThreatReport>" in scan_screen_code and "ThreatSeverity.MALICIOUS -> 0" in scan_screen_code and "ThreatSeverity.SAFE -> 3" in scan_screen_code)
+        self.record("DashboardScreen sorts real-time stream with Malware -> Suspicious -> Clean order", "compareBy<ThreatReport>" in dash_screen_code and "ThreatSeverity.MALICIOUS -> 0" in dash_screen_code)
+        self.record("FullScanScreen renders Order By sorting dropdown selector", "ORDER BY:" in scan_screen_code and "selectedSortOption.label" in scan_screen_code and "DropdownMenu" in scan_screen_code)
+
 
 if __name__ == "__main__":
     runner = RegressionTestRunner()

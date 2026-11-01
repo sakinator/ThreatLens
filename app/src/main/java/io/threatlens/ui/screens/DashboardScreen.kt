@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.threatlens.R
+import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.ui.components.CyberRadarShield
 import io.threatlens.ui.components.GlassCard
@@ -467,10 +468,20 @@ fun DashboardScreen(
                 }
             }
 
-            // List of Scans (Focus on active threats & real-time events)
+            // List of Scans (Focus on active threats & real-time events, sorted: Malware -> Suspicious -> Clean)
             val streamReports = scans.filter { it.severity != ThreatSeverity.SAFE }.ifEmpty {
                 scans.take(5)
-            }
+            }.sortedWith(
+                compareBy<ThreatReport> { report ->
+                    when (report.severity) {
+                        ThreatSeverity.MALICIOUS -> 0
+                        ThreatSeverity.HIGH_RISK -> 1
+                        ThreatSeverity.SUSPICIOUS -> 2
+                        ThreatSeverity.SAFE -> 3
+                    }
+                }.thenByDescending { it.currentScore }
+                 .thenBy { (it.appName ?: it.targetName).lowercase() }
+            )
             if (streamReports.isEmpty()) {
                 item {
                     GlassCard {

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.scanner.FullScanStatus
 import io.threatlens.ui.components.GlassCard
@@ -33,6 +34,12 @@ enum class ScanResultFilter {
     ALL,
     THREATS,
     SAFE
+}
+
+enum class ScanSortOption(val label: String) {
+    MALWARE_FIRST("Malware → Suspicious → Clean"),
+    SCORE_DESC("Threat Score (Highest First)"),
+    NAME_ASC("Application Name (A → Z)")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +57,8 @@ fun FullScanScreen(
     val vtKey by viewModel.vtKey.collectAsState()
     var showConfirmDeleteAllDialog by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(ScanResultFilter.ALL) }
+    var selectedSortOption by remember { mutableStateOf(ScanSortOption.MALWARE_FIRST) }
+    var showSortDropdown by remember { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -570,21 +579,117 @@ fun FullScanScreen(
                         }
                     }
                 }
+
+                // Sorting Selector Bar (Malware -> Suspicious -> Clean)
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = "Sort",
+                                tint = NeonCyan,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "ORDER BY:",
+                                color = TextMuted,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+
+                        Box {
+                            Surface(
+                                onClick = { showSortDropdown = true },
+                                color = CyberDarkSurface,
+                                shape = RoundedCornerShape(6.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = selectedSortOption.label,
+                                        color = NeonCyan,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = NeonCyan,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showSortDropdown,
+                                onDismissRequest = { showSortDropdown = false },
+                                modifier = Modifier.background(CyberDarkSurface)
+                            ) {
+                                ScanSortOption.values().forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = option.label,
+                                                color = if (selectedSortOption == option) NeonCyan else TextPrimary,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (selectedSortOption == option) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = {
+                                            selectedSortOption = option
+                                            showSortDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-            // Display Scanned Items based on scan state and filter
-            val displayList = when {
+            // Display Scanned Items based on scan state, filter and sort order
+            val baseList = when {
                 isCompleted -> when (selectedFilter) {
                     ScanResultFilter.THREATS -> scanState.threatsFound
                     ScanResultFilter.SAFE -> scanState.allScannedReports.filter { it.severity == ThreatSeverity.SAFE }
                     ScanResultFilter.ALL -> if (scanState.allScannedReports.isNotEmpty()) {
-                        scanState.allScannedReports.sortedByDescending { it.currentScore }
+                        scanState.allScannedReports
                     } else {
                         scanState.threatsFound
                     }
                 }
                 scanState.threatsFound.isNotEmpty() -> scanState.threatsFound
                 else -> emptyList()
+            }
+
+            val displayList = when (selectedSortOption) {
+                ScanSortOption.MALWARE_FIRST -> baseList.sortedWith(
+                    compareBy<ThreatReport> { report ->
+                        when (report.severity) {
+                            ThreatSeverity.MALICIOUS -> 0
+                            ThreatSeverity.HIGH_RISK -> 1
+                            ThreatSeverity.SUSPICIOUS -> 2
+                            ThreatSeverity.SAFE -> 3
+                        }
+                    }.thenByDescending { it.currentScore }
+                     .thenBy { (it.appName ?: it.targetName).lowercase() }
+                )
+                ScanSortOption.SCORE_DESC -> baseList.sortedByDescending { it.currentScore }
+                ScanSortOption.NAME_ASC -> baseList.sortedBy { (it.appName ?: it.targetName).lowercase() }
             }
 
             if (displayList.isNotEmpty()) {

@@ -10,7 +10,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg" alt="License"/></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android_8.0+-00E5FF.svg" alt="Platform"/></a>
   <a href="#zero-idle-battery-performance"><img src="https://img.shields.io/badge/Battery-Zero--Idle_Drain-brightgreen.svg" alt="Battery Mode"/></a>
-  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-240%2F240_Passing-brightgreen.svg" alt="Regression Tests"/></a>
+  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-244%2F244_Passing-brightgreen.svg" alt="Regression Tests"/></a>
 </p>
 
 **ThreatLens** is an open-source, hybrid Android cybersecurity system combining:
@@ -202,9 +202,9 @@ python tools/run_regression_suite.py
 ▶ SUITE 21: v1.4.2 Banking FP, Score Cap & Engine Name De-truncation
 ▶ SUITE 22: v1.5.0 Multi-Store Provenance, Whitelist & Fast Scan Cache
 ▶ SUITE 23: v1.5.1 Authentic Brand Logos, Heuristic Score Reconciliation & Offline Ransomware
-▶ SUITE 24: v1.5.2 False-Positive Elimination, Dynamic Counts & Scan Export
+▶ SUITE 24: v1.5.2 False-Positive Elimination, Dynamic Counts, Scan Export & Sorting
 ----------------------------------------------------------------------
-Regression Result: 240/240 Tests Passed (0 failed)
+Regression Result: 244/244 Tests Passed (0 failed)
 ----------------------------------------------------------------------
 ```
 
