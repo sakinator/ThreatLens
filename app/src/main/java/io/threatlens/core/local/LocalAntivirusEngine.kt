@@ -30,7 +30,9 @@ object LocalAntivirusEngine {
         val clamAvResult: ClamAvEngine.ClamAvResult? = null,
         val yaraResult: YaraMobileRules.YaraResult? = null,
         val certResult: ApkCertificateVerifier.CertResult? = null,
-        val packerResult: PackerEntropyDetector.PackerResult? = null
+        val packerResult: PackerEntropyDetector.PackerResult? = null,
+        val bytecodeMatches: List<BytecodeRule> = emptyList(),
+        val offlineDbMatch: LocalSignatureDatabase.SignatureEntry? = null
     )
 
     // Known malicious bytecode signatures & strings found in mobile malware
@@ -64,14 +66,21 @@ object LocalAntivirusEngine {
             description = "SpyNote commercial remote surveillance Trojan signature"
         ),
         BytecodeRule(
-            pattern = "ahmyth",
+            pattern = "ahmyth/mine/king/ahmyth",
             family = "Trojan.AndroidOS.AhMyth",
             category = "Open-Source RAT",
             score = 95,
             description = "AhMyth Android Remote Access Trojan control harness"
         ),
         BytecodeRule(
-            pattern = "craxsrat",
+            pattern = "Lios/ahmyth",
+            family = "Trojan.AndroidOS.AhMyth",
+            category = "Open-Source RAT",
+            score = 95,
+            description = "AhMyth Android Remote Access Trojan package descriptor"
+        ),
+        BytecodeRule(
+            pattern = "craxsrat/stub",
             family = "Trojan.AndroidOS.CraxsRAT",
             category = "Advanced RAT",
             score = 100,
@@ -85,7 +94,7 @@ object LocalAntivirusEngine {
             description = "Alters system execution privileges to drop secondary unverified payload"
         ),
         BytecodeRule(
-            pattern = "daemonsu",
+            pattern = "daemonsu --daemon",
             family = "Exploit.AndroidOS.RootExploit",
             category = "Privilege Escalation",
             score = 85,
@@ -111,13 +120,6 @@ object LocalAntivirusEngine {
             category = "Mobile Ransomware",
             score = 100,
             description = "WannaLocker mobile crypto-ransomware payload"
-        ),
-        BytecodeRule(
-            pattern = "DevicePolicyManager;->lockNow",
-            family = "Heuristic.Ransomware.ScreenLocker",
-            category = "Potential Screen Locker",
-            score = 55,
-            description = "Direct programmatic invocation of DevicePolicyManager lockNow to enforce screen lockout"
         )
     )
 
@@ -307,7 +309,7 @@ object LocalAntivirusEngine {
             sig != null -> 100
             clamAv.isMalicious -> clamAv.confidenceScore
             yara != null && yara.isMatched -> yara.score
-            hasBytecodeMatch -> bytecodeMatches.maxOfOrNull { it.score } ?: 80
+            hasBytecodeMatch && !isVerifiedStore -> bytecodeMatches.maxOfOrNull { it.score } ?: 80
             else -> 0
         }
         val hasConfirmedSignature = sigScore > 0
@@ -381,12 +383,14 @@ object LocalAntivirusEngine {
             clamAvResult = clamAv,
             yaraResult = yara,
             certResult = cert,
-            packerResult = packer
+            packerResult = packer,
+            bytecodeMatches = bytecodeMatches,
+            offlineDbMatch = sig
         )
     }
 
     /**
-     * Inspects classes.dex and zip archive entries for known malware bytecode patterns.
+     * Inspects classes.dex entries for known malware bytecode patterns.
      */
     private fun scanApkBytecode(apkFile: File): List<BytecodeRule> {
         val matches = mutableListOf<BytecodeRule>()
@@ -395,8 +399,8 @@ object LocalAntivirusEngine {
                 val entries = zip.entries()
                 while (entries.hasMoreElements()) {
                     val entry = entries.nextElement()
-                    // Inspect DEX bytecode files and shell scripts
-                    if (entry.name.endsWith(".dex") || entry.name.endsWith(".sh") || entry.name.startsWith("assets/")) {
+                    // Inspect compiled Dalvik bytecode entries only (.dex)
+                    if (entry.name.endsWith(".dex") && !entry.isDirectory) {
                         // Scan up to first 2MB of each DEX entry to maintain instant scan latency
                         zip.getInputStream(entry).use { stream ->
                             val buffer = ByteArray(1024 * 512) // 512 KB chunks
@@ -407,7 +411,7 @@ object LocalAntivirusEngine {
                             while (bytesRead != -1 && totalRead < maxToScan) {
                                 val chunkString = String(buffer, 0, bytesRead, Charsets.ISO_8859_1)
                                 for (rule in BYTECODE_SIGNATURES) {
-                                    if (!matches.contains(rule) && chunkString.contains(rule.pattern, ignoreCase = true)) {
+                                    if (!matches.contains(rule) && chunkString.contains(rule.pattern, ignoreCase = false)) {
                                         matches.add(rule)
                                     }
                                 }

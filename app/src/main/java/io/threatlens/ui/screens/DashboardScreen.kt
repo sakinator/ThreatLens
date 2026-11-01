@@ -53,8 +53,10 @@ fun DashboardScreen(
     val mitmReport by io.threatlens.core.security.MitmDetector.lastReport.collectAsState()
 
     val isFullScanActive = fullScanState.status == io.threatlens.core.scanner.FullScanStatus.SCANNING || fullScanState.status == io.threatlens.core.scanner.FullScanStatus.PAUSED
-    val maliciousCount = scans.count { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK } + fullScanState.threatsFound.size
-    val cleanCount = scans.count { it.severity == ThreatSeverity.SAFE } + fullScanState.cleanCount
+    val combinedThreats = (scans.filter { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK } + fullScanState.threatsFound)
+        .distinctBy { it.sha256.ifBlank { it.targetPath } }
+    val maliciousCount = combinedThreats.size
+    val cleanCount = maxOf(fullScanState.cleanCount, scans.count { it.severity == ThreatSeverity.SAFE })
     val isDeviceSafe = maliciousCount == 0
 
     Scaffold(
@@ -465,8 +467,11 @@ fun DashboardScreen(
                 }
             }
 
-            // List of Scans
-            if (scans.isEmpty()) {
+            // List of Scans (Focus on active threats & real-time events)
+            val streamReports = scans.filter { it.severity != ThreatSeverity.SAFE }.ifEmpty {
+                scans.take(5)
+            }
+            if (streamReports.isEmpty()) {
                 item {
                     GlassCard {
                         Box(
@@ -483,7 +488,7 @@ fun DashboardScreen(
                     }
                 }
             } else {
-                items(scans, key = { it.id }) { report ->
+                items(streamReports, key = { it.id }) { report ->
                     ThreatItemRow(report = report) {
                         viewModel.selectReport(report)
                     }

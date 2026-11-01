@@ -69,6 +69,7 @@ class RegressionTestRunner:
         self.test_v142_critical_fixes()
         self.test_v150_provenance_and_features()
         self.test_v151_brand_logos_and_pattern_features()
+        self.test_v152_false_positive_elimination_and_export()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -735,6 +736,64 @@ class RegressionTestRunner:
         # 7. Scanner Tab Card Redesign
         self.record("ThreatItemRow uses softWrap=false preventing single-letter word wrapping", "softWrap = false" in components_code and "report.appName ?: report.targetName" in components_code)
         self.record("ThreatItemRow displays meaningful 1-line finding rationale surface", "findingSummary" in components_code and "CyberDarkSurface" in components_code)
+
+    # 24. Test v1.5.2 False Positive Elimination, Dynamic DB Count, Row Reconciliation & Scan Export
+    def test_v152_false_positive_elimination_and_export(self):
+        print(f"\n{YELLOW}▶ SUITE 24: v1.5.2 False-Positive Elimination, Dynamic Counts & Scan Export{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        local_av_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        scanner_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        scan_screen_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+        dash_screen_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "DashboardScreen.kt")
+        detail_sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        exporter_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "export", "ScanReportExporter.kt")
+        filepaths_file = os.path.join(script_dir, "..", "app", "src", "main", "res", "xml", "file_paths.xml")
+
+        with open(local_av_file, "r", encoding="utf-8") as f:
+            local_av_code = f.read()
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(scanner_file, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        with open(scan_screen_file, "r", encoding="utf-8") as f:
+            scan_screen_code = f.read()
+        with open(dash_screen_file, "r", encoding="utf-8") as f:
+            dash_screen_code = f.read()
+        with open(detail_sheet_file, "r", encoding="utf-8") as f:
+            detail_sheet_code = f.read()
+        with open(exporter_file, "r", encoding="utf-8") as f:
+            exporter_code = f.read()
+        with open(filepaths_file, "r", encoding="utf-8") as f:
+            filepaths_code = f.read()
+
+        # 1. Bytecode False-Positive Immunity (Paytm & Savvy Time)
+        self.record("LocalAntivirusEngine restricts scanApkBytecode to compiled .dex entries only", 'entry.name.endsWith(".dex")' in local_av_code and 'entry.name.startsWith("assets/")' not in local_av_code)
+        self.record("LocalAntivirusEngine uses refined AhMyth class package descriptor", "ahmyth/mine/king/ahmyth" in local_av_code and "Lios/ahmyth" in local_av_code)
+        self.record("LocalAntivirusEngine replaces loose daemonsu with active daemon command", "daemonsu --daemon" in local_av_code)
+        self.record("LocalAntivirusEngine exempts verified store apps from uncorroborated bytecode flags", "hasBytecodeMatch && !isVerifiedStore" in local_av_code)
+        self.record("LocalAntivirusEngine provides offlineDbMatch in LocalScanVerdict", "val offlineDbMatch: LocalSignatureDatabase.SignatureEntry?" in local_av_code)
+        self.record("LocalAntivirusEngine provides bytecodeMatches in LocalScanVerdict", "val bytecodeMatches: List<BytecodeRule>" in local_av_code)
+
+        # 2. Dynamic Count & Threat Name Attribution
+        self.record("RealtimeScanCoordinator uses dynamic LocalSignatureDatabase.totalSignatures in offline DB verdict", "LocalSignatureDatabase.totalSignatures} definitions checked" in coord_code)
+        self.record("RealtimeScanCoordinator populates offline DB badge with matched threat family name", "Flagged: ${sigMatch.threatFamily}" in coord_code)
+        self.record("RealtimeScanCoordinator isolates ThreatLens Bytecode Pattern Engine findings", "ThreatLens Bytecode Pattern Engine" in coord_code)
+
+        # 3. Scanner vs Shield Row Count Reconciliation
+        self.record("FullSystemScanner adds allScannedReports to FullScanState", "val allScannedReports: List<ThreatReport>" in scanner_code)
+        self.record("FullSystemScanner retains cached clean apps in allScannedReports", "allReports.add(cachedReport)" in scanner_code)
+        self.record("FullScanScreen defines ScanResultFilter enum with ALL, THREATS, SAFE", "enum class ScanResultFilter" in scan_screen_code and "ALL" in scan_screen_code and "THREATS" in scan_screen_code and "SAFE" in scan_screen_code)
+        self.record("FullScanScreen renders segmented filter pills for scan results", "ALL ($allCount)" in scan_screen_code and "THREATS (" in scan_screen_code and "SAFE (" in scan_screen_code)
+        self.record("DashboardScreen computes deduplicated threats count without double counting", "combinedThreats.size" in dash_screen_code and "distinctBy" in dash_screen_code)
+        self.record("DashboardScreen computes deduplicated cleanCount without double counting", "cleanCount = maxOf(fullScanState.cleanCount, scans.count { it.severity == ThreatSeverity.SAFE })" in dash_screen_code)
+        self.record("DashboardScreen streamlines real-time stream to prevent bulk scan pollution", "val streamReports = scans.filter { it.severity != ThreatSeverity.SAFE }.ifEmpty" in dash_screen_code)
+
+        # 4. Scan Report Exporter
+        self.record("FullScanScreen implements EXPORT SCAN REPORT (.JSON) button", "EXPORT SCAN REPORT (.JSON)" in scan_screen_code and "ScanReportExporter.exportScanReport" in scan_screen_code)
+        self.record("ThreatDetailSheet includes Share / Export Threat Report (.JSON) button", "Share / Export Threat Report (.JSON)" in detail_sheet_code and "ScanReportExporter.exportSingleThreatReport" in detail_sheet_code)
+        self.record("ScanReportExporter serializes metadata, posture, and per-app telemetry", "ThreatLens Autonomous Mobile EDR" in exporter_code and "serializeReport" in exporter_code and "shareReportFile" in exporter_code)
+        self.record("file_paths.xml grants external storage access for report sharing", "<external-path name=\"external_storage\" path=\".\" />" in filepaths_code)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,12 @@ import io.threatlens.ui.theme.*
 import io.threatlens.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
+enum class ScanResultFilter {
+    ALL,
+    THREATS,
+    SAFE
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullScanScreen(
@@ -42,6 +48,7 @@ fun FullScanScreen(
     val uploadProgress by viewModel.uploadProgress.collectAsState()
     val vtKey by viewModel.vtKey.collectAsState()
     var showConfirmDeleteAllDialog by remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf(ScanResultFilter.ALL) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -460,73 +467,207 @@ fun FullScanScreen(
                                 Text("Total Scan Duration:", color = TextSecondary, fontSize = 13.sp)
                                 Text("${scanState.durationMs / 1000}s", color = TextPrimary, fontSize = 13.sp)
                             }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Button(
+                                onClick = {
+                                    val exported = io.threatlens.core.export.ScanReportExporter.exportScanReport(
+                                        context,
+                                        scanState,
+                                        scanState.allScannedReports
+                                    )
+                                    if (exported != null) {
+                                        io.threatlens.core.export.ScanReportExporter.shareReportFile(context, exported)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth().height(44.dp)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = null, tint = CyberBlack, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("EXPORT SCAN REPORT (.JSON)", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+
+                // Filter Tabs: ALL | THREATS | SAFE
+                val allCount = scanState.allScannedReports.size.coerceAtLeast(scanState.totalCount)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // ALL Pill
+                        Surface(
+                            onClick = { selectedFilter = ScanResultFilter.ALL },
+                            color = if (selectedFilter == ScanResultFilter.ALL) NeonCyan.copy(alpha = 0.2f) else CyberDarkSurface,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (selectedFilter == ScanResultFilter.ALL) NeonCyan else CyberCardBorder
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "ALL ($allCount)",
+                                color = if (selectedFilter == ScanResultFilter.ALL) NeonCyan else TextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
+                        // THREATS Pill
+                        Surface(
+                            onClick = { selectedFilter = ScanResultFilter.THREATS },
+                            color = if (selectedFilter == ScanResultFilter.THREATS) {
+                                if (hasThreats) NeonCrimson.copy(alpha = 0.2f) else CyberDarkSurface
+                            } else CyberDarkSurface,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (selectedFilter == ScanResultFilter.THREATS) {
+                                    if (hasThreats) NeonCrimson else NeonCyan
+                                } else CyberCardBorder
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "THREATS (${scanState.threatsFound.size})",
+                                color = if (selectedFilter == ScanResultFilter.THREATS) {
+                                    if (hasThreats) NeonCrimson else NeonCyan
+                                } else TextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
+                        // SAFE Pill
+                        Surface(
+                            onClick = { selectedFilter = ScanResultFilter.SAFE },
+                            color = if (selectedFilter == ScanResultFilter.SAFE) NeonEmerald.copy(alpha = 0.2f) else CyberDarkSurface,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (selectedFilter == ScanResultFilter.SAFE) NeonEmerald else CyberCardBorder
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "SAFE (${scanState.cleanCount})",
+                                color = if (selectedFilter == ScanResultFilter.SAFE) NeonEmerald else TextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
                         }
                     }
                 }
             }
 
-            // Threats Found List
-            if (scanState.threatsFound.isNotEmpty()) {
-                val hasMalicious = scanState.threatsFound.any { it.severity == ThreatSeverity.MALICIOUS }
-                val sectionTitle = if (hasMalicious) {
-                    "CRITICAL THREATS REQUIRING ATTENTION (${scanState.threatsFound.size})"
-                } else {
-                    "SUSPICIOUS APPS REQUIRING REVIEW (${scanState.threatsFound.size})"
+            // Display Scanned Items based on scan state and filter
+            val displayList = when {
+                isCompleted -> when (selectedFilter) {
+                    ScanResultFilter.THREATS -> scanState.threatsFound
+                    ScanResultFilter.SAFE -> scanState.allScannedReports.filter { it.severity == ThreatSeverity.SAFE }
+                    ScanResultFilter.ALL -> if (scanState.allScannedReports.isNotEmpty()) {
+                        scanState.allScannedReports.sortedByDescending { it.currentScore }
+                    } else {
+                        scanState.threatsFound
+                    }
                 }
-                val sectionColor = if (hasMalicious) NeonCrimson else CyberAmber
-                val buttonText = if (hasMalicious) {
-                    "UNINSTALL / DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS"
-                } else {
-                    "REVIEW / REMOVE ALL ${scanState.threatsFound.size} SUSPICIOUS APPS"
-                }
+                scanState.threatsFound.isNotEmpty() -> scanState.threatsFound
+                else -> emptyList()
+            }
 
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = sectionTitle,
-                            color = sectionColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
+            if (displayList.isNotEmpty()) {
+                val hasMalicious = displayList.any { it.severity == ThreatSeverity.MALICIOUS }
+                val hasAnyThreatsInList = displayList.any { it.severity != ThreatSeverity.SAFE }
+
+                if (hasAnyThreatsInList && (selectedFilter == ScanResultFilter.THREATS || (selectedFilter == ScanResultFilter.ALL && scanState.threatsFound.isNotEmpty()))) {
+                    val sectionTitle = if (hasMalicious) {
+                        "CRITICAL THREATS REQUIRING ATTENTION (${scanState.threatsFound.size})"
+                    } else {
+                        "SUSPICIOUS APPS REQUIRING REVIEW (${scanState.threatsFound.size})"
+                    }
+                    val sectionColor = if (hasMalicious) NeonCrimson else CyberAmber
+                    val buttonText = if (hasMalicious) {
+                        "UNINSTALL / DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS"
+                    } else {
+                        "REVIEW / REMOVE ALL ${scanState.threatsFound.size} SUSPICIOUS APPS"
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = sectionTitle,
+                                color = sectionColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    item {
+                        Button(
+                            onClick = { showConfirmDeleteAllDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (hasMalicious) NeonCrimson else CyberAmber.copy(alpha = 0.2f),
+                                contentColor = if (hasMalicious) Color.White else CyberAmber
+                            ),
+                            border = if (hasMalicious) null else androidx.compose.foundation.BorderStroke(1.dp, CyberAmber.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .padding(vertical = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteForever,
+                                contentDescription = null,
+                                tint = if (hasMalicious) Color.White else CyberAmber
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = buttonText,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
 
-                item {
-                    Button(
-                        onClick = { showConfirmDeleteAllDialog = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (hasMalicious) NeonCrimson else CyberAmber.copy(alpha = 0.2f),
-                            contentColor = if (hasMalicious) Color.White else CyberAmber
-                        ),
-                        border = if (hasMalicious) null else androidx.compose.foundation.BorderStroke(1.dp, CyberAmber.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .padding(vertical = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteForever,
-                            contentDescription = null,
-                            tint = if (hasMalicious) Color.White else CyberAmber
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = buttonText,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 12.sp,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                items(scanState.threatsFound) { report ->
+                items(displayList) { report ->
                     ThreatItemRow(report = report) {
                         viewModel.selectReport(report)
+                    }
+                }
+            } else if (isCompleted && selectedFilter == ScanResultFilter.THREATS && scanState.threatsFound.isEmpty()) {
+                item {
+                    GlassCard {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "✓ Zero threats detected across all scanned applications.",
+                                color = NeonEmerald,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

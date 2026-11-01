@@ -1288,6 +1288,33 @@ fun ThreatDetailSheet(
                 )
             }
 
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Export Single Threat Report Button
+            OutlinedButton(
+                onClick = {
+                    val exported = io.threatlens.core.export.ScanReportExporter.exportSingleThreatReport(context, report)
+                    if (exported != null) {
+                        io.threatlens.core.export.ScanReportExporter.shareReportFile(context, exported)
+                    }
+                },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+            ) {
+                Icon(Icons.Default.Share, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Share / Export Threat Report (.JSON)",
+                    color = NeonCyan,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

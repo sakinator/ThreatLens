@@ -30,7 +30,8 @@ data class FullScanState(
     val currentItemName: String = "",
     val threatsFound: List<ThreatReport> = emptyList(),
     val cleanCount: Int = 0,
-    val durationMs: Long = 0L
+    val durationMs: Long = 0L,
+    val allScannedReports: List<ThreatReport> = emptyList()
 )
 
 object FullSystemScanner {
@@ -54,6 +55,7 @@ object FullSystemScanner {
             var scanned = 0
             var clean = 0
             val threats = mutableListOf<ThreatReport>()
+            val allReports = mutableListOf<ThreatReport>()
 
             for (target in targets) {
                 if (!isActive) {
@@ -76,7 +78,8 @@ object FullSystemScanner {
                     totalCount = total,
                     currentItemName = target.name,
                     threatsFound = threats.toList(),
-                    cleanCount = clean
+                    cleanCount = clean,
+                    allScannedReports = allReports.toList()
                 )
 
                 // 1. Fast Cache Check: If already verified clean and un-updated, instant skip deep parsing
@@ -85,6 +88,27 @@ object FullSystemScanner {
                     if (cached != null) {
                         clean++
                         scanned++
+                        val cachedReport = ThreatReport(
+                            targetName = target.file.name,
+                            targetPath = target.file.absolutePath,
+                            appName = target.name,
+                            packageName = target.packageName,
+                            sha256 = "",
+                            fileSize = target.file.length(),
+                            isApk = true,
+                            localScore = 0,
+                            cloudScore = 0,
+                            currentScore = 0,
+                            severity = ThreatSeverity.SAFE,
+                            threatFamily = "Clean",
+                            detectionType = io.threatlens.core.model.DetectionType.CLEAN,
+                            storeProvenance = io.threatlens.core.model.StoreProvenance.GOOGLE_PLAY,
+                            engineVerdictMap = mapOf(
+                                "ThreatLens Local Engine" to "Clean (Cached Safe)",
+                                "ThreatLens Offline Signature DB" to "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
+                            )
+                        )
+                        allReports.add(cachedReport)
                         continue
                     }
                 }
@@ -96,6 +120,7 @@ object FullSystemScanner {
                         customAppName = target.name,
                         customPackageName = target.packageName
                     )
+                    allReports.add(report)
                     if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
                         threats.add(report)
                     } else {
@@ -135,7 +160,8 @@ object FullSystemScanner {
                 currentItemName = "Scan Complete",
                 threatsFound = threats,
                 cleanCount = clean,
-                durationMs = elapsed
+                durationMs = elapsed,
+                allScannedReports = allReports.toList()
             )
         }
     }

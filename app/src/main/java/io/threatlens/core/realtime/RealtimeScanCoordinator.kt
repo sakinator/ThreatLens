@@ -217,13 +217,40 @@ object RealtimeScanCoordinator {
         engineDetailsMap["ThreatLens Anti-Analysis & Packer Shield"] = packer?.details ?: listOf("Bytecode Structure: Standard uncompressed Dalvik DEX", "No commercial crypters or anti-analysis evasion stubs detected")
 
         // 6. ThreatLens Offline Signature DB
-        val hasSig = localVerdict.matchedSignatures.any { !it.startsWith("Andr.") && !it.startsWith("Android_") }
-        engineVerdictMap["ThreatLens Offline Signature DB"] = if (hasSig) {
-            "Flagged: Exact match in offline database"
+        val sigMatch = localVerdict.offlineDbMatch
+        engineVerdictMap["ThreatLens Offline Signature DB"] = if (sigMatch != null) {
+            "Flagged: ${sigMatch.threatFamily}"
         } else {
-            "Clean (25,000+ definitions checked)"
+            "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
         }
-        engineDetailsMap["ThreatLens Offline Signature DB"] = listOf("25,000+ verified mobile malware hashes queried in <1ms", "Zero network dependency")
+        engineDetailsMap["ThreatLens Offline Signature DB"] = if (sigMatch != null) {
+            listOf(
+                "Threat Name: ${sigMatch.threatFamily}",
+                "Classification: ${sigMatch.category}",
+                "Exact SHA-256 signature match in offline database"
+            )
+        } else {
+            listOf(
+                "${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} verified mobile malware signatures queried in <1ms",
+                "Zero network dependency"
+            )
+        }
+
+        // 7. ThreatLens Bytecode Pattern Engine
+        val bytecodeMatches = localVerdict.bytecodeMatches
+        engineVerdictMap["ThreatLens Bytecode Pattern Engine"] = if (bytecodeMatches.isNotEmpty()) {
+            "Flagged: ${bytecodeMatches.first().family}"
+        } else {
+            "Clean (Bytecode pattern scan clean)"
+        }
+        engineDetailsMap["ThreatLens Bytecode Pattern Engine"] = if (bytecodeMatches.isNotEmpty()) {
+            bytecodeMatches.map { "${it.family}: ${it.description}" }
+        } else {
+            listOf(
+                "DEX Bytecode Scan: Clean",
+                "No embedded RAT stagers or crypto-ransomware bytecode sequences detected"
+            )
+        }
 
         engineVerdictMap["AlienVault OTX"] = "Scanning public threat pulses..."
         engineVerdictMap["CIRCL Hashlookup"] = "Querying NIST NSRL database..."
