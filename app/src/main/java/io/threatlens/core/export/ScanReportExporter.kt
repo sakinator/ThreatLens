@@ -64,14 +64,14 @@ object ScanReportExporter {
             // 3. Threats Array
             val threatsArray = JSONArray()
             for (threat in scanState.threatsFound) {
-                threatsArray.put(serializeReport(threat))
+                threatsArray.put(serializeReport(context, threat))
             }
             root.put("threats", threatsArray)
 
             // 4. All Scanned Items (Clean + Flagged)
             val allItemsArray = JSONArray()
             for (item in allScannedReports) {
-                allItemsArray.put(serializeReport(item))
+                allItemsArray.put(serializeReport(context, item))
             }
             root.put("allScannedItems", allItemsArray)
 
@@ -105,7 +105,7 @@ object ScanReportExporter {
                 put("deviceModel", "${Build.MANUFACTURER} ${Build.MODEL}")
             }
             root.put("metadata", meta)
-            root.put("threat", serializeReport(report))
+            root.put("threat", serializeReport(context, report))
 
             val targetDir = getExportDirectory(context)
             if (!targetDir.exists()) targetDir.mkdirs()
@@ -148,7 +148,7 @@ object ScanReportExporter {
         }
     }
 
-    private fun serializeReport(report: ThreatReport): JSONObject {
+    private fun serializeReport(context: Context, report: ThreatReport): JSONObject {
         return JSONObject().apply {
             put("appName", report.appName ?: report.targetName)
             put("packageName", report.packageName ?: "N/A")
@@ -159,7 +159,12 @@ object ScanReportExporter {
             put("severity", report.severity.name)
             put("detectionType", report.detectionType.name)
             put("threatFamily", report.threatFamily)
-            put("storeProvenance", report.storeProvenance?.name ?: "UNKNOWN")
+            
+            val provBadge = if (!report.packageName.isNullOrBlank()) {
+                val prov = io.threatlens.core.local.AppProvenanceVerifier.inspectProvenance(context, report.packageName)
+                prov.badgeLabel
+            } else "STANDALONE"
+            put("storeProvenance", provBadge)
 
             // Score breakdown
             report.scoreBreakdown?.let { sb ->
@@ -173,14 +178,9 @@ object ScanReportExporter {
                 put("scoreBreakdown", sbObj)
             }
 
-            // AI Executive Assessment
+            // AI Assessment
             report.aiExplanation?.let { ai ->
-                val aiObj = JSONObject().apply {
-                    put("executiveAssessment", ai.executiveAssessment)
-                    put("confidenceLevel", ai.confidenceLevel)
-                    put("recommendedAction", ai.recommendedAction)
-                }
-                put("aiAssessment", aiObj)
+                put("aiAssessment", ai)
             }
 
             // Engine Verdicts

@@ -123,7 +123,7 @@ object LocalAntivirusEngine {
         )
     )
 
-    private data class BytecodeRule(
+    data class BytecodeRule(
         val pattern: String,
         val family: String,
         val category: String,

@@ -44,6 +44,7 @@ fun FullScanScreen(
     val isScanning = scanState.status == FullScanStatus.SCANNING
     val isPaused = scanState.status == FullScanStatus.PAUSED
     val isCompleted = scanState.status == FullScanStatus.COMPLETED
+    val hasThreats = scanState.threatsFound.isNotEmpty()
     val selectedReport by viewModel.selectedReport.collectAsState()
     val uploadProgress by viewModel.uploadProgress.collectAsState()
     val vtKey by viewModel.vtKey.collectAsState()

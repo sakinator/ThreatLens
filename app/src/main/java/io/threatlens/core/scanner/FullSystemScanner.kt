@@ -102,7 +102,6 @@ object FullSystemScanner {
                             severity = ThreatSeverity.SAFE,
                             threatFamily = "Clean",
                             detectionType = io.threatlens.core.model.DetectionType.CLEAN,
-                            storeProvenance = io.threatlens.core.model.StoreProvenance.GOOGLE_PLAY,
                             engineVerdictMap = mapOf(
                                 "ThreatLens Local Engine" to "Clean (Cached Safe)",
                                 "ThreatLens Offline Signature DB" to "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
