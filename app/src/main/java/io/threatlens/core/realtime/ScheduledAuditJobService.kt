@@ -40,8 +40,7 @@ class ScheduledAuditJobService : JobService() {
     }
 
     private suspend fun performScheduledAudit(context: Context) = withContext(Dispatchers.IO) {
-        AppDiagnosticLogger.logInfo("ScheduledAuditJobService", "Executing scheduled background deep audit...")
-        val coordinator = RealtimeScanCoordinator.getInstance(context)
+        AppDiagnosticLogger.log("ScheduledAuditJobService", "Executing scheduled background deep audit...")
         val pm = context.packageManager
         val packages = pm.getInstalledPackages(0)
 
@@ -50,10 +49,10 @@ class ScheduledAuditJobService : JobService() {
             val sourceDir = pkg.applicationInfo.sourceDir ?: continue
             val apkFile = java.io.File(sourceDir)
             if (apkFile.exists() && apkFile.canRead()) {
-                val report = coordinator.scanFile(apkFile)
+                val report = RealtimeScanCoordinator.streamScan(context, apkFile, isFullScan = true)
                 if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK) {
                     threatsFound++
-                    ThreatNotificationManager.showThreatNotification(context, report)
+                    ThreatNotificationManager.showThreatAlert(context, report)
                 }
             }
         }
@@ -62,7 +61,7 @@ class ScheduledAuditJobService : JobService() {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putLong(KEY_LAST_AUDIT_TIMESTAMP, System.currentTimeMillis()).apply()
 
-        AppDiagnosticLogger.logInfo(
+        AppDiagnosticLogger.log(
             "ScheduledAuditJobService",
             "Scheduled audit complete: Scanned ${packages.size} apps, identified $threatsFound threats."
         )
