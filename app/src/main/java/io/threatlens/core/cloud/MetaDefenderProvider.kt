@@ -24,8 +24,9 @@ object MetaDefenderProvider {
         if (apiKey.isBlank()) return null
         return try {
             val request = Request.Builder()
-                .url("https://api.metadefender.com/v4/hash/$sha256")
+                .url("https://api.metadefender.com/v4/hash/${sha256.trim()}")
                 .addHeader("apikey", apiKey.trim())
+                .addHeader("User-Agent", "ThreatLens-Security/1.5.3")
                 .get()
                 .build()
 

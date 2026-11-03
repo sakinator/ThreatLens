@@ -20,32 +20,101 @@ object FilescanProvider {
 
     fun queryHash(sha256: String, apiKey: String): FilescanResult? {
         if (apiKey.isBlank()) return null
+        val cleanHash = sha256.trim()
+        val cleanKey = apiKey.trim()
+
         return try {
-            val request = Request.Builder()
-                .url("https://www.filescan.io/api/reports/search?value=$sha256")
-                .addHeader("Authorization", "Bearer ${apiKey.trim()}")
+            // 1. Check primary reputation endpoint
+            val repRequest = Request.Builder()
+                .url("https://www.filescan.io/api/reputation/hash?sha256=$cleanHash")
+                .addHeader("X-Api-Key", cleanKey)
+                .addHeader("Authorization", "Bearer $cleanKey")
+                .addHeader("User-Agent", "ThreatLens-Security/1.5.3")
                 .get()
                 .build()
 
-            client.newCall(request).execute().use { response ->
+            client.newCall(repRequest).execute().use { response ->
+                if (response.code == 404) {
+                    return FilescanResult("BENIGN", 0, emptyList())
+                }
+                if (response.code == 401 || response.code == 403) {
+                    return null
+                }
+                if (response.isSuccessful) {
+                    val raw = response.body?.string() ?: return null
+                    val root = JSONObject(raw)
+
+                    val overallVerdict = root.optString("overall_verdict", "unknown").uppercase()
+                    val mdcloud = root.optJSONObject("mdcloud")
+                    val detectedAv = mdcloud?.optInt("detected_av_engines", 0) ?: 0
+                    val totalAv = mdcloud?.optInt("total_av_engines", 0) ?: 0
+
+                    val tagList = mutableListOf<String>()
+                    val reports = root.optJSONArray("filescan_reports")
+                    var reportVerdict = ""
+                    if (reports != null && reports.length() > 0) {
+                        val latest = reports.getJSONObject(0)
+                        reportVerdict = latest.optString("verdict", "").uppercase()
+                    }
+
+                    val finalVerdict = when {
+                        detectedAv > 0 || overallVerdict == "MALICIOUS" || reportVerdict == "MALICIOUS" -> "MALICIOUS"
+                        overallVerdict == "SUSPICIOUS" || reportVerdict == "SUSPICIOUS" -> "SUSPICIOUS"
+                        overallVerdict in listOf("BENIGN", "NO_THREAT") || reportVerdict in listOf("BENIGN", "NO_THREAT") -> "BENIGN"
+                        else -> "UNKNOWN"
+                    }
+
+                    val threatScore = when (finalVerdict) {
+                        "MALICIOUS" -> if (detectedAv > 0) maxOf(85, minOf(100, 70 + (detectedAv * 5))) else 90
+                        "SUSPICIOUS" -> 60
+                        else -> 0
+                    }
+
+                    if (detectedAv > 0) {
+                        tagList.add("MDCloud: $detectedAv/$totalAv AVs")
+                    }
+
+                    return FilescanResult(finalVerdict, threatScore, tagList)
+                }
+            }
+
+            // 2. Fallback to reports/search if reputation endpoint had unexpected response
+            val searchRequest = Request.Builder()
+                .url("https://www.filescan.io/api/reports/search?sha256=$cleanHash&page_size=1")
+                .addHeader("X-Api-Key", cleanKey)
+                .addHeader("Authorization", "Bearer $cleanKey")
+                .addHeader("User-Agent", "ThreatLens-Security/1.5.3")
+                .get()
+                .build()
+
+            client.newCall(searchRequest).execute().use { response ->
+                if (response.code == 404) return FilescanResult("BENIGN", 0, emptyList())
                 if (!response.isSuccessful) return null
                 val raw = response.body?.string() ?: return null
                 val root = JSONObject(raw)
-                val reports = root.optJSONArray("reports") ?: return null
-                if (reports.length() == 0) return null
+                val items = root.optJSONArray("items") ?: root.optJSONArray("reports") ?: return FilescanResult("UNKNOWN", 0, emptyList())
+                if (items.length() == 0) return FilescanResult("BENIGN", 0, emptyList())
 
-                val latest = reports.getJSONObject(0)
-                val verdict = latest.optString("verdict", "UNKNOWN")
-                val threatScore = latest.optInt("threat_score", 0)
+                val latest = items.getJSONObject(0)
+                val verdict = latest.optString("verdict", "UNKNOWN").uppercase()
+                val threatScore = when (verdict) {
+                    "MALICIOUS" -> 90
+                    "SUSPICIOUS" -> 60
+                    else -> 0
+                }
                 val tagList = mutableListOf<String>()
-
                 val tagsArray = latest.optJSONArray("tags")
                 if (tagsArray != null) {
                     for (i in 0 until tagsArray.length()) {
-                        tagList.add(tagsArray.getString(i))
+                        val item = tagsArray.opt(i)
+                        if (item is JSONObject) {
+                            val tagName = item.optJSONObject("tag")?.optString("name") ?: item.optString("name")
+                            if (!tagName.isNullOrBlank()) tagList.add(tagName)
+                        } else if (item is String) {
+                            tagList.add(item)
+                        }
                     }
                 }
-
                 FilescanResult(verdict, threatScore, tagList)
             }
         } catch (e: Exception) {

@@ -1026,7 +1026,7 @@ fun SettingsScreen(
                 engineName = "Filescan.io",
                 providerId = "filescan",
                 label = "Filescan.io API Key",
-                placeholder = "Bearer token",
+                placeholder = "Filescan API Key",
                 hint = "Free IOCs & report lookup at filescan.io",
                 portalUrl = "https://www.filescan.io/profile",
                 value = filescanInput,

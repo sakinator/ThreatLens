@@ -103,14 +103,16 @@ object ApiKeyValidator {
                 }
                 "metadefender" -> {
                     val request = Request.Builder()
-                        .url("https://api.metadefender.com/v4/stat/limits")
+                        .url("https://api.metadefender.com/v4/apikey")
                         .addHeader("apikey", trimmed)
+                        .addHeader("User-Agent", "ThreatLens-Security/1.5.3")
                         .build()
                     client.newCall(request).execute().use { resp ->
-                        if (resp.isSuccessful) {
-                            ValidationStatus.Valid("MetaDefender Connected (HTTP ${resp.code})")
-                        } else {
-                            ValidationStatus.Invalid("Invalid MetaDefender Key (HTTP ${resp.code})")
+                        when {
+                            resp.isSuccessful -> ValidationStatus.Valid("MetaDefender Connected (HTTP ${resp.code})")
+                            resp.code == 401 || resp.code == 403 -> ValidationStatus.Invalid("Invalid MetaDefender Key (HTTP ${resp.code})")
+                            resp.code == 429 -> ValidationStatus.Valid("Key verified (HTTP 429: Rate limit / Quota)")
+                            else -> ValidationStatus.Invalid("MetaDefender Error (HTTP ${resp.code})")
                         }
                     }
                 }
@@ -143,14 +145,17 @@ object ApiKeyValidator {
                 }
                 "filescan" -> {
                     val request = Request.Builder()
-                        .url("https://www.filescan.io/api/v1/users/me")
+                        .url("https://www.filescan.io/api/reports/search?page_size=1")
+                        .addHeader("X-Api-Key", trimmed)
                         .addHeader("Authorization", "Bearer $trimmed")
+                        .addHeader("User-Agent", "ThreatLens-Security/1.5.3")
                         .build()
                     client.newCall(request).execute().use { resp ->
-                        if (resp.isSuccessful) {
-                            ValidationStatus.Valid("Filescan.io Connected (HTTP ${resp.code})")
-                        } else {
-                            ValidationStatus.Invalid("Invalid Filescan Key (HTTP ${resp.code})")
+                        when {
+                            resp.isSuccessful -> ValidationStatus.Valid("Filescan.io Connected (HTTP ${resp.code})")
+                            resp.code == 401 || resp.code == 403 -> ValidationStatus.Invalid("Invalid Filescan Key (HTTP ${resp.code})")
+                            resp.code == 429 -> ValidationStatus.Valid("Key verified (HTTP 429: Rate limit / Quota)")
+                            else -> ValidationStatus.Invalid("Filescan Error (HTTP ${resp.code})")
                         }
                     }
                 }

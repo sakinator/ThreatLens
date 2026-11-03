@@ -70,6 +70,7 @@ class RegressionTestRunner:
         self.test_v150_provenance_and_features()
         self.test_v151_brand_logos_and_pattern_features()
         self.test_v152_false_positive_elimination_and_export()
+        self.suite_25_api_key_validation_hardening()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -800,6 +801,38 @@ class RegressionTestRunner:
         self.record("FullScanScreen implements Malware -> Suspicious -> Clean severity comparator", "compareBy<ThreatReport>" in scan_screen_code and "ThreatSeverity.MALICIOUS -> 0" in scan_screen_code and "ThreatSeverity.SAFE -> 3" in scan_screen_code)
         self.record("DashboardScreen sorts real-time stream with Malware -> Suspicious -> Clean order", "compareBy<ThreatReport>" in dash_screen_code and "ThreatSeverity.MALICIOUS -> 0" in dash_screen_code)
         self.record("FullScanScreen renders Order By sorting dropdown selector", "ORDER BY:" in scan_screen_code and "selectedSortOption.label" in scan_screen_code and "DropdownMenu" in scan_screen_code)
+
+    def suite_25_api_key_validation_hardening(self):
+        print(f"\n{YELLOW}▶  SUITE 25: v1.5.3 Cloud API Key Validation & Endpoint Hardening (MetaDefender & Filescan){RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        val_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "validation", "ApiKeyValidator.kt")
+        md_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "MetaDefenderProvider.kt")
+        fs_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "FilescanProvider.kt")
+        settings_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
+
+        with open(val_file, "r", encoding="utf-8") as f:
+            val_code = f.read()
+        with open(md_file, "r", encoding="utf-8") as f:
+            md_code = f.read()
+        with open(fs_file, "r", encoding="utf-8") as f:
+            fs_code = f.read()
+        with open(settings_file, "r", encoding="utf-8") as f:
+            settings_code = f.read()
+
+        # MetaDefender v4 Fixes
+        self.record("ApiKeyValidator targets official MetaDefender v4/apikey route", "api.metadefender.com/v4/apikey" in val_code and "stat/limits" not in val_code)
+        self.record("ApiKeyValidator passes apikey header for MetaDefender", '.addHeader("apikey", trimmed)' in val_code)
+        self.record("ApiKeyValidator handles MetaDefender 401/403 auth rejections", "Invalid MetaDefender Key (HTTP ${resp.code})" in val_code)
+        self.record("MetaDefenderProvider includes User-Agent header", "ThreatLens-Security" in md_code)
+
+        # Filescan.io Fixes
+        self.record("ApiKeyValidator targets Filescan /api/reports/search route", "filescan.io/api/reports/search" in val_code and "api/v1/users/me" not in val_code)
+        self.record("ApiKeyValidator passes X-Api-Key header for Filescan", '.addHeader("X-Api-Key", trimmed)' in val_code)
+        self.record("ApiKeyValidator handles Filescan 401/403 auth rejections", "Invalid Filescan Key (HTTP ${resp.code})" in val_code)
+        self.record("FilescanProvider uses official /api/reputation/hash endpoint", "filescan.io/api/reputation/hash" in fs_code)
+        self.record("FilescanProvider passes X-Api-Key header", '.addHeader("X-Api-Key", cleanKey)' in fs_code)
+        self.record("FilescanProvider returns benign verdict for 404 unindexed hashes", 'response.code == 404' in fs_code and 'FilescanResult("BENIGN", 0, emptyList())' in fs_code)
+        self.record("SettingsScreen updates Filescan placeholder away from Bearer token", 'placeholder = "Filescan API Key"' in settings_code and 'placeholder = "Bearer token"' not in settings_code)
 
 
 if __name__ == "__main__":
