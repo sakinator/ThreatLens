@@ -22,6 +22,7 @@ object ManifestHeuristicEngine {
 
     private val CRITICAL_ABUSE_PERMISSIONS = setOf(
         "android.permission.BIND_ACCESSIBILITY_SERVICE",
+        "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.BIND_DEVICE_ADMIN",
         "android.permission.REQUEST_INSTALL_PACKAGES"
@@ -147,13 +148,19 @@ object ManifestHeuristicEngine {
                 behaviors.add("Requests Accessibility Service (Can monitor screen touches & read credentials)")
             }
 
-            // 3. Toxic Combo 2: SMS Interception + Internet (OTP / 2FA Stealer)
+            // 3. Toxic Combo 2: SMS & Notification Interception + Internet (OTP / 2FA Stealer)
             val hasSms = permSet.contains("android.permission.RECEIVE_SMS") || permSet.contains("android.permission.READ_SMS")
+            val hasNotificationListener = permSet.contains("android.permission.BIND_NOTIFICATION_LISTENER_SERVICE")
             val hasInternet = permSet.contains("android.permission.INTERNET")
             if (hasSms && hasInternet) {
                 behaviorPts += 30
                 isSpyware = true
                 behaviors.add("Intercepts incoming SMS/OTPs and exfiltrates over the network")
+            }
+            if (hasNotificationListener && hasInternet && !isKnownTrustedVendor) {
+                behaviorPts += 30
+                isBanker = true
+                behaviors.add("Notification Listener with network access (Monitors 2FA push notifications & OTP codes)")
             }
 
             // 4. Toxic Combo 3: Silent Dropper (Install Packages + Boot Completed)

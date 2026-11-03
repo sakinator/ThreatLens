@@ -106,6 +106,12 @@
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false" />
 
+        <!-- Autonomous Scheduled Deep Audit JobService (24h/48h Maintenance Windows) -->
+        <service
+            android:name=".core.realtime.ScheduledAuditJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
         <!-- Shield Watchdog Supervisor JobService -->
         <service
             android:name=".core.system.ShieldWatchdogJobService"

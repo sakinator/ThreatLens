@@ -89,6 +89,15 @@ fun SettingsScreen(
     var autoUpdateEnabled by remember { mutableStateOf(SignatureUpdateService.isAutoUpdateEnabled(context)) }
     var showSourcesDetail by remember { mutableStateOf(false) }
 
+    var scheduledAuditEnabled by remember {
+        mutableStateOf(io.threatlens.core.realtime.ScheduledAuditJobService.isEnabled(context))
+    }
+    var scheduledIntervalHours by remember {
+        mutableStateOf(io.threatlens.core.realtime.ScheduledAuditJobService.getIntervalHours(context))
+    }
+    val totalLiveFeedRules by io.threatlens.core.vpn.DomainFilterEngine.totalLiveFeedRules.collectAsState()
+    var isSyncingLiveFeeds by remember { mutableStateOf(false) }
+
     Scaffold(
         containerColor = CyberBlack,
         topBar = {
@@ -1315,6 +1324,104 @@ fun SettingsScreen(
                     }
                 )
             }
+
+            // Autonomous Scheduled Deep Audit & Live Feeds Card
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Scheduled Background Deep Audit",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "Daily deep scan • Idle & Charging only (0% battery drain)",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = scheduledAuditEnabled,
+                            onCheckedChange = {
+                                scheduledAuditEnabled = it
+                                io.threatlens.core.realtime.ScheduledAuditJobService.setEnabled(context, it, scheduledIntervalHours)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = CyberBlack,
+                                checkedTrackColor = NeonCyan,
+                                uncheckedThumbColor = TextMuted,
+                                uncheckedTrackColor = CyberDarkSurface
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = CyberCardBorder.copy(alpha = 0.5f))
+
+                    // Live Threat Intelligence Feeds Sync (Abuse.ch, TweetFeed, Phishing.Database)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Live Threat Feeds (Abuse.ch / TweetFeed)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "URLhaus, Feodo Botnet, TweetFeed, Phishing.Database ($totalLiveFeedRules active C2 rules)",
+                                color = TextMuted,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                isSyncingLiveFeeds = true
+                                coroutineScope.launch {
+                                    val count = io.threatlens.core.update.SignatureUpdateService.syncLiveThreatFeeds(context)
+                                    isSyncingLiveFeeds = false
+                                    Toast.makeText(context, "✓ Synced $count live botnet & phishing rules", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = CyberDarkSurface),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f)),
+                            enabled = !isSyncingLiveFeeds,
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            if (isSyncingLiveFeeds) {
+                                CircularProgressIndicator(modifier = Modifier.size(12.dp), color = NeonCyan, strokeWidth = 1.5.dp)
+                            } else {
+                                Text("Sync Feeds", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Diagnostics & Error Log Exporter Card
             GlassCard(

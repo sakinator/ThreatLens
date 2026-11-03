@@ -4,6 +4,50 @@ All notable changes to ThreatLens are documented in this file.
 
 ---
 
+## [v1.6.0] - 2026-11-03
+### 🚀 7 Core Security Capabilities, Webpage Block Landing Page, Interactive Blocked Counter & Full App Whitelist
+* **P1: Accessibility & 2FA Notification Hijack Auditor (`AccessibilityHijackAuditor`)**:
+  - Audits all installed applications for dangerous combinations: Accessibility Service (`BIND_ACCESSIBILITY_SERVICE`), Notification Listener (`BIND_NOTIFICATION_LISTENER_SERVICE`), Screen Overlay (`SYSTEM_ALERT_WINDOW`), and SMS interception (`RECEIVE_SMS` / `READ_SMS`).
+  - Detects active 2FA OTP interception, banking credential overlay injection (Anatsa, TeaBot, SharkBot, SpyNote), and anti-removal Device Administrator hooks.
+  - Generates actionable remediation instructions directing users to revoke permissions in Android Settings.
+* **P2: Native `.so` ELF Library Inspector (`ElfBinaryInspector`)**:
+  - Pure-Kotlin ELF binary inspector examining shared libraries (`.so`) packaged inside APKs across ARM64, ARMv7, and x86 architectures.
+  - Flags dangerous low-level anti-debugging & code execution syscalls: `ptrace`, `mprotect`, `process_vm_readv`, `process_vm_writev`, `execve`, `fork`, `dlopen`.
+  - Uncovers raw socket backdoor hooks (`socket`, `connect`, `sendto`, `recvfrom`) and hooking/rootkit frameworks (`frida`, `substrate`, `xposed`, `magisk`).
+* **P3: Per-App Network Firewall (`FirewallRuleManager`)**:
+  - Granular per-application network firewall running directly on the on-device loopback VPN layer.
+  - Lets users completely sever internet access for individual apps with persistent storage in SharedPreferences and zero battery overhead.
+* **P4: Autonomous Scheduled Background Deep Audit (`ScheduledAuditJobService`)**:
+  - Native Android `JobScheduler` periodic deep scans scheduled every 24 to 48 hours exclusively during device idle and charging states.
+  - Executes full-system heuristic, bytecode, and signature audits without user intervention or battery drain.
+* **P5: Encrypted DNS-over-HTTPS (`DohResolver`)**:
+  - Upstream DNS queries are encapsulated in encrypted DoH wire format (`application/dns-message`) over port 443 with Cloudflare, AdGuard, Quad9, and Google.
+  - Prevents ISP snooping, captive portal tampering, and SNI eavesdropping with instant fallback to protected fast UDP Anycast.
+* **P6: Real-Time Threat Intelligence Feeds Sync (Abuse.ch, TweetFeed, Phishing.Database)**:
+  - Synchronizes active botnet C2 IP and domain indicators directly from:
+    - **Abuse.ch URLhaus** (`https://urlhaus.abuse.ch/`)
+    - **Abuse.ch Feodo Tracker** (`https://feodotracker.abuse.ch/`)
+    - **TweetFeed Live IOCs** (`https://tweetfeed.live/malicious-domains/`)
+    - **Phishing.Database** (`https://github.com/Phishing-Database/Phishing.Database`)
+    - **OpenPhish Global Feed** (`https://openphish.com/phishing_feeds.html`)
+    - **RomainMarcoux Malicious Domains** (`https://github.com/romainmarcoux/malicious-domains`)
+  - Dynamic hot-reload directly into `DomainFilterEngine` with 0ms delay and zero app restarts.
+* **P7: Static String De-Obfuscator (`StringDeobfuscator`)**:
+  - Sweeps DEX string pools for Base64, ROT13, and single-byte XOR ciphers (0x01..0xFF).
+  - Exposes hidden C2 URLs, IP addresses, Telegram bot webhook tokens, and sensitive root shell commands (`/system/bin/su`, `chmod 777`).
+* **Webpage Block Landing Page (`SinkholeTcpResponder`)**:
+  - When an HTTP browser link is blocked by ThreatLens, the on-device TUN TCP responder completes a 3-way handshake on port 80 and serves an authentic dark-cyber "Blocked by ThreatLens" landing page with SVG shield logo, threat category, reason, and an instant "Unblock & Whitelist Domain" action (`/__threatlens_unblock`).
+  - For non-HTTP ports (such as HTTPS 443 or API background endpoints), connections are dropped/reset immediately so malicious C2 traffic is blocked cold without hanging.
+* **Interactive Blocked Sites Counter & Whitelist Manager (`BlockedSitesSheet`)**:
+  - Touch-interactive counter chips on Dashboard and Web Protection screens opening the `BlockedSitesSheet`.
+  - Searchable live intercept log with one-touch unblocking for each blocked domain.
+  - Dedicated "Whitelist Any Domain or URL" input field with instant persistent storage via `ExclusionManager`.
+  - Active Whitelist management tab with remove/re-block controls.
+* **Comprehensive Test Suite**:
+  - Added Suites 31, 32, 33, 34, 35 to the regression suite. Total verified tests: **379/379 passing across 35 suites**.
+
+---
+
 ## [v1.5.8] - 2026-11-03
 ### 🎨 Direct Official Vector Brand Logo Binding & Transparency Fixes
 * **Direct Vendor Name Resolution (`getOfficialVendorDrawable`)**: Added top-level unified resolution function mapping any vendor name, alias, or engine string directly to its official 256×256 vector drawable in `R.drawable.ic_vendor_*`. Completely eliminates generic canvas shield fallbacks for Rising, Lionic, K7, AlienVault, Trellix, Antiy, Huorong, Webroot, Xcitium, NANO, RocketCyber, Varist, Xvirus, Vir.IT, Aurora, etc.

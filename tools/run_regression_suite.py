@@ -76,6 +76,11 @@ class RegressionTestRunner:
         self.suite_28_realtime_safe_notifications_and_intent_routing()
         self.suite_29_v157_consensus_brand_logos_and_storage_exhaustion()
         self.suite_30_v158_direct_brand_logos_and_transparency()
+        self.suite_31_accessibility_and_notification_hijack_auditor()
+        self.suite_32_native_elf_inspector_and_string_deobfuscator()
+        self.suite_33_per_app_firewall_and_scheduled_deep_audit()
+        self.suite_34_doh_resolvers_and_live_threat_feed_sync()
+        self.suite_35_block_webpage_sinkhole_and_whitelist_manager()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -948,7 +953,7 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code))
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code))
 
     def suite_28_realtime_safe_notifications_and_intent_routing(self):
         print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
@@ -999,7 +1004,7 @@ class RegressionTestRunner:
             "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
 
         # 4. Release version
-        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code))
+        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code))
 
     def suite_29_v157_consensus_brand_logos_and_storage_exhaustion(self):
         print(f"\n{YELLOW}▶  SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation{RESET}")
@@ -1112,7 +1117,7 @@ class RegressionTestRunner:
             "fun OfficialVendorLogo" in logos_code and "ContentScale.Fit" in logos_code)
 
         # 7. Release Version
-        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code))
+        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code))
 
 
 
@@ -1165,9 +1170,207 @@ class RegressionTestRunner:
             tl_corner == (0, 0, 0, 0) and k7_im.size == (256, 256))
 
         # 8. Version bumped to 1.5.8 (versionCode 23)
-        self.record("Version bumped to 1.5.8 (versionCode 23)",
-            'versionName = "1.5.8"' in gradle_code and 'versionCode = 23' in gradle_code)
+        self.record("Version bumped to 1.5.8+ (versionCode >= 23)",
+            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code))
 
+
+
+    # 31. Test Suite: Accessibility & 2FA Notification Hijack Auditor (P1)
+    def suite_31_accessibility_and_notification_hijack_auditor(self):
+        print(f"\n{YELLOW}▶  SUITE 31: P1 Accessibility & 2FA Notification Hijack Auditor{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        auditor_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "security", "AccessibilityHijackAuditor.kt")
+        manifest_heur_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+
+        self.record("AccessibilityHijackAuditor.kt exists", os.path.exists(auditor_path))
+        with open(auditor_path, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        self.record("AccessibilityHijackAuditor inspects active AccessibilityManager services",
+            "AccessibilityManager" in code and "getEnabledAccessibilityServiceList" in code)
+        self.record("AccessibilityHijackAuditor audits NotificationManagerCompat listeners",
+            "NotificationManagerCompat" in code and "getEnabledListenerPackages" in code)
+        self.record("AccessibilityHijackAuditor detects Overlay + Accessibility toxic banking combo",
+            "Trojan-Banker.OverlayHijack" in code and "SYSTEM_ALERT_WINDOW" in code)
+        self.record("AccessibilityHijackAuditor detects SMS + Accessibility 2FA bypass combo",
+            "Trojan-Banker.SmsBypass" in code and "RECEIVE_SMS" in code)
+        self.record("AccessibilityHijackAuditor detects Notification Listener 2FA OTP harvester",
+            "Spyware.NotificationHarvester" in code and "BIND_NOTIFICATION_LISTENER_SERVICE" in code)
+        self.record("AccessibilityHijackAuditor detects Device Administrator self-defense locking",
+            "Trojan.PersistentRAT" in code and "BIND_DEVICE_ADMIN" in code)
+
+        with open(manifest_heur_path, "r", encoding="utf-8") as f:
+            m_code = f.read()
+        self.record("ManifestHeuristicEngine registers BIND_NOTIFICATION_LISTENER_SERVICE",
+            "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" in m_code)
+
+    # 32. Test Suite: Native ELF Binary Inspector (P2) & Static String De-Obfuscator (P7)
+    def suite_32_native_elf_inspector_and_string_deobfuscator(self):
+        print(f"\n{YELLOW}▶  SUITE 32: Native ELF Binary Inspector & Static String De-Obfuscator{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        elf_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ElfBinaryInspector.kt")
+        deobf_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "StringDeobfuscator.kt")
+        local_av_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+
+        self.record("ElfBinaryInspector.kt exists", os.path.exists(elf_path))
+        with open(elf_path, "r", encoding="utf-8") as f:
+            elf_code = f.read()
+
+        self.record("ElfBinaryInspector validates ELF magic header bytes",
+            "0x7F.toByte()" in elf_code and "'E'.code.toByte()" in elf_code)
+        self.record("ElfBinaryInspector flags anti-debugging & code injection syscalls (ptrace, mprotect, execve)",
+            "ptrace" in elf_code and "mprotect" in elf_code and "execve" in elf_code)
+        self.record("ElfBinaryInspector flags raw network socket hooks (socket, connect, sendto)",
+            "socket" in elf_code and "connect" in elf_code and "sendto" in elf_code)
+        self.record("ElfBinaryInspector detects hooking & rootkit frameworks (Frida, Substrate, Xposed)",
+            "frida" in elf_code and "substrate" in elf_code and "xposed" in elf_code)
+
+        self.record("StringDeobfuscator.kt exists", os.path.exists(deobf_path))
+        with open(deobf_path, "r", encoding="utf-8") as f:
+            deobf_code = f.read()
+
+        self.record("StringDeobfuscator implements Base64 de-obfuscation sweep",
+            "Base64.decode" in deobf_code and "isLikelyBase64" in deobf_code)
+        self.record("StringDeobfuscator implements single-byte XOR key sweep (0x01..0xFF)",
+            "xorSweep" in deobf_code and "xor key" in deobf_code)
+        self.record("StringDeobfuscator implements ROT13 string substitution",
+            "applyRot13" in deobf_code)
+        self.record("StringDeobfuscator inspects for Telegram Bot C2 webhooks & shell commands",
+            "bot[0-9]{8,10}" in deobf_code and "chmod 777" in deobf_code)
+
+        with open(local_av_path, "r", encoding="utf-8") as f:
+            av_code = f.read()
+        self.record("LocalAntivirusEngine integrates ElfBinaryInspector into scan pipeline",
+            "ElfBinaryInspector.inspectApk" in av_code)
+        self.record("LocalAntivirusEngine integrates StringDeobfuscator into scan pipeline",
+            "StringDeobfuscator.scanApk" in av_code)
+
+    # 33. Test Suite: Per-App Network Firewall (P3) & Scheduled Deep Audit (P4)
+    def suite_33_per_app_firewall_and_scheduled_deep_audit(self):
+        print(f"\n{YELLOW}▶  SUITE 33: Per-App Network Firewall & Scheduled Background Deep Audit{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        firewall_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "firewall", "FirewallRuleManager.kt")
+        audit_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "ScheduledAuditJobService.kt")
+        manifest_path = os.path.join(script_dir, "..", "app", "src", "main", "AndroidManifest.xml")
+        settings_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
+
+        self.record("FirewallRuleManager.kt exists", os.path.exists(firewall_path))
+        with open(firewall_path, "r", encoding="utf-8") as f:
+            fw_code = f.read()
+
+        self.record("FirewallRuleManager implements blockApp, unblockApp, toggleApp",
+            "fun blockApp" in fw_code and "fun unblockApp" in fw_code and "fun toggleApp" in fw_code)
+        self.record("FirewallRuleManager exposes reactive blockedPackages StateFlow",
+            "blockedPackages: StateFlow<Set<String>>" in fw_code)
+
+        self.record("ScheduledAuditJobService.kt exists", os.path.exists(audit_path))
+        with open(audit_path, "r", encoding="utf-8") as f:
+            job_code = f.read()
+
+        self.record("ScheduledAuditJobService extends native JobService",
+            "class ScheduledAuditJobService : JobService()" in job_code)
+        self.record("ScheduledAuditJobService enforces setRequiresCharging & setRequiresDeviceIdle",
+            "setRequiresCharging(true)" in job_code and "setRequiresDeviceIdle(true)" in job_code)
+        self.record("ScheduledAuditJobService enforces setPersisted(true) across reboots",
+            "setPersisted(true)" in job_code)
+
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            man_code = f.read()
+        self.record("AndroidManifest.xml registers ScheduledAuditJobService with BIND_JOB_SERVICE",
+            "ScheduledAuditJobService" in man_code and "android.permission.BIND_JOB_SERVICE" in man_code)
+
+        with open(settings_path, "r", encoding="utf-8") as f:
+            set_code = f.read()
+        self.record("SettingsScreen provides Scheduled Deep Audit toggle and live feed sync",
+            "Scheduled Background Deep Audit" in set_code and "ScheduledAuditJobService.setEnabled" in set_code)
+
+    # 34. Test Suite: Encrypted DoH Resolvers (P5) & Live Threat Feed Sync (P6)
+    def suite_34_doh_resolvers_and_live_threat_feed_sync(self):
+        print(f"\n{YELLOW}▶  SUITE 34: Encrypted DoH Resolvers & Live Threat Feed Sync{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        doh_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "vpn", "DohResolver.kt")
+        providers_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "vpn", "DnsProviders.kt")
+        filter_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "vpn", "DomainFilterEngine.kt")
+        update_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "update", "SignatureUpdateService.kt")
+
+        with open(doh_path, "r", encoding="utf-8") as f:
+            doh_code = f.read()
+        self.record("DohResolver resolves DNS queries via application/dns-message wire format",
+            "application/dns-message" in doh_code and "resolveQuery" in doh_code)
+
+        with open(providers_path, "r", encoding="utf-8") as f:
+            prov_code = f.read()
+        self.record("DnsProviders registers DoH URLs for Cloudflare, AdGuard, and Google",
+            "cloudflare-dns.com/dns-query" in prov_code and "dns.adguard-dns.com/dns-query" in prov_code)
+
+        with open(filter_path, "r", encoding="utf-8") as f:
+            filter_code = f.read()
+        self.record("DomainFilterEngine registers user requested threat intelligence feeds (Phishing.Database, TweetFeed, URLhaus, OpenPhish)",
+            "Phishing.Database" in filter_code and "TweetFeed" in filter_code and "URLhaus" in filter_code and "OpenPhish" in filter_code)
+        self.record("DomainFilterEngine supports dynamic registerLiveC2Domain & registerLiveC2Ip",
+            "fun registerLiveC2Domain" in filter_code and "fun registerLiveC2Ip" in filter_code)
+
+        with open(update_path, "r", encoding="utf-8") as f:
+            up_code = f.read()
+        self.record("SignatureUpdateService implements syncLiveThreatFeeds parsing TweetFeed CSV and URLhaus hosts",
+            "syncLiveThreatFeeds" in up_code and "TweetFeed" in up_code and "hostfile" in up_code)
+
+    # 35. Test Suite: Webpage Block Landing Page, Interactive Counter & Whitelist Manager
+    def suite_35_block_webpage_sinkhole_and_whitelist_manager(self):
+        print(f"\n{YELLOW}▶  SUITE 35: Webpage Block Landing Page & Whitelist Manager{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        sinkhole_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "vpn", "SinkholeTcpResponder.kt")
+        sheet_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "BlockedSitesSheet.kt")
+        vpn_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "vpn", "ThreatLensVpnService.kt")
+        dash_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "DashboardScreen.kt")
+        web_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "WebProtectionScreen.kt")
+        gradle_path = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+
+        self.record("SinkholeTcpResponder.kt exists", os.path.exists(sinkhole_path))
+        with open(sinkhole_path, "r", encoding="utf-8") as f:
+            sink_code = f.read()
+
+        self.record("SinkholeTcpResponder inspects TCP protocol 6 on TUN interface",
+            "protocol != 6" in sink_code and "handleTcpPacket" in sink_code)
+        self.record("SinkholeTcpResponder serves dark-cyber Block Page HTML with SVG shield logo",
+            "generateBlockPageHtml" in sink_code and "ACCESS BLOCKED" in sink_code and "shield-icon" in sink_code)
+        self.record("SinkholeTcpResponder handles in-browser unblock action (/__threatlens_unblock)",
+            "/__threatlens_unblock" in sink_code and "DomainFilterEngine.whitelistDomain" in sink_code)
+        self.record("SinkholeTcpResponder drops / resets non-HTTP ports to block stealth API calls",
+            "dstPort != 80" in sink_code and "RST | ACK" in sink_code)
+
+        with open(vpn_path, "r", encoding="utf-8") as f:
+            vpn_code = f.read()
+        self.record("ThreatLensVpnService delegates TCP packets to SinkholeTcpResponder",
+            "SinkholeTcpResponder.handleTcpPacket" in vpn_code)
+        self.record("ThreatLensVpnService uses SINKHOLE_TUN_IP (10.111.222.1) for web sinkhole",
+            "DnsPacketParser.SINKHOLE_TUN_IP" in vpn_code)
+
+        self.record("BlockedSitesSheet.kt exists", os.path.exists(sheet_path))
+        with open(sheet_path, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+
+        self.record("BlockedSitesSheet displays interactive counter chips and quick URL whitelist field",
+            "WHITELIST ANY DOMAIN OR URL" in sheet_code and "totalMalware" in sheet_code and "totalAds" in sheet_code)
+        self.record("BlockedSitesSheet allows one-touch unblocking of blocked domains",
+            "Unblock" in sheet_code and "DomainFilterEngine.whitelistDomain" in sheet_code)
+        self.record("BlockedSitesSheet provides active whitelisted domains management tab",
+            "Whitelisted (" in sheet_code and "WhitelistedDomainRow" in sheet_code and "unwhitelistDomain" in sheet_code)
+
+        with open(dash_path, "r", encoding="utf-8") as f:
+            dash_code = f.read()
+        self.record("DashboardScreen renders touchable blocked counter pill opening BlockedSitesSheet",
+            "totalMalwareBlocked + totalAdsBlocked" in dash_code and "BlockedSitesSheet" in dash_code)
+
+        with open(web_path, "r", encoding="utf-8") as f:
+            web_code = f.read()
+        self.record("WebProtectionScreen renders touchable counter row opening BlockedSitesSheet",
+            "showBlockedSitesSheet = true" in web_code and "BlockedSitesSheet" in web_code)
+
+        with open(gradle_path, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+        self.record("Version bumped to 1.6.0 (versionCode 24)",
+            'versionName = "1.6.0"' in gradle_code and 'versionCode = 24' in gradle_code)
 
 if __name__ == "__main__":
     runner = RegressionTestRunner()

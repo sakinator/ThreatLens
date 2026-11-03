@@ -10,7 +10,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg" alt="License"/></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android_8.0+-00E5FF.svg" alt="Platform"/></a>
   <a href="#zero-idle-battery-performance"><img src="https://img.shields.io/badge/Battery-Zero--Idle_Drain-brightgreen.svg" alt="Battery Mode"/></a>
-  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-331%2F331_Passing-brightgreen.svg" alt="Regression Tests"/></a>
+  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-379%2F379_Passing-brightgreen.svg" alt="Regression Tests"/></a>
 </p>
 
 **ThreatLens** is an open-source, hybrid Android cybersecurity system combining:
@@ -296,9 +296,14 @@ ThreatLens stands on the shoulders of the global cybersecurity research communit
 
 ---
 
-### 🛡️ 4. DNS Filter Feeds & Privacy Resolvers
+### 🛡️ 4. DNS Filter Feeds & Real-Time Threat Intelligence Sources
 
-ThreatLens integrates domain intelligence from top open-source blocklist maintainers:
+ThreatLens integrates domain intelligence, active botnet C2 indicators, and phishing URLs from premier threat intelligence feeds:
+* **Phishing.Database**: Community-driven active phishing feed ([Phishing-Database/Phishing.Database](https://github.com/Phishing-Database/Phishing.Database)).
+* **TweetFeed Live IOCs**: Real-time actionable cyber threat intelligence scraped from infosec researcher pulses ([tweetfeed.live](https://tweetfeed.live/malicious-domains/)).
+* **Abuse.ch URLhaus & Feodo Tracker**: Active malware distribution URLs, botnet C2 servers, and mobile banking trojan gates ([urlhaus.abuse.ch](https://urlhaus.abuse.ch/)).
+* **OpenPhish Global Community Feed**: Automated machine-learning anti-phishing indicators ([openphish.com](https://openphish.com/phishing_feeds.html)).
+* **RomainMarcoux Consolidated Malicious Domains**: Continuously aggregated high-confidence malware hostnames ([romainmarcoux/malicious-domains](https://github.com/romainmarcoux/malicious-domains)).
 * **HaGeZi (Multi / Threat)**: Curated comprehensive ad and malware protection.
 * **Phishing Army**: Active anti-phishing indicators.
 * **StevenBlack Hosts**: Unified ad and telemetry blocking list.

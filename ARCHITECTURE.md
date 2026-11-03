@@ -62,16 +62,20 @@ ThreatLens incorporates an on-device packet filter utilizing Android's `VpnServi
 [ALLOW]                          [BLOCK_AD]              [BLOCK_MALWARE]
      │                                 │                        │
      ▼                                 ▼                        ▼
-Forward via protected UDP      Synthesize DNS A        Synthesize DNS A
-socket to selected Upstream    record (0.0.0.0)        record (0.0.0.0)
-DNS (AdGuard/Cloudflare/Quad9)         │                        │
+Forward via protected UDP      Synthesize DNS A         Synthesize DNS A
+socket or Encrypted DoH        record (10.111.222.1)    record (10.111.222.1)
+to upstream resolver                   │                        │
      │                                 ▼                        ▼
-     ▼                        Immediate Drop /        Trigger Full-Screen
-Write reply to TUN               No Latency          ThreatBlockedActivity
+     ▼                        Browser loads on-device   Browser loads on-device
+Write reply to TUN             TCP Port 80 Block Page   TCP Port 80 Block Page
+                              (Dark Cyber HTML UI)     (Dark Cyber HTML UI) +
+                                                        ThreatBlockedActivity
 ```
 
 ### Route Isolation & Zero Latency:
 * The VPN routes **only** the virtual DNS server (`10.111.222.1/32`).
+* When an HTTP browser link is blocked by ThreatLens, the on-device `SinkholeTcpResponder` synthesizes a lightweight TCP handshake on TUN port 80 and serves an authentic dark-cyber "Blocked by ThreatLens" landing page with SVG shield logo, threat category, reason, and an instant "Unblock & Whitelist Domain" action (`/__threatlens_unblock`).
+* For non-HTTP ports (such as HTTPS port 443 or background API calls), connections are dropped/reset immediately so malicious C2 traffic is blocked cold without hanging.
 * All user TCP/UDP payload traffic (browsing, video streaming, downloads, gaming) bypasses the VPN completely.
 * Result: Zero proxy bottlenecks, full Wi-Fi/5G wire speeds, and no remote server required.
 

@@ -52,6 +52,10 @@ fun DashboardScreen(
     val activeDns by io.threatlens.core.vpn.ThreatLensVpnService.activeDnsProvider.collectAsState()
     val filterIntensity by io.threatlens.core.vpn.DomainFilterEngine.filterIntensity.collectAsState()
     val mitmReport by io.threatlens.core.security.MitmDetector.lastReport.collectAsState()
+    val totalAdsBlocked by io.threatlens.core.vpn.DomainFilterEngine.totalAdsBlocked.collectAsState()
+    val totalMalwareBlocked by io.threatlens.core.vpn.DomainFilterEngine.totalMalwareBlocked.collectAsState()
+
+    var showBlockedSitesSheet by remember { mutableStateOf(false) }
 
     val isFullScanActive = fullScanState.status == io.threatlens.core.scanner.FullScanStatus.SCANNING || fullScanState.status == io.threatlens.core.scanner.FullScanStatus.PAUSED
     val combinedThreats = (scans.filter { it.severity == ThreatSeverity.MALICIOUS || it.severity == ThreatSeverity.HIGH_RISK } + fullScanState.threatsFound)
@@ -424,6 +428,23 @@ fun DashboardScreen(
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
+
+                                if (totalMalwareBlocked + totalAdsBlocked > 0) {
+                                    Surface(
+                                        color = NeonRed.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonRed.copy(alpha = 0.5f)),
+                                        modifier = Modifier.clickable { showBlockedSitesSheet = true }
+                                    ) {
+                                        Text(
+                                            text = "🚨 ${totalMalwareBlocked + totalAdsBlocked} Blocked",
+                                            color = NeonRed,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                             }
 
                             Row(
@@ -522,6 +543,10 @@ fun DashboardScreen(
             uploadProgress = uploadProgress,
             isVtKeyConfigured = vtKey.isNotBlank()
         )
+    }
+
+    if (showBlockedSitesSheet) {
+        BlockedSitesSheet(onDismiss = { showBlockedSitesSheet = false })
     }
 }
 

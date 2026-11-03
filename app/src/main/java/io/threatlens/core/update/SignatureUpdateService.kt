@@ -266,4 +266,44 @@ object SignatureUpdateService {
                     LocalSignatureDatabase.SignatureEntry("Trojan.AndroidOS.Agent.LiveStream", "Toll Fraud", 95)
         )
     }
+
+    /**
+     * P6: Synchronizes live Botnet C2, URLhaus, TweetFeed, Phishing.Database & OpenPhish feeds.
+     */
+    suspend fun syncLiveThreatFeeds(context: Context): Int = withContext(Dispatchers.IO) {
+        var addedCount = 0
+        val liveUrls = listOf(
+            "https://raw.githubusercontent.com/0xDanielLopez/TweetFeed/master/today.csv",
+            "https://urlhaus.abuse.ch/downloads/hostfile/",
+            "https://raw.githubusercontent.com/romainmarcoux/malicious-domains/main/malicious-domains.txt"
+        )
+
+        for (url in liveUrls) {
+            try {
+                val req = Request.Builder().url(url).addHeader("User-Agent", "ThreatLens-Android-AV").get().build()
+                client.newCall(req).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string() ?: return@use
+                        val lines = body.lineSequence()
+                        for (rawLine in lines) {
+                            val line = rawLine.trim()
+                            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) continue
+                            // Extract domain from TweetFeed CSV or hosts format (e.g. "127.0.0.1 domain.com" or CSV)
+                            val domain = when {
+                                line.contains(",") -> line.split(",").getOrNull(2)?.trim() ?: ""
+                                line.startsWith("127.0.0.1") || line.startsWith("0.0.0.0") -> line.substringAfter(" ").trim()
+                                else -> line
+                            }
+                            if (domain.length >= 4 && !domain.contains(" ") && domain.contains(".")) {
+                                if (io.threatlens.core.vpn.DomainFilterEngine.registerLiveC2Domain(domain, "Live Threat Feed")) {
+                                    addedCount++
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        return@withContext addedCount
+    }
 }

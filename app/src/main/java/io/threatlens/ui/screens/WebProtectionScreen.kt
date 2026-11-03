@@ -59,6 +59,7 @@ fun WebProtectionScreen(
 
     var isScanningMitm by remember { mutableStateOf(false) }
     var selectedDnsCategory by remember { mutableStateOf<DnsCategory?>(null) }
+    var showBlockedSitesSheet by remember { mutableStateOf(false) }
 
     val vpnPrepareLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -199,7 +200,9 @@ fun WebProtectionScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showBlockedSitesSheet = true },
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -227,6 +230,35 @@ fun WebProtectionScreen(
                                     text = "Ads & Trackers Blocked",
                                     color = TextSecondary,
                                     fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            color = CyberDarkSurface,
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showBlockedSitesSheet = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Touch to inspect & unblock sites / manage whitelist",
+                                    color = NeonCyan,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
@@ -963,6 +995,10 @@ fun WebProtectionScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+
+        if (showBlockedSitesSheet) {
+            BlockedSitesSheet(onDismiss = { showBlockedSitesSheet = false })
         }
     }
 }

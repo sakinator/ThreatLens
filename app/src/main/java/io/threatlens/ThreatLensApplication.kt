@@ -12,9 +12,15 @@ class ThreatLensApplication : Application() {
         ThreatNotificationManager.createChannels(this)
         // Initialize exclusion filters for both Antivirus and VPN
         io.threatlens.core.exclusions.ExclusionManager.init(this)
+        // Initialize per-app network firewall rule manager
+        io.threatlens.core.firewall.FirewallRuleManager.init(this)
         // Initialize local signature database and load persisted updates
         SignatureUpdateService.init(this)
         // Initialize durable API key vault (survives app updates and restores lost keys)
         io.threatlens.core.storage.ApiKeyVault.init(this)
+        // Initialize scheduled deep audit if enabled
+        if (io.threatlens.core.realtime.ScheduledAuditJobService.isEnabled(this)) {
+            io.threatlens.core.realtime.ScheduledAuditJobService.scheduleAudit(this)
+        }
     }
 }

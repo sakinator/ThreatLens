@@ -93,7 +93,14 @@ object DnsPacketParser {
         }
     }
 
-    fun buildSinkholeResponsePacket(query: ParsedDnsQuery): ByteArray {
+    const val SINKHOLE_TUN_IP_STR = "10.111.222.1"
+    val SINKHOLE_TUN_IP = byteArrayOf(10, 111, 222.toByte(), 1)
+    val SINKHOLE_DROP_IP = byteArrayOf(0, 0, 0, 0)
+
+    fun buildSinkholeResponsePacket(
+        query: ParsedDnsQuery,
+        sinkholeIp: ByteArray = SINKHOLE_TUN_IP
+    ): ByteArray {
         val dnsOut = ByteArrayOutputStream()
 
         // 1. DNS Header (12 bytes)
@@ -124,8 +131,8 @@ object DnsPacketParser {
         dnsOut.write(byteArrayOf(0x00, 0x00, 0x01, 0x2C))
         // Data length: 4 bytes
         dnsOut.write(byteArrayOf(0x00, 0x04))
-        // IP: 0.0.0.0 (Sinkhole loopback drop)
-        dnsOut.write(byteArrayOf(0x00, 0x00, 0x00, 0x00))
+        // IP: Sinkhole loopback landing address or drop IP
+        dnsOut.write(sinkholeIp)
 
         val dnsResponsePayload = dnsOut.toByteArray()
         return wrapInIpUdpPacket(

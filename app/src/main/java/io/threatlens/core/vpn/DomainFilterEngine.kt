@@ -107,6 +107,27 @@ object DomainFilterEngine {
     private val _totalMalwareBlocked = MutableStateFlow(0)
     val totalMalwareBlocked: StateFlow<Int> = _totalMalwareBlocked.asStateFlow()
 
+    private val _whitelistedDomains = MutableStateFlow<Set<String>>(emptySet())
+    val whitelistedDomains: StateFlow<Set<String>> = _whitelistedDomains.asStateFlow()
+
+    private val _totalLiveFeedRules = MutableStateFlow(0)
+    val totalLiveFeedRules: StateFlow<Int> = _totalLiveFeedRules.asStateFlow()
+
+    // Dynamic Live C2 blocklist hot-loaded from Abuse.ch, URLhaus, TweetFeed, Phishing.Database
+    private val liveDynamicMalwareDomains = ConcurrentHashMap.newKeySet<String>()
+    private val liveDynamicC2Ips = ConcurrentHashMap.newKeySet<String>()
+
+    // Global Threat Intelligence Feeds registered in ThreatLens Sentinel
+    val THREAT_FEEDS = listOf(
+        "Phishing.Database" to "https://github.com/Phishing-Database/Phishing.Database",
+        "TweetFeed Live IOCs" to "https://tweetfeed.live/malicious-domains/",
+        "Abuse.ch URLhaus" to "https://urlhaus.abuse.ch/",
+        "OpenPhish Global Feed" to "https://openphish.com/phishing_feeds.html",
+        "RomainMarcoux Malicious Domains" to "https://github.com/romainmarcoux/malicious-domains",
+        "HaGeZi Multi Threat" to "https://github.com/hagezi/dns-blocklists",
+        "Phishing Army" to "https://phishing.army"
+    )
+
     // Temporary or user whitelisted domains
     private val whitelist = ConcurrentHashMap.newKeySet<String>()
 
@@ -119,14 +140,71 @@ object DomainFilterEngine {
     }
 
     fun whitelistDomain(domain: String) {
-        whitelist.add(normalize(domain))
+        val norm = normalize(domain)
+        if (norm.isNotBlank()) {
+            whitelist.add(norm)
+            try {
+                io.threatlens.core.exclusions.ExclusionManager.addVpnWhitelistedDomain(norm)
+            } catch (_: Exception) {}
+            refreshWhitelistFlow()
+        }
+    }
+
+    fun unwhitelistDomain(domain: String) {
+        val norm = normalize(domain)
+        whitelist.remove(norm)
+        try {
+            io.threatlens.core.exclusions.ExclusionManager.removeVpnWhitelistedDomain(norm)
+        } catch (_: Exception) {}
+        refreshWhitelistFlow()
+    }
+
+    fun getWhitelistedDomains(): Set<String> {
+        val combined = HashSet(whitelist)
+        try {
+            val vpnItems = io.threatlens.core.exclusions.ExclusionManager.vpnExclusionItems.value
+            for (item in vpnItems) {
+                if (item.type == io.threatlens.core.exclusions.ExclusionType.VPN_WHITELIST_DOMAIN) {
+                    combined.add(normalize(item.value))
+                }
+            }
+        } catch (_: Exception) {}
+        return combined
+    }
+
+    private fun refreshWhitelistFlow() {
+        _whitelistedDomains.value = getWhitelistedDomains()
+    }
+
+    fun registerLiveC2Domain(domain: String, source: String = "Abuse.ch URLhaus"): Boolean {
+        val norm = normalize(domain)
+        if (norm.length >= 4 && !isWhitelisted(norm)) {
+            val added = liveDynamicMalwareDomains.add(norm)
+            if (added) {
+                _totalLiveFeedRules.value = liveDynamicMalwareDomains.size + liveDynamicC2Ips.size
+            }
+            return added
+        }
+        return false
+    }
+
+    fun registerLiveC2Ip(ip: String, source: String = "Abuse.ch Feodo Tracker"): Boolean {
+        val norm = ip.trim()
+        if (norm.isNotEmpty()) {
+            val added = liveDynamicC2Ips.add(norm)
+            if (added) {
+                _totalLiveFeedRules.value = liveDynamicMalwareDomains.size + liveDynamicC2Ips.size
+            }
+            return added
+        }
+        return false
     }
 
     fun isWhitelisted(domain: String): Boolean {
         val norm = normalize(domain)
         return whitelist.contains(norm) ||
-               whitelist.any { norm.endsWith(".$it") } ||
-               io.threatlens.core.exclusions.ExclusionManager.isDomainWhitelisted(norm)
+                whitelist.any { norm.endsWith(".$it") } ||
+                io.threatlens.core.exclusions.ExclusionManager.isDomainWhitelisted(norm)
     }
 
     // High-risk verified phishing & malware domains (Phishing Army, HaGeZi Threat, URLhaus, OISD)
@@ -245,17 +323,31 @@ object DomainFilterEngine {
             return FilterDecision(FilterAction.ALLOW, ThreatCategory.CLEAN, emptyList(), "Allowed / Whitelisted")
         }
 
-        // 1. Check Malware & Phishing Database
+        // 1. Check Malware & Phishing Database (Confirmed corpus + Live Feeds from URLhaus, TweetFeed, Phishing.Database)
         if (mode == FilterMode.BOTH || mode == FilterMode.MALWARE_ONLY) {
-            val isExactMalware = confirmedMalwareDomains.contains(domain) || confirmedMalwareDomains.any { domain.endsWith(".$it") }
+            val isExactMalware = confirmedMalwareDomains.contains(domain) ||
+                    confirmedMalwareDomains.any { domain.endsWith(".$it") } ||
+                    liveDynamicMalwareDomains.contains(domain) ||
+                    liveDynamicMalwareDomains.any { domain.endsWith(".$it") } ||
+                    liveDynamicC2Ips.contains(domain)
+
             if (isExactMalware) {
+                val isLiveFeedMatch = liveDynamicMalwareDomains.contains(domain) || liveDynamicC2Ips.contains(domain)
                 val decision = FilterDecision(
                     action = FilterAction.BLOCK_MALWARE,
-                    category = if (domain.contains("c2") || domain.contains("stealer") || domain.contains("gate") || domain.contains("payload"))
+                    category = if (domain.contains("c2") || domain.contains("stealer") || domain.contains("gate") || domain.contains("payload") || isLiveFeedMatch)
                         ThreatCategory.MALWARE_C2 else ThreatCategory.PHISHING,
-                    sources = listOf("🛡️ Phishing Army DNS Feed", "⚡ HaGeZi Multi Threat Blocklist", "🌐 URLhaus Active Threat DB"),
-                    reason = "Target host is flagged in global threat intelligence feeds as active malware C2 or credential harvesting infrastructure.",
-                    threatFamily = "Phish/TrojanGate"
+                    sources = if (isLiveFeedMatch) {
+                        listOf("🌐 Abuse.ch URLhaus / Feodo", "⚡ TweetFeed Live IOCs", "🎣 Phishing.Database")
+                    } else {
+                        listOf("🛡️ Phishing Army DNS Feed", "⚡ HaGeZi Multi Threat Blocklist", "🌐 URLhaus Active Threat DB")
+                    },
+                    reason = if (isLiveFeedMatch) {
+                        "Target host is verified active malware C2 botnet or payload distributor synced from real-time threat intelligence feeds."
+                    } else {
+                        "Target host is flagged in global threat intelligence feeds as active malware C2 or credential harvesting infrastructure."
+                    },
+                    threatFamily = if (isLiveFeedMatch) "Botnet.LiveC2" else "Phish/TrojanGate"
                 )
                 recordBlockedMalware(domain, decision)
                 return decision

@@ -32,7 +32,9 @@ object LocalAntivirusEngine {
         val certResult: ApkCertificateVerifier.CertResult? = null,
         val packerResult: PackerEntropyDetector.PackerResult? = null,
         val bytecodeMatches: List<BytecodeRule> = emptyList(),
-        val offlineDbMatch: LocalSignatureDatabase.SignatureEntry? = null
+        val offlineDbMatch: LocalSignatureDatabase.SignatureEntry? = null,
+        val elfResult: ElfBinaryInspector.ElfScanResult? = null,
+        val deobfuscationResult: StringDeobfuscator.DeobfuscationResult? = null
     )
 
     // Known malicious bytecode signatures & strings found in mobile malware
@@ -319,6 +321,34 @@ object LocalAntivirusEngine {
             }
         }
 
+        // 8. Native .so ELF Binary Inspector (P2)
+        val elfResult = if (isApk && file.exists() && file.canRead()) ElfBinaryInspector.inspectApk(file) else null
+        if (elfResult != null && elfResult.isSuspicious) {
+            sources.add("ThreatLens Native ELF Inspector")
+            behaviors.addAll(elfResult.findings)
+            if (elfResult.riskScore > highestScore) {
+                highestScore = elfResult.riskScore
+                if (detectedFamily == "Clean" || detectedFamily.startsWith("Heuristic.")) {
+                    detectedFamily = elfResult.threatFamily
+                    category = elfResult.category
+                }
+            }
+        }
+
+        // 9. Static String De-Obfuscator Sweep (P7)
+        val deobfuscation = if (isApk && file.exists() && file.canRead()) StringDeobfuscator.scanApk(file) else null
+        if (deobfuscation != null && deobfuscation.hasHiddenThreats) {
+            sources.add("ThreatLens String De-Obfuscator")
+            behaviors.addAll(deobfuscation.findings)
+            if (deobfuscation.score > highestScore) {
+                highestScore = deobfuscation.score
+                if (detectedFamily == "Clean" || detectedFamily.startsWith("Heuristic.")) {
+                    detectedFamily = "Trojan.ObfuscatedPayload"
+                    category = "Concealed C2 / Obfuscated Payload"
+                }
+            }
+        }
+
         val sigScore = when {
             sig != null -> 100
             clamAv.isMalicious -> clamAv.confidenceScore
@@ -399,7 +429,9 @@ object LocalAntivirusEngine {
             certResult = cert,
             packerResult = packer,
             bytecodeMatches = bytecodeMatches,
-            offlineDbMatch = sig
+            offlineDbMatch = sig,
+            elfResult = elfResult,
+            deobfuscationResult = deobfuscation
         )
     }
 

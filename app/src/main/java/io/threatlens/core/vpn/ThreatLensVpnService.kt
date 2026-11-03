@@ -129,22 +129,30 @@ class ThreatLensVpnService : VpnService() {
                 val length = input.read(buffer)
                 if (length <= 0) continue
 
+                // 1. Process TCP Sinkhole Handshake / HTTP Block Landing Page
+                if (length >= 40 && (buffer[0].toInt() and 0xF0) == 0x40 && (buffer[9].toInt() and 0xFF) == 6) {
+                    if (SinkholeTcpResponder.handleTcpPacket(buffer, length, output)) {
+                        continue
+                    }
+                }
+
+                // 2. Process DNS Queries (UDP Port 53)
                 val query = DnsPacketParser.parseQuery(buffer, length) ?: continue
                 val domain = query.domain
                 val decision = DomainFilterEngine.evaluateDomain(domain)
 
                 when (decision.action) {
                     FilterAction.BLOCK_AD -> {
-                        // Return 0.0.0.0 sinkhole response immediately
-                        val sinkholePacket = DnsPacketParser.buildSinkholeResponsePacket(query)
+                        // Return sinkhole response directing browser/app to loopback sinkhole
+                        val sinkholePacket = DnsPacketParser.buildSinkholeResponsePacket(query, DnsPacketParser.SINKHOLE_TUN_IP)
                         output.write(sinkholePacket)
                     }
                     FilterAction.BLOCK_MALWARE -> {
-                        // Return sinkhole response so browser cannot reach attacker
-                        val sinkholePacket = DnsPacketParser.buildSinkholeResponsePacket(query)
+                        // Return sinkhole response so browser loads ThreatLens Block Landing Page
+                        val sinkholePacket = DnsPacketParser.buildSinkholeResponsePacket(query, DnsPacketParser.SINKHOLE_TUN_IP)
                         output.write(sinkholePacket)
 
-                        // Launch full-screen Threat Intercept Page!
+                        // Launch full-screen Threat Intercept Page for immediate OS-wide alert!
                         launchThreatBlockedActivity(
                             domain = domain,
                             category = decision.category.label,
