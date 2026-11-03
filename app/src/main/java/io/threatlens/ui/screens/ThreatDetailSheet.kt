@@ -232,6 +232,41 @@ fun ThreatDetailSheet(
                 }
             }
 
+            // Active Scanning Engines Badge Row
+            val activeEngines = remember(report.engineVerdictMap) {
+                report.engineVerdictMap.keys.filter {
+                    it != "ThreatLens Exclusions" &&
+                    !it.contains("Quota Preserved", ignoreCase = true) &&
+                    report.engineVerdictMap[it]?.contains("Unreachable", ignoreCase = true) != true
+                }
+            }
+            if (activeEngines.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = CyberDarkSurface,
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Active Engines (${activeEngines.size}):",
+                            color = TextSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        activeEngines.forEach { eng ->
+                            EngineLogoIcon(engineName = eng, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
             // Transparent Threat Score Calculation & Rationale Card

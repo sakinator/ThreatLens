@@ -372,6 +372,41 @@ fun ThreatItemRow(
                 )
             }
 
+            // Mini Brand Engine Logos (showing active scanning engines when info is available)
+            val scannedEngines = remember(report.engineVerdictMap) {
+                report.engineVerdictMap.keys.filter {
+                    it != "ThreatLens Exclusions" &&
+                    !it.contains("Quota Preserved", ignoreCase = true) &&
+                    report.engineVerdictMap[it]?.contains("Unreachable", ignoreCase = true) != true
+                }
+            }
+            if (scannedEngines.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        text = "Scanned by:",
+                        color = TextMuted,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    scannedEngines.take(6).forEach { eng ->
+                        EngineLogoIcon(engineName = eng, modifier = Modifier.size(14.dp))
+                    }
+                    if (scannedEngines.size > 6) {
+                        Text(
+                            text = "+${scannedEngines.size - 6}",
+                            color = TextMuted,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+            }
+
             // Line 4: Live status message or scan status line
             if (!report.isFinal || report.statusMessage.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))

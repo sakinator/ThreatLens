@@ -215,7 +215,14 @@ object EngineRegistry {
             lower.contains("virustotal") || lower.contains("vt") -> VIRUSTOTAL
             lower.contains("hybrid") -> HYBRID_ANALYSIS
             lower.contains("kaspersky") -> KASPERSKY
-            lower.contains("metadefender") -> METADEFENDER
+            lower.contains("alin") -> EngineBrand("Predictive Alin AI", "Alin", Color(0xFF6C5CE7), Color(0xFFA29BFE), Icons.Default.Psychology, "AI")
+            lower.contains("vulnerability") -> EngineBrand("Vulnerability Assessment", "Vulnerability", Color(0xFFFF7675), Color(0xFFD63031), Icons.Default.Warning, "CVE")
+            lower.contains("cdr") -> EngineBrand("Deep CDR", "DeepCDR", Color(0xFF00CEC9), Color(0xFF0984E3), Icons.Default.CleaningServices, "CDR")
+            lower.contains("sandbox") -> EngineBrand("Adaptive Sandbox", "Sandbox", Color(0xFF0284C7), Color(0xFF38BDF8), Icons.Default.ViewInAr, "SBX")
+            lower.contains("dlp") -> EngineBrand("Proactive DLP", "ProactiveDlp", Color(0xFF0369A1), Color(0xFF38BDF8), Icons.Default.Lock, "DLP")
+            lower.contains("content inspector") || lower.contains("ai content") -> EngineBrand("AI Content Inspector", "AiContentInspector", Color(0xFF7C3AED), Color(0xFFA78BFA), Icons.Default.Policy, "AIC")
+            lower.contains("country") || lower.contains("origin") -> EngineBrand("Country of Origin", "CountryOfOrigin", Color(0xFF4F46E5), Color(0xFF818CF8), Icons.Default.Public, "COO")
+            lower.contains("metascan") || lower.contains("metadefender") -> METADEFENDER
             lower.contains("bazaar") -> MALWARE_BAZAAR
             lower.contains("filescan") -> FILESCAN
             lower.contains("alienvault") || lower.contains("otx") -> ALIENVAULT_OTX
@@ -619,7 +626,11 @@ fun AviraLogo(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        drawCircle(Color(0xFFD32F2F), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.5f))
+        // Modern Avira Red Rounded Square Emblem (as in MetaDefender)
+        drawRoundRect(
+            color = Color(0xFFD32F2F),
+            cornerRadius = CornerRadius(w * 0.24f, h * 0.24f)
+        )
         // Open white umbrella
         val dome = Path().apply {
             moveTo(w * 0.20f, h * 0.48f)
@@ -868,6 +879,154 @@ fun YaraLogo(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+fun AlinAiLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawCircle(Color(0xFF6C5CE7), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.5f))
+        val c = Offset(w * 0.5f, h * 0.5f)
+        val p1 = Offset(w * 0.30f, h * 0.35f)
+        val p2 = Offset(w * 0.70f, h * 0.35f)
+        val p3 = Offset(w * 0.35f, h * 0.70f)
+        val p4 = Offset(w * 0.65f, h * 0.70f)
+        val stroke = w * 0.04f
+        drawLine(Color.White.copy(alpha = 0.7f), c, p1, strokeWidth = stroke)
+        drawLine(Color.White.copy(alpha = 0.7f), c, p2, strokeWidth = stroke)
+        drawLine(Color.White.copy(alpha = 0.7f), c, p3, strokeWidth = stroke)
+        drawLine(Color.White.copy(alpha = 0.7f), c, p4, strokeWidth = stroke)
+        drawLine(Color.White.copy(alpha = 0.5f), p1, p2, strokeWidth = stroke)
+        drawLine(Color.White.copy(alpha = 0.5f), p3, p4, strokeWidth = stroke)
+        val rSmall = w * 0.07f
+        drawCircle(Color.White, radius = w * 0.09f, center = c)
+        drawCircle(Color(0xFFA29BFE), radius = rSmall, center = p1)
+        drawCircle(Color(0xFFA29BFE), radius = rSmall, center = p2)
+        drawCircle(Color(0xFFA29BFE), radius = rSmall, center = p3)
+        drawCircle(Color(0xFFA29BFE), radius = rSmall, center = p4)
+    }
+}
+
+@Composable
+fun VulnerabilityLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFFDC2626), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
+        val path = Path().apply {
+            moveTo(w * 0.50f, h * 0.20f)
+            lineTo(w * 0.78f, h * 0.32f)
+            lineTo(w * 0.78f, h * 0.58f)
+            cubicTo(w * 0.78f, h * 0.74f, w * 0.50f, h * 0.84f, w * 0.50f, h * 0.84f)
+            cubicTo(w * 0.50f, h * 0.84f, w * 0.22f, h * 0.74f, w * 0.22f, h * 0.58f)
+            lineTo(w * 0.22f, h * 0.32f)
+            close()
+        }
+        drawPath(path, Color.White, style = Stroke(width = w * 0.07f, cap = StrokeCap.Round))
+        drawLine(Color.White, Offset(w * 0.50f, h * 0.36f), Offset(w * 0.50f, h * 0.54f), strokeWidth = w * 0.08f, cap = StrokeCap.Round)
+        drawCircle(Color.White, radius = w * 0.045f, center = Offset(w * 0.50f, h * 0.66f))
+    }
+}
+
+@Composable
+fun DeepCdrLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawCircle(Color(0xFF0D9488), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.5f))
+        val check = Path().apply {
+            moveTo(w * 0.28f, h * 0.52f)
+            lineTo(w * 0.44f, h * 0.68f)
+            lineTo(w * 0.72f, h * 0.34f)
+        }
+        drawPath(check, Color.White, style = Stroke(width = w * 0.08f, cap = StrokeCap.Round))
+    }
+}
+
+@Composable
+fun AdaptiveSandboxLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFF0284C7), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
+        val path = Path().apply {
+            moveTo(w * 0.50f, h * 0.22f)
+            lineTo(w * 0.78f, h * 0.38f)
+            lineTo(w * 0.78f, h * 0.68f)
+            lineTo(w * 0.50f, h * 0.84f)
+            lineTo(w * 0.22f, h * 0.68f)
+            lineTo(w * 0.22f, h * 0.38f)
+            close()
+        }
+        drawPath(path, Color.White, style = Stroke(width = w * 0.06f, cap = StrokeCap.Round))
+        drawLine(Color.White, Offset(w * 0.50f, h * 0.52f), Offset(w * 0.50f, h * 0.84f), strokeWidth = w * 0.05f)
+        drawLine(Color.White, Offset(w * 0.50f, h * 0.52f), Offset(w * 0.78f, h * 0.38f), strokeWidth = w * 0.05f)
+        drawLine(Color.White, Offset(w * 0.50f, h * 0.52f), Offset(w * 0.22f, h * 0.38f), strokeWidth = w * 0.05f)
+    }
+}
+
+@Composable
+fun CountryOfOriginLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawCircle(Color(0xFF4F46E5), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.5f))
+        drawCircle(Color.White, radius = w * 0.34f, center = Offset(w * 0.5f, h * 0.5f), style = Stroke(width = w * 0.05f))
+        drawLine(Color.White, Offset(w * 0.16f, h * 0.50f), Offset(w * 0.84f, h * 0.50f), strokeWidth = w * 0.04f)
+        val arc = Path().apply {
+            moveTo(w * 0.50f, h * 0.16f)
+            cubicTo(w * 0.32f, h * 0.28f, w * 0.32f, h * 0.72f, w * 0.50f, h * 0.84f)
+            cubicTo(w * 0.68f, h * 0.72f, w * 0.68f, h * 0.28f, w * 0.50f, h * 0.16f)
+        }
+        drawPath(arc, Color.White, style = Stroke(width = w * 0.04f))
+    }
+}
+
+@Composable
+fun ProactiveDlpLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFF0369A1), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
+        val doc = Path().apply {
+            moveTo(w * 0.28f, h * 0.22f)
+            lineTo(w * 0.58f, h * 0.22f)
+            lineTo(w * 0.72f, h * 0.36f)
+            lineTo(w * 0.72f, h * 0.78f)
+            lineTo(w * 0.28f, h * 0.78f)
+            close()
+        }
+        drawPath(doc, Color.White.copy(alpha = 0.25f))
+        drawPath(doc, Color.White, style = Stroke(width = w * 0.06f))
+        drawRoundRect(Color(0xFF38BDF8), topLeft = Offset(w * 0.38f, h * 0.48f), size = Size(w * 0.24f, h * 0.22f), cornerRadius = CornerRadius(w * 0.04f, h * 0.04f))
+        val shackle = Path().apply {
+            moveTo(w * 0.43f, h * 0.48f)
+            lineTo(w * 0.43f, h * 0.40f)
+            cubicTo(w * 0.43f, h * 0.34f, w * 0.57f, h * 0.34f, w * 0.57f, h * 0.40f)
+            lineTo(w * 0.57f, h * 0.48f)
+        }
+        drawPath(shackle, Color.White, style = Stroke(width = w * 0.05f))
+    }
+}
+
+@Composable
+fun AiContentInspectorLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFF7C3AED), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
+        val sparkle = Path().apply {
+            moveTo(w * 0.50f, h * 0.22f)
+            cubicTo(w * 0.50f, h * 0.42f, w * 0.58f, h * 0.50f, w * 0.78f, h * 0.50f)
+            cubicTo(w * 0.58f, h * 0.50f, w * 0.50f, h * 0.58f, w * 0.50f, h * 0.78f)
+            cubicTo(w * 0.50f, h * 0.58f, w * 0.42f, h * 0.50f, w * 0.22f, h * 0.50f)
+            cubicTo(w * 0.42f, h * 0.50f, w * 0.50f, h * 0.42f, w * 0.50f, h * 0.22f)
+            close()
+        }
+        drawPath(sparkle, Color.White)
+        drawCircle(Color(0xFFA78BFA), radius = w * 0.08f, center = Offset(w * 0.50f, h * 0.50f))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // BRAND LOGO DISPATCHER
 // ---------------------------------------------------------------------------
@@ -906,6 +1065,13 @@ fun BrandLogoBadge(
         "ThreatLensCert" -> ThreatLensCertLogo(modifier)
         "ThreatLensSigDb" -> ThreatLensSigDbLogo(modifier)
         "YARA" -> YaraLogo(modifier)
+        "Alin", "Alin AI", "Predictive Alin AI" -> AlinAiLogo(modifier)
+        "Vulnerability", "Vulnerability Assessment" -> VulnerabilityLogo(modifier)
+        "DeepCDR", "CDR", "Deep CDR" -> DeepCdrLogo(modifier)
+        "Sandbox", "Adaptive Sandbox" -> AdaptiveSandboxLogo(modifier)
+        "ProactiveDlp", "DLP", "Proactive DLP" -> ProactiveDlpLogo(modifier)
+        "AiContentInspector", "AIC", "AI Content Inspector" -> AiContentInspectorLogo(modifier)
+        "CountryOfOrigin", "Country of Origin" -> CountryOfOriginLogo(modifier)
         else -> {
             // High-quality generic fallback
             val brand = EngineRegistry.getBrand(brandKey)
@@ -1106,6 +1272,14 @@ object SubEngineRegistry {
             clean.contains("quickheal") || clean.contains("cat-quickheal") -> return VendorBrand(name, "QuickHeal", Color(0xFFFF6F00), "QH")
             clean.contains("ahnlab") || clean.contains("v3") -> return VendorBrand(name, "AhnLab", Color(0xFF005BAC), "AHN")
             clean.contains("avira") -> return VendorBrand(name, "Avira", Color(0xFFD32F2F), "AVR")
+            clean.contains("alin") -> return VendorBrand(name, "Alin", Color(0xFF6C5CE7), "ALIN")
+            clean.contains("metascan") -> return VendorBrand(name, "MetaDefender", Color(0xFF0072CE), "META")
+            clean.contains("vulnerability") -> return VendorBrand(name, "Vulnerability", Color(0xFFFF7675), "VULN")
+            clean.contains("cdr") -> return VendorBrand(name, "DeepCDR", Color(0xFF00CEC9), "CDR")
+            clean.contains("sandbox") -> return VendorBrand(name, "Sandbox", Color(0xFF0284C7), "SBX")
+            clean.contains("dlp") -> return VendorBrand(name, "ProactiveDlp", Color(0xFF0369A1), "DLP")
+            clean.contains("content inspector") || clean.contains("ai content") -> return VendorBrand(name, "AiContentInspector", Color(0xFF7C3AED), "AIC")
+            clean.contains("country") || clean.contains("origin") -> return VendorBrand(name, "CountryOfOrigin", Color(0xFF4F46E5), "COO")
             clean.contains("sentinel") -> return VendorBrand(name, "SentinelOne", Color(0xFF4E2A84), "S1")
             clean.contains("crowdstrike") || clean.contains("falcon") -> return VendorBrand(name, "CrowdStrike", Color(0xFFE2231A), "CS")
             clean.contains("fortinet") || clean.contains("forti") -> return VendorBrand(name, "Fortinet", Color(0xFFDA291C), "FT")
@@ -1140,6 +1314,20 @@ fun VendorFindingBadge(
         val vendorName = item.substring(0, colonIndex).trim()
         val findingText = item.substring(colonIndex + 1).trim()
         val vendor = SubEngineRegistry.getVendorBrand(vendorName)
+        val isItemClean = findingText.contains("clean", ignoreCase = true) ||
+                          findingText.contains("no threat", ignoreCase = true) ||
+                          findingText.contains("verified safe", ignoreCase = true) ||
+                          findingText.contains("0/", ignoreCase = true) ||
+                          findingText.contains("no vulnerabilities", ignoreCase = true) ||
+                          findingText.contains("0 known", ignoreCase = true) ||
+                          findingText.contains("allowed", ignoreCase = true) ||
+                          findingText.contains("no restricted", ignoreCase = true)
+
+        val findingColor = when {
+            isItemClean -> NeonEmerald
+            isMalicious -> NeonCrimson
+            else -> CyberAmber
+        }
 
         Surface(
             modifier = modifier.fillMaxWidth(),
@@ -1167,7 +1355,7 @@ fun VendorFindingBadge(
                     Spacer(modifier = Modifier.height(1.dp))
                     Text(
                         text = findingText,
-                        color = if (isMalicious) NeonCrimson else CyberAmber,
+                        color = findingColor,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
                         maxLines = 2,
@@ -1178,13 +1366,22 @@ fun VendorFindingBadge(
         }
     } else {
         // Non-vendor line (e.g. general intelligence finding)
+        val isItemClean = item.contains("clean", ignoreCase = true) ||
+                          item.contains("safe", ignoreCase = true) ||
+                          item.contains("0 known", ignoreCase = true) ||
+                          item.contains("no threat", ignoreCase = true) ||
+                          item.contains("no vulnerabilities", ignoreCase = true) ||
+                          item.contains("no restricted", ignoreCase = true) ||
+                          item.contains("0/", ignoreCase = true) ||
+                          !isMalicious
+
         Row(
             modifier = modifier.fillMaxWidth().padding(vertical = 2.dp),
             verticalAlignment = Alignment.Top
         ) {
             Text(
                 text = "• ",
-                color = if (isMalicious) NeonCrimson else NeonEmerald,
+                color = if (isItemClean) NeonEmerald else NeonCrimson,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )

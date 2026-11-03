@@ -72,6 +72,7 @@ class RegressionTestRunner:
         self.test_v152_false_positive_elimination_and_export()
         self.suite_25_api_key_validation_hardening()
         self.suite_26_rate_limit_quota_saver()
+        self.suite_27_multi_cloud_consensus_and_brand_logos()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -832,7 +833,7 @@ class RegressionTestRunner:
         self.record("ApiKeyValidator handles Filescan 401/403 auth rejections", "Invalid Filescan Key (HTTP ${resp.code})" in val_code)
         self.record("FilescanProvider uses official /api/reputation/hash endpoint", "filescan.io/api/reputation/hash" in fs_code)
         self.record("FilescanProvider passes X-Api-Key header", '.addHeader("X-Api-Key", cleanKey)' in fs_code)
-        self.record("FilescanProvider returns benign verdict for 404 unindexed hashes", 'response.code == 404' in fs_code and 'FilescanResult("BENIGN", 0, emptyList())' in fs_code)
+        self.record("FilescanProvider returns benign verdict for 404 unindexed hashes", 'response.code == 404' in fs_code and 'FilescanResult("BENIGN", 0, emptyList()' in fs_code)
         self.record("Filescan search requests avoid invalid enum page_size=1 (HTTP 422)", "page_size=1" not in val_code and "page_size=1" not in fs_code)
         self.record("SettingsScreen updates Filescan placeholder away from Bearer token", 'placeholder = "Filescan API Key"' in settings_code and 'placeholder = "Bearer token"' not in settings_code)
 
@@ -875,6 +876,76 @@ class RegressionTestRunner:
         self.record("ApiKeyFieldWithIcon supports showQuotaSelector parameter", "showQuotaSelector: Boolean = false" in settings_code)
         self.record("ApiKeyFieldWithIcon renders Save Quota and Always Query RadioButtons", "Save Quota" in settings_code and "Always Query" in settings_code and "RadioButton" in settings_code)
         self.record("SettingsScreen enables quota selector for MetaDefender and Filescan", 'engineName = "MetaDefender"' in settings_code and 'engineName = "Filescan.io"' in settings_code and 'showQuotaSelector = true' in settings_code)
+
+    def suite_27_multi_cloud_consensus_and_brand_logos(self):
+        print(f"\n{YELLOW}▶  SUITE 27: v1.5.5 Multi-Cloud Dynamic Consensus, MetaDefender Active Modules & Engine Brand Logos{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        agg_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "CloudThreatAggregator.kt")
+        md_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "MetaDefenderProvider.kt")
+        fs_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "FilescanProvider.kt")
+        ha_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "HybridAnalysisProvider.kt")
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        logos_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "EngineLogos.kt")
+        cyber_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "CyberComponents.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        gradle_file = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+
+        with open(agg_file, "r", encoding="utf-8") as f:
+            agg_code = f.read()
+        with open(md_file, "r", encoding="utf-8") as f:
+            md_code = f.read()
+        with open(fs_file, "r", encoding="utf-8") as f:
+            fs_code = f.read()
+        with open(ha_file, "r", encoding="utf-8") as f:
+            ha_code = f.read()
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(logos_file, "r", encoding="utf-8") as f:
+            logos_code = f.read()
+        with open(cyber_file, "r", encoding="utf-8") as f:
+            cyber_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(gradle_file, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+
+        # 1. Web report URL corrections
+        self.record("Filescan web report targets valid search route (avoids SPA 404)", "filescan.io/search?query=$sha256" in agg_code)
+        self.record("MetaDefender web report targets hash overview route", "metadefender.com/results/hash/$sha256/overview" in agg_code)
+
+        # 2. MetaDefender Modular Architecture
+        self.record("MetaDefenderProvider defines MetaDefenderModule data structure", "data class MetaDefenderModule" in md_code)
+        self.record("MetaDefenderProvider parses Metascan individual AV vendors (e.g. Avira)", "scanDetails" in md_code and "flaggedVendors" in md_code and "cleanVendors" in md_code)
+        self.record("MetaDefenderProvider filters out inactive modules (hides 'Not Active')", "isNotActive" in md_code or "equals(\"Not Active\"" in md_code)
+        self.record("MetaDefenderProvider parses Predictive Alin AI", "Predictive Alin AI" in md_code)
+        self.record("MetaDefenderProvider parses Vulnerability Assessment", "Vulnerability Assessment" in md_code)
+        self.record("MetaDefenderProvider parses Adaptive Sandbox", "Adaptive Sandbox" in md_code)
+        self.record("MetaDefenderProvider parses Deep CDR", "Deep CDR" in md_code)
+        self.record("MetaDefenderProvider parses Country of Origin", "Country of Origin" in md_code)
+        self.record("MetaDefenderProvider parses Proactive DLP", "Proactive DLP" in md_code)
+        self.record("MetaDefenderProvider parses AI Content Inspector", "AI Content Inspector" in md_code)
+
+        # 3. Hybrid Analysis Unindexed & Quota Protection
+        self.record("HybridAnalysisProvider handles unindexed hashes gracefully (no false OFFLINE)", "isUnindexed = true" in ha_code)
+        self.record("HybridAnalysisProvider implements submitFileForScan quick-scan", "fun submitFileForScan" in ha_code)
+        self.record("RealtimeScanCoordinator submits to Falcon Sandbox only for suspicious files", "isSuspiciousOrWorse" in coord_code and "submitFileForScan" in coord_code)
+
+        # 4. Dynamic Multi-Cloud Consensus & Score Calibration
+        self.record("RealtimeScanCoordinator tracks cleanCloudProviders and flaggingCloudProviders", "cleanCloudProviders" in coord_code and "flaggingCloudProviders" in coord_code)
+        self.record("RealtimeScanCoordinator multi-cloud corroboration elevates threat score to 75-100", "hasMultiCloudConfirmedMalware" in coord_code and "coerceIn(75, 100)" in coord_code)
+        self.record("RealtimeScanCoordinator suppresses local false positives when cloud consensus clean", "isCloudScanPerformed && flaggingCloudProviders.isEmpty()" in coord_code)
+        self.record("RealtimeScanCoordinator caps pure on-device heuristics at 50 without signatures", "!isCloudScanPerformed" in coord_code and "coerceIn(0, 50)" in coord_code)
+
+        # 5. Brand Logos & Vendor Badges
+        self.record("AviraLogo renders authentic rounded square emblem", "fun AviraLogo" in logos_code and "drawRoundRect" in logos_code)
+        self.record("EngineLogos defines OPSWAT module emblems (Alin, Vulnerability, DeepCDR, Sandbox, COO, DLP, AIC)",
+            "fun AlinAiLogo" in logos_code and "fun VulnerabilityLogo" in logos_code and "fun DeepCdrLogo" in logos_code and
+            "fun AdaptiveSandboxLogo" in logos_code and "fun CountryOfOriginLogo" in logos_code and "fun ProactiveDlpLogo" in logos_code and
+            "fun AiContentInspectorLogo" in logos_code)
+        self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
+        self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
+        self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
+        self.record("Version bumped to 1.5.5 (versionCode 20)", 'versionName = "1.5.5"' in gradle_code and 'versionCode = 20' in gradle_code)
 
 
 if __name__ == "__main__":

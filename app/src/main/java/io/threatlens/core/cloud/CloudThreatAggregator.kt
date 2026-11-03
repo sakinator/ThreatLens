@@ -162,12 +162,16 @@ class CloudThreatAggregator(
             val ha = haDeferred.await()
             if (ha != null) {
                 successfulEngines.add("Hybrid Analysis")
-                sources.add("Hybrid Analysis (Score ${ha.threatScore}/100)")
-                highestScore = maxOf(highestScore, ha.threatScore)
-                if (ha.threatScore >= 50) flaggedCount += 1
-                totalCount += 1
-                if (detectedFamily == null && !ha.vxFamily.isNullOrBlank()) {
-                    detectedFamily = ha.vxFamily
+                if (ha.isUnindexed) {
+                    sources.add("Hybrid Analysis (Unindexed / Clean)")
+                } else {
+                    sources.add("Hybrid Analysis (Score ${ha.threatScore}/100)")
+                    highestScore = maxOf(highestScore, ha.threatScore)
+                    if (ha.threatScore >= 50) flaggedCount += 1
+                    totalCount += 1
+                    if (detectedFamily == null && !ha.vxFamily.isNullOrBlank()) {
+                        detectedFamily = ha.vxFamily
+                    }
                 }
             } else {
                 failedEngines.add("Hybrid Analysis")
@@ -213,6 +217,10 @@ class CloudThreatAggregator(
                     if (detectedFamily == null && !md.threatName.isNullOrBlank()) {
                         detectedFamily = md.threatName
                     }
+                } else if (md.isUnindexed) {
+                    sources.add("MetaDefender (Unindexed / Clean)")
+                } else {
+                    sources.add("MetaDefender (Clean)")
                 }
             } else {
                 failedEngines.add("MetaDefender")
@@ -224,10 +232,14 @@ class CloudThreatAggregator(
             val fs = filescanDeferred.await()
             if (fs != null) {
                 successfulEngines.add("Filescan.io")
-                sources.add("Filescan.io (${fs.verdict})")
-                highestScore = maxOf(highestScore, fs.threatScore)
-                if (fs.threatScore >= 50) flaggedCount += 1
-                totalCount += 1
+                if (fs.isUnindexed) {
+                    sources.add("Filescan.io (Unindexed / Clean)")
+                } else {
+                    sources.add("Filescan.io (${fs.verdict.lowercase().replaceFirstChar { it.uppercase() }})")
+                    highestScore = maxOf(highestScore, fs.threatScore)
+                    if (fs.threatScore >= 50) flaggedCount += 1
+                    totalCount += 1
+                }
             } else {
                 failedEngines.add("Filescan.io")
             }
@@ -254,8 +266,8 @@ class CloudThreatAggregator(
                 "MalwareBazaar" -> "https://bazaar.abuse.ch/sample/$sha256/"
                 "Kaspersky OpenTIP" -> "https://opentip.kaspersky.com/$sha256/"
                 "Hybrid Analysis" -> "https://www.hybrid-analysis.com/sample/$sha256"
-                "MetaDefender" -> "https://metadefender.opswat.com/results/file/$sha256/hash/overview"
-                "Filescan.io" -> "https://www.filescan.io/scan/$sha256"
+                "MetaDefender" -> "https://metadefender.com/results/hash/$sha256/overview"
+                "Filescan.io" -> "https://www.filescan.io/search?query=$sha256"
                 else -> null
             }
         }
