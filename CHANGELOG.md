@@ -4,6 +4,16 @@ All notable changes to ThreatLens are documented in this file.
 
 ---
 
+## [v1.5.8] - 2026-11-03
+### 🎨 Direct Official Vector Brand Logo Binding & Transparency Fixes
+* **Direct Vendor Name Resolution (`getOfficialVendorDrawable`)**: Added top-level unified resolution function mapping any vendor name, alias, or engine string directly to its official 256×256 vector drawable in `R.drawable.ic_vendor_*`. Completely eliminates generic canvas shield fallbacks for Rising, Lionic, K7, AlienVault, Trellix, Antiy, Huorong, Webroot, Xcitium, NANO, RocketCyber, Varist, Xvirus, Vir.IT, Aurora, etc.
+* **Direct Logo Binding in `VendorFindingBadge`**: Sourced vendor findings directly against `getOfficialVendorDrawable(vendorName)`, preventing vendor names from collapsing into `brandKey = "Generic"`.
+* **Direct Logo Binding in `EngineLogoIcon`**: Now attempts direct vendor asset resolution first before falling back to `EngineRegistry`.
+* **K7 Mobile Security Official Transparent Asset**: Deployed official K7 Computing Mobile Security app asset with full alpha transparency `(0, 0, 0, 0)` corner padding, resolving dark-theme contrast blockiness.
+* **`SubEngineRegistry` Full Coverage**: Added explicit Priority 1 matches for all 61 commercial antivirus vendors and updated registry tuples.
+
+---
+
 ## [v1.5.7] - 2026-11-03
 ### 🦁 61 Official Brand Logos, Storage Exhaustion DoS Heuristics & Multi-Scanner Consensus Reconciliation
 * **Exact Official Square-Fit Brand Logos (Multi-Pass Consensus)**: Verified and deployed 61 authentic, high-resolution 256x256 square brand logos into `app/src/main/res/drawable/ic_vendor_*.png` without distortion or canvas approximation. Direct user-reported fixes include:

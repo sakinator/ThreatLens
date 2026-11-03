@@ -10,7 +10,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg" alt="License"/></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android_8.0+-00E5FF.svg" alt="Platform"/></a>
   <a href="#zero-idle-battery-performance"><img src="https://img.shields.io/badge/Battery-Zero--Idle_Drain-brightgreen.svg" alt="Battery Mode"/></a>
-  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-323%2F323_Passing-brightgreen.svg" alt="Regression Tests"/></a>
+  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-331%2F331_Passing-brightgreen.svg" alt="Regression Tests"/></a>
 </p>
 
 **ThreatLens** is an open-source, hybrid Android cybersecurity system combining:
@@ -160,6 +160,13 @@ When an untrusted link or malicious APK host is intercepted:
 
 ---
 
+### 🎨 16. Direct Official Vector Brand Logo Binding & Alpha Transparency (v1.5.8)
+* **Direct Vendor Name Resolution (`getOfficialVendorDrawable`)**: Direct regex-normalized matching mapping any vendor finding or engine string directly to its official 256×256 vector drawable in `R.drawable.ic_vendor_*`. Completely resolves generic canvas shield fallbacks for Rising, Lionic, K7, AlienVault, Trellix, Antiy, Huorong, Webroot, Xcitium, NANO, RocketCyber, Varist, Xvirus, Vir.IT, and Aurora.
+* **Direct Logo Binding in `VendorFindingBadge`**: Vendor finding rows bypass intermediate `brandKey` translation and directly bind official brand assets.
+* **Official K7 Mobile Security Transparent Asset**: Replaced solid white canvas block with official K7 Computing transparent asset with `(0, 0, 0, 0)` corner alpha padding.
+
+---
+
 ## 🏗️ Architecture Matrix
 
 ```
@@ -234,8 +241,9 @@ python tools/run_regression_suite.py
 ▶ SUITE 27: v1.5.5 Multi-Cloud Dynamic Consensus, MetaDefender Active Modules & Engine Brand Logos
 ▶ SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing
 ▶ SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation
+▶ SUITE 30: v1.5.8 Direct Official Vector Brand Logos & Transparency
 ----------------------------------------------------------------------
-Regression Result: 323/323 Tests Passed (0 failed)
+Regression Result: 331/331 Tests Passed (0 failed)
 ----------------------------------------------------------------------
 ```
 

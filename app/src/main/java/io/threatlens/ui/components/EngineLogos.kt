@@ -900,44 +900,46 @@ fun AuroraLogo(modifier: Modifier = Modifier.size(24.dp)) {
 }
 
 
-@Composable
-fun BrandLogoBadge(
-    brandKey: String,
-    modifier: Modifier = Modifier.size(22.dp)
-) {
-    val clean = brandKey.trim().lowercase()
-    val drawableRes = when {
-        clean.contains("virustotal") -> R.drawable.ic_vendor_virustotal
-        clean.contains("metadefender") || clean.contains("metascan") -> R.drawable.ic_vendor_metadefender
+fun getOfficialVendorDrawable(name: String): Int? {
+    val clean = name.trim().lowercase()
+        .replace("-", "")
+        .replace(".", "")
+        .replace("!", "")
+        .replace("_", "")
+        .replace(" ", "")
+
+    return when {
+        clean.contains("virustotal") || clean == "vt" -> R.drawable.ic_vendor_virustotal
+        clean.contains("metadefender") || clean.contains("metascan") || clean.contains("opswat") -> R.drawable.ic_vendor_metadefender
         clean.contains("hybridanalysis") || clean.contains("hybrid") -> R.drawable.ic_vendor_hybridanalysis
         clean.contains("filescan") -> R.drawable.ic_vendor_filescan
-        clean.contains("alienvault") -> R.drawable.ic_vendor_alienvault
-        clean.contains("bitdefender") -> R.drawable.ic_vendor_bitdefender
+        clean.contains("alienvault") || clean.contains("otx") -> R.drawable.ic_vendor_alienvault
+        clean.contains("bitdefender") || clean.contains("falx") || clean.contains("theta") -> R.drawable.ic_vendor_bitdefender
         clean.contains("norton") || clean.contains("symantec") || clean.contains("broadcom") -> R.drawable.ic_vendor_norton
         clean.contains("microsoft") || clean.contains("windowsdefender") || clean.contains("defender") -> R.drawable.ic_vendor_microsoft
-        clean.contains("kaspersky") -> R.drawable.ic_vendor_kaspersky
+        clean.contains("kaspersky") || clean.contains("opentip") -> R.drawable.ic_vendor_kaspersky
         clean.contains("avast") -> R.drawable.ic_vendor_avast
         clean.contains("avg") -> R.drawable.ic_vendor_avg
         clean.contains("eset") || clean.contains("nod32") -> R.drawable.ic_vendor_eset
         clean.contains("mcafee") -> R.drawable.ic_vendor_mcafee
-        clean.contains("sophos") -> R.drawable.ic_vendor_sophos
+        clean.contains("sophos") || clean.contains("hitmanpro") -> R.drawable.ic_vendor_sophos
         clean.contains("google") || clean.contains("playprotect") -> R.drawable.ic_vendor_google
         clean.contains("trendmicro") || clean.contains("housecall") -> R.drawable.ic_vendor_trendmicro
-        clean.contains("malwarebytes") -> R.drawable.ic_vendor_malwarebytes
-        clean.contains("clamav") -> R.drawable.ic_vendor_clamav
+        clean.contains("malwarebytes") || clean.contains("mbam") -> R.drawable.ic_vendor_malwarebytes
+        clean.contains("clamav") || clean.contains("talos") -> R.drawable.ic_vendor_clamav
         clean.contains("drweb") -> R.drawable.ic_vendor_drweb
-        clean.contains("quickheal") -> R.drawable.ic_vendor_quickheal
+        clean.contains("quickheal") || clean.contains("catquickheal") -> R.drawable.ic_vendor_quickheal
         clean.contains("ahnlab") || clean.contains("v3") -> R.drawable.ic_vendor_ahnlab
         clean.contains("avira") -> R.drawable.ic_vendor_avira
         clean.contains("trustlook") -> R.drawable.ic_vendor_trustlook
         clean.contains("trellix") -> R.drawable.ic_vendor_trellix
-        clean.contains("rising") -> R.drawable.ic_vendor_rising
-        clean.contains("kingsoft") || clean.contains("duba") -> R.drawable.ic_vendor_kingsoft
+        clean.contains("rising") || clean.contains("ruixing") -> R.drawable.ic_vendor_rising
+        clean.contains("kingsoft") || clean.contains("duba") || clean.contains("cheetah") -> R.drawable.ic_vendor_kingsoft
         clean.contains("bkav") -> R.drawable.ic_vendor_bkav
         clean.contains("emsisoft") -> R.drawable.ic_vendor_emsisoft
         clean.contains("ikarus") -> R.drawable.ic_vendor_ikarus
         clean.contains("k7") -> R.drawable.ic_vendor_k7
-        clean.contains("antiy") -> R.drawable.ic_vendor_antiy
+        clean.contains("antiy") || clean.contains("avl") -> R.drawable.ic_vendor_antiy
         clean.contains("cmc") -> R.drawable.ic_vendor_cmc
         clean.contains("huorong") -> R.drawable.ic_vendor_huorong
         clean.contains("webroot") -> R.drawable.ic_vendor_webroot
@@ -945,23 +947,23 @@ fun BrandLogoBadge(
         clean.contains("zillya") -> R.drawable.ic_vendor_zillya
         clean.contains("lionic") -> R.drawable.ic_vendor_lionic
         clean.contains("nano") -> R.drawable.ic_vendor_nano
-        clean.contains("tachyon") -> R.drawable.ic_vendor_tachyon
+        clean.contains("tachyon") || clean.contains("inca") -> R.drawable.ic_vendor_tachyon
         clean.contains("rocketcyber") -> R.drawable.ic_vendor_rocketcyber
         clean.contains("varist") -> R.drawable.ic_vendor_varist
         clean.contains("xvirus") -> R.drawable.ic_vendor_xvirus
-        clean.contains("virit") || clean.contains("vir.it") -> R.drawable.ic_vendor_virit
+        clean.contains("virit") || clean.contains("tgsoft") -> R.drawable.ic_vendor_virit
         clean.contains("aurora") || clean.contains("secureage") -> R.drawable.ic_vendor_aurora
         clean.contains("crowdstrike") || clean.contains("falcon") -> R.drawable.ic_vendor_crowdstrike
         clean.contains("sentinel") -> R.drawable.ic_vendor_sentinelone
         clean.contains("fortinet") || clean.contains("forti") -> R.drawable.ic_vendor_fortinet
-        clean.contains("f-secure") || clean.contains("fsecure") -> R.drawable.ic_vendor_fsecure
+        clean.contains("fsecure") -> R.drawable.ic_vendor_fsecure
         clean.contains("withsecure") -> R.drawable.ic_vendor_withsecure
-        clean.contains("gdata") || clean.contains("g-data") -> R.drawable.ic_vendor_gdata
+        clean.contains("gdata") -> R.drawable.ic_vendor_gdata
         clean.contains("paloalto") || clean.contains("wildfire") -> R.drawable.ic_vendor_paloalto
         clean.contains("zonealarm") -> R.drawable.ic_vendor_zonealarm
         clean.contains("zoner") -> R.drawable.ic_vendor_zoner
         clean.contains("totaldefense") -> R.drawable.ic_vendor_totaldefense
-        clean.contains("tencent") -> R.drawable.ic_vendor_tencent
+        clean.contains("tencent") || clean.contains("qq") -> R.drawable.ic_vendor_tencent
         clean.contains("yandex") -> R.drawable.ic_vendor_yandex
         clean.contains("alyac") -> R.drawable.ic_vendor_alyac
         clean.contains("arcabit") -> R.drawable.ic_vendor_arcabit
@@ -970,6 +972,14 @@ fun BrandLogoBadge(
         clean.contains("cynet") -> R.drawable.ic_vendor_cynet
         else -> null
     }
+}
+
+@Composable
+fun BrandLogoBadge(
+    brandKey: String,
+    modifier: Modifier = Modifier.size(22.dp)
+) {
+    val drawableRes = getOfficialVendorDrawable(brandKey)
 
     if (drawableRes != null) {
         OfficialVendorLogo(drawableRes, brandKey, modifier)
@@ -989,23 +999,28 @@ fun BrandLogoBadge(
             "CountryOfOrigin", "Country of Origin" -> CountryOfOriginLogo(modifier)
             else -> {
                 val vendor = SubEngineRegistry.getVendorBrand(brandKey)
-                Canvas(modifier = modifier) {
-                    val w = size.width
-                    val h = size.height
-                    drawRoundRect(
-                        color = vendor.color,
-                        cornerRadius = CornerRadius(w * 0.24f, h * 0.24f)
-                    )
-                    val shield = Path().apply {
-                        moveTo(w * 0.50f, h * 0.22f)
-                        lineTo(w * 0.74f, h * 0.34f)
-                        lineTo(w * 0.74f, h * 0.58f)
-                        cubicTo(w * 0.74f, h * 0.74f, w * 0.50f, h * 0.84f, w * 0.50f, h * 0.84f)
-                        cubicTo(w * 0.50f, h * 0.84f, w * 0.26f, h * 0.74f, w * 0.26f, h * 0.58f)
-                        lineTo(w * 0.26f, h * 0.34f)
-                        close()
+                val fallbackDrawable = getOfficialVendorDrawable(vendor.name)
+                if (fallbackDrawable != null) {
+                    OfficialVendorLogo(fallbackDrawable, vendor.name, modifier)
+                } else {
+                    Canvas(modifier = modifier) {
+                        val w = size.width
+                        val h = size.height
+                        drawRoundRect(
+                            color = vendor.color,
+                            cornerRadius = CornerRadius(w * 0.24f, h * 0.24f)
+                        )
+                        val shield = Path().apply {
+                            moveTo(w * 0.50f, h * 0.22f)
+                            lineTo(w * 0.74f, h * 0.34f)
+                            lineTo(w * 0.74f, h * 0.58f)
+                            cubicTo(w * 0.74f, h * 0.74f, w * 0.50f, h * 0.84f, w * 0.50f, h * 0.84f)
+                            cubicTo(w * 0.50f, h * 0.84f, w * 0.26f, h * 0.74f, w * 0.26f, h * 0.58f)
+                            lineTo(w * 0.26f, h * 0.34f)
+                            close()
+                        }
+                        drawPath(shield, Color.White, style = Stroke(width = w * 0.08f))
                     }
-                    drawPath(shield, Color.White, style = Stroke(width = w * 0.08f))
                 }
             }
         }
@@ -1017,8 +1032,13 @@ fun EngineLogoIcon(
     engineName: String,
     modifier: Modifier = Modifier.size(24.dp)
 ) {
-    val brand = EngineRegistry.getBrand(engineName)
-    BrandLogoBadge(brandKey = brand.brandKey, modifier = modifier)
+    val directDrawable = getOfficialVendorDrawable(engineName)
+    if (directDrawable != null) {
+        OfficialVendorLogo(directDrawable, engineName, modifier)
+    } else {
+        val brand = EngineRegistry.getBrand(engineName)
+        BrandLogoBadge(brandKey = brand.brandKey, modifier = modifier)
+    }
 }
 
 @Composable
@@ -1163,7 +1183,21 @@ object SubEngineRegistry {
         VendorBrand("VIPRE", "VIPRE", Color(0xFF00796B), "VIP"),
         VendorBrand("ViRobot", "ViRobot", Color(0xFF0288D1), "VR"),
         VendorBrand("Zillya", "Zillya", Color(0xFF7CB342), "ZIL"),
-        VendorBrand("Zoner", "Zoner", Color(0xFF689F38), "ZON")
+        VendorBrand("Zoner", "Zoner", Color(0xFF689F38), "ZON"),
+        VendorBrand("Rising", "Rising", Color(0xFFFFB300), "RSG"),
+        VendorBrand("Lionic", "Lionic", Color(0xFF1E88E5), "LNC"),
+        VendorBrand("AlienVault", "AlienVault", Color(0xFF66BB6A), "OTX"),
+        VendorBrand("Trellix", "Trellix", Color(0xFFE53935), "TLX"),
+        VendorBrand("Huorong", "Huorong", Color(0xFFFF9800), "HR"),
+        VendorBrand("Webroot", "Webroot", Color(0xFF7CB342), "WBR"),
+        VendorBrand("Xcitium", "Xcitium", Color(0xFFD32F2F), "XCT"),
+        VendorBrand("RocketCyber", "RocketCyber", Color(0xFF0288D1), "RC"),
+        VendorBrand("Varist", "Varist", Color(0xFF00897B), "VAR"),
+        VendorBrand("Xvirus", "Xvirus", Color(0xFFE53935), "XV"),
+        VendorBrand("Vir.IT", "VirIT", Color(0xFF1976D2), "VIR"),
+        VendorBrand("VirIT", "VirIT", Color(0xFF1976D2), "VIR"),
+        VendorBrand("Aurora", "Aurora", Color(0xFF3949AB), "AUR"),
+        VendorBrand("SecureAge", "Aurora", Color(0xFF3949AB), "AUR")
     )
 
     fun getVendorBrand(name: String): VendorBrand {
@@ -1205,6 +1239,29 @@ object SubEngineRegistry {
             clean.contains("tencent") -> return VendorBrand(name, "Tencent", Color(0xFF12B7F5), "TC")
             clean.contains("yandex") -> return VendorBrand(name, "Yandex", Color(0xFFFF0000), "YA")
             clean.contains("ikarus") -> return VendorBrand(name, "Ikarus", Color(0xFF388E3C), "IKR")
+            clean.contains("rising") || clean.contains("ruixing") -> return VendorBrand(name, "Rising", Color(0xFFFFB300), "RSG")
+            clean.contains("lionic") -> return VendorBrand(name, "Lionic", Color(0xFF1E88E5), "LNC")
+            clean.contains("k7") -> return VendorBrand(name, "K7", Color(0xFF00897B), "K7")
+            clean.contains("alienvault") || clean.contains("otx") -> return VendorBrand(name, "AlienVault", Color(0xFF66BB6A), "OTX")
+            clean.contains("trellix") -> return VendorBrand(name, "Trellix", Color(0xFFE53935), "TLX")
+            clean.contains("antiy") -> return VendorBrand(name, "Antiy", Color(0xFF5E35B1), "ANT")
+            clean.contains("huorong") -> return VendorBrand(name, "Huorong", Color(0xFFFF9800), "HR")
+            clean.contains("webroot") -> return VendorBrand(name, "Webroot", Color(0xFF7CB342), "WBR")
+            clean.contains("xcitium") || clean.contains("comodo") -> return VendorBrand(name, "Xcitium", Color(0xFFD32F2F), "XCT")
+            clean.contains("zillya") -> return VendorBrand(name, "Zillya", Color(0xFF7CB342), "ZIL")
+            clean.contains("tachyon") -> return VendorBrand(name, "Tachyon", Color(0xFF1E88E5), "TY")
+            clean.contains("nano") -> return VendorBrand(name, "NANO", Color(0xFF546E7A), "NANO")
+            clean.contains("rocketcyber") -> return VendorBrand(name, "RocketCyber", Color(0xFF0288D1), "RC")
+            clean.contains("varist") -> return VendorBrand(name, "Varist", Color(0xFF00897B), "VAR")
+            clean.contains("xvirus") -> return VendorBrand(name, "Xvirus", Color(0xFFE53935), "XV")
+            clean.contains("virit") || clean.contains("vir.it") -> return VendorBrand(name, "VirIT", Color(0xFF1976D2), "VIR")
+            clean.contains("aurora") || clean.contains("secureage") -> return VendorBrand(name, "Aurora", Color(0xFF3949AB), "AUR")
+            clean.contains("gdata") || clean.contains("g-data") -> return VendorBrand(name, "GData", Color(0xFFD50000), "GD")
+            clean.contains("bkav") -> return VendorBrand(name, "Bkav", Color(0xFFFF6D00), "BK")
+            clean.contains("kingsoft") || clean.contains("duba") -> return VendorBrand(name, "Kingsoft", Color(0xFF00ACC1), "KS")
+            clean.contains("trustlook") -> return VendorBrand(name, "Trustlook", Color(0xFF00B0FF), "TL")
+            clean.contains("emsisoft") -> return VendorBrand(name, "Emsisoft", Color(0xFF0091EA), "EMS")
+            clean.contains("cmc") -> return VendorBrand(name, "CMC", Color(0xFF43A047), "CMC")
         }
 
         // Priority 2: Match against registered vendors sorted by longest name descending
@@ -1256,11 +1313,20 @@ fun VendorFindingBadge(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Authentic Brand Logo Badge
-                BrandLogoBadge(
-                    brandKey = vendor.brandKey,
-                    modifier = Modifier.size(24.dp)
-                )
+                // Authentic Brand Logo Badge (Exact Official Vector Logo Matching)
+                val directLogo = getOfficialVendorDrawable(vendorName) ?: getOfficialVendorDrawable(vendor.brandKey)
+                if (directLogo != null) {
+                    OfficialVendorLogo(
+                        drawableRes = directLogo,
+                        contentDescription = vendorName,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    BrandLogoBadge(
+                        brandKey = vendor.brandKey,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
