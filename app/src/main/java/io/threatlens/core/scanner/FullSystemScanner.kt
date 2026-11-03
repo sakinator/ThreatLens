@@ -117,7 +117,9 @@ object FullSystemScanner {
                         context = context,
                         file = target.file,
                         customAppName = target.name,
-                        customPackageName = target.packageName
+                        customPackageName = target.packageName,
+                        isFullScan = true,
+                        totalScanCount = targets.size
                     )
                     allReports.add(report)
                     if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {

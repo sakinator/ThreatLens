@@ -71,6 +71,7 @@ class RegressionTestRunner:
         self.test_v151_brand_logos_and_pattern_features()
         self.test_v152_false_positive_elimination_and_export()
         self.suite_25_api_key_validation_hardening()
+        self.suite_26_rate_limit_quota_saver()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -832,7 +833,48 @@ class RegressionTestRunner:
         self.record("FilescanProvider uses official /api/reputation/hash endpoint", "filescan.io/api/reputation/hash" in fs_code)
         self.record("FilescanProvider passes X-Api-Key header", '.addHeader("X-Api-Key", cleanKey)' in fs_code)
         self.record("FilescanProvider returns benign verdict for 404 unindexed hashes", 'response.code == 404' in fs_code and 'FilescanResult("BENIGN", 0, emptyList())' in fs_code)
+        self.record("Filescan search requests avoid invalid enum page_size=1 (HTTP 422)", "page_size=1" not in val_code and "page_size=1" not in fs_code)
         self.record("SettingsScreen updates Filescan placeholder away from Bearer token", 'placeholder = "Filescan API Key"' in settings_code and 'placeholder = "Bearer token"' not in settings_code)
+
+    def suite_26_rate_limit_quota_saver(self):
+        print(f"\n{YELLOW}▶  SUITE 26: v1.5.4 Smart Daily Rate Limit Quota Saver & Radio Controls{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        vault_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "storage", "ApiKeyVault.kt")
+        scanner_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        settings_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
+        vm_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "viewmodel", "MainViewModel.kt")
+
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(vault_file, "r", encoding="utf-8") as f:
+            vault_code = f.read()
+        with open(scanner_file, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        with open(settings_file, "r", encoding="utf-8") as f:
+            settings_code = f.read()
+        with open(vm_file, "r", encoding="utf-8") as f:
+            vm_code = f.read()
+
+        # 1. FullSystemScanner passes scan telemetry
+        self.record("FullSystemScanner passes isFullScan and totalScanCount", "isFullScan = true" in scanner_code and "totalScanCount = targets.size" in scanner_code)
+
+        # 2. Daily Rate Limit Thresholds (VirusTotal: 500, MetaDefender: 100, Filescan: 100)
+        self.record("RealtimeScanCoordinator defines isVtOverQuotaLimit (threshold 500)", "isFullScan && totalScanCount > 500" in coord_code)
+        self.record("RealtimeScanCoordinator defines isMdOverQuotaLimit (threshold 100)", "isFullScan && totalScanCount > 100" in coord_code)
+        self.record("RealtimeScanCoordinator defines isFsOverQuotaLimit (threshold 100)", "isFullScan && totalScanCount > 100" in coord_code)
+
+        # 3. Fresh downloads and installs always scanned (isFullScan=false bypasses quota limits)
+        self.record("Fresh downloads and installs always scanned with all cloud engines", "!isVtOverQuotaLimit || !virusTotalQuotaSaver || isSuspiciousOrWorse" in coord_code and "!isMdOverQuotaLimit || !metaDefenderQuotaSaver || isSuspiciousOrWorse" in coord_code)
+
+        # 4. ApiKeyVault & MainViewModel quota saver persistence
+        self.record("ApiKeyVault implements getQuotaSaverMode and setQuotaSaverMode", "getQuotaSaverMode" in vault_code and "setQuotaSaverMode" in vault_code)
+        self.record("MainViewModel exposes isQuotaSaverEnabled and setQuotaSaverEnabled", "isQuotaSaverEnabled" in vm_code and "setQuotaSaverEnabled" in vm_code)
+
+        # 5. SettingsScreen RadioButton Controls
+        self.record("ApiKeyFieldWithIcon supports showQuotaSelector parameter", "showQuotaSelector: Boolean = false" in settings_code)
+        self.record("ApiKeyFieldWithIcon renders Save Quota and Always Query RadioButtons", "Save Quota" in settings_code and "Always Query" in settings_code and "RadioButton" in settings_code)
+        self.record("SettingsScreen enables quota selector for MetaDefender and Filescan", 'engineName = "MetaDefender"' in settings_code and 'engineName = "Filescan.io"' in settings_code and 'showQuotaSelector = true' in settings_code)
 
 
 if __name__ == "__main__":

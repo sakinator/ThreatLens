@@ -145,7 +145,7 @@ object ApiKeyValidator {
                 }
                 "filescan" -> {
                     val request = Request.Builder()
-                        .url("https://www.filescan.io/api/reports/search?page_size=1")
+                        .url("https://www.filescan.io/api/reports/search")
                         .addHeader("X-Api-Key", trimmed)
                         .addHeader("Authorization", "Bearer $trimmed")
                         .addHeader("User-Agent", "ThreatLens-Security/1.5.3")

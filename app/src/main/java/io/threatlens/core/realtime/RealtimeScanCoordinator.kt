@@ -33,6 +33,13 @@ object RealtimeScanCoordinator {
     var metaDefenderKey: String? = null
     var filescanKey: String? = null
     var bazaarKey: String? = null
+
+    // Engine quota saver modes (true = scan suspicious & threats only, false = scan all files)
+    var virusTotalQuotaSaver: Boolean = true
+    var hybridAnalysisQuotaSaver: Boolean = true
+    var kasperskyQuotaSaver: Boolean = true
+    var metaDefenderQuotaSaver: Boolean = true
+    var filescanQuotaSaver: Boolean = true
     
     // AI Explainer keys
     var openAiKey: String? = null
@@ -62,7 +69,9 @@ object RealtimeScanCoordinator {
         context: Context,
         file: File,
         customAppName: String? = null,
-        customPackageName: String? = null
+        customPackageName: String? = null,
+        isFullScan: Boolean = false,
+        totalScanCount: Int = 1
     ): ThreatReport = withContext(Dispatchers.IO) {
         // Resolve application name and package identity
         var appName = customAppName
@@ -558,184 +567,286 @@ object RealtimeScanCoordinator {
             })
         }
 
+        val isSuspiciousOrWorse = highestSeverity != ThreatSeverity.SAFE ||
+                runningLocalScore >= 20 ||
+                localVerdict.detectedBehaviors.isNotEmpty() ||
+                localVerdict.dangerousPermissions.size >= 4 ||
+                !isVerifiedStoreApp ||
+                localVerdict.certResult?.isSuspicious == true ||
+                localVerdict.packerResult?.isPacked == true
+
+        // Known free-tier daily rate limits:
+        // VirusTotal: 500/day, MetaDefender: 100/day, Filescan: 100/day, Hybrid Analysis: 100/day, Kaspersky: 100/day.
+        // If total files in full scan <= daily limit, do not save — scan all files!
+        val isVtOverQuotaLimit = isFullScan && totalScanCount > 500
+        val isMdOverQuotaLimit = isFullScan && totalScanCount > 100
+        val isHaOverQuotaLimit = isFullScan && totalScanCount > 100
+        val isKasOverQuotaLimit = isFullScan && totalScanCount > 100
+        val isFsOverQuotaLimit = isFullScan && totalScanCount > 100
+
         // Launch VirusTotal
+        val shouldScanVt = !virusTotalKey.isNullOrBlank() && (!isVtOverQuotaLimit || !virusTotalQuotaSaver || isSuspiciousOrWorse)
         if (!virusTotalKey.isNullOrBlank()) {
-            engineJobs.add(scanScope.launch {
-                try {
-                    val vt = VirusTotalProvider.queryHash(sha256, virusTotalKey!!)
-                    if (vt != null && vt.totalEngines > 0) {
-                        val normalized = ThreatFamilyNormalizer.normalize(
-                            maliciousCount = vt.maliciousCount,
-                            totalEngines = vt.totalEngines,
-                            rawFamilyLabels = vt.detectedVendors,
-                            isVerifiedStoreApp = isVerifiedStoreApp
-                        )
-                        val score = normalized.adjustedScore
-                        val family = if (normalized.isFalsePositiveRisk) normalized.normalizedFamily else (vt.suggestedThreatLabel ?: normalized.displayCategory)
-                        val details = if (vt.detectedVendors.isNotEmpty()) {
-                            listOf(normalized.consensusSummary) + vt.detectedVendors
+            if (!shouldScanVt) {
+                onEngineFinished(
+                    "VirusTotal",
+                    score = 0,
+                    flagged = 0,
+                    total = 0,
+                    sourceLabel = "VirusTotal (Quota Preserved)",
+                    family = null,
+                    details = listOf(
+                        "File verified safe locally • Quota preserved",
+                        "Clean verified app: skipped to save daily 500-request quota.",
+                        "Toggle 'Always scan all' in Settings if preferred."
+                    )
+                )
+            } else {
+                engineJobs.add(scanScope.launch {
+                    try {
+                        val vt = VirusTotalProvider.queryHash(sha256, virusTotalKey!!)
+                        if (vt != null && vt.totalEngines > 0) {
+                            val normalized = ThreatFamilyNormalizer.normalize(
+                                maliciousCount = vt.maliciousCount,
+                                totalEngines = vt.totalEngines,
+                                rawFamilyLabels = vt.detectedVendors,
+                                isVerifiedStoreApp = isVerifiedStoreApp
+                            )
+                            val score = normalized.adjustedScore
+                            val family = if (normalized.isFalsePositiveRisk) normalized.normalizedFamily else (vt.suggestedThreatLabel ?: normalized.displayCategory)
+                            val details = if (vt.detectedVendors.isNotEmpty()) {
+                                listOf(normalized.consensusSummary) + vt.detectedVendors
+                            } else {
+                                listOf("0/${vt.totalEngines} security vendors flagged this file across VirusTotal.")
+                            }
+                            onEngineFinished(
+                                "VirusTotal",
+                                score = score,
+                                flagged = vt.maliciousCount,
+                                total = vt.totalEngines,
+                                sourceLabel = "VirusTotal (${vt.maliciousCount}/${vt.totalEngines})",
+                                family = family,
+                                details = details
+                            )
+                        } else if (vt != null) {
+                            onEngineFinished(
+                                "VirusTotal",
+                                score = 0,
+                                flagged = 0,
+                                total = 0,
+                                sourceLabel = "VirusTotal (Unindexed)",
+                                family = null,
+                                details = listOf("Hash not indexed in VirusTotal database.")
+                            )
                         } else {
-                            listOf("0/${vt.totalEngines} security vendors flagged this file across VirusTotal.")
+                            onEngineFailed("VirusTotal")
                         }
-                        onEngineFinished(
-                            "VirusTotal",
-                            score = score,
-                            flagged = vt.maliciousCount,
-                            total = vt.totalEngines,
-                            sourceLabel = "VirusTotal (${vt.maliciousCount}/${vt.totalEngines})",
-                            family = family,
-                            details = details
-                        )
-                    } else if (vt != null) {
-                        onEngineFinished(
-                            "VirusTotal",
-                            score = 0,
-                            flagged = 0,
-                            total = 0,
-                            sourceLabel = "VirusTotal (Unindexed)",
-                            family = null,
-                            details = listOf("Hash not indexed in VirusTotal database.")
-                        )
-                    } else {
+                    } catch (_: Exception) {
                         onEngineFailed("VirusTotal")
                     }
-                } catch (_: Exception) {
-                    onEngineFailed("VirusTotal")
-                }
-            })
+                })
+            }
         }
 
         // Launch MetaDefender
+        val shouldScanMd = !metaDefenderKey.isNullOrBlank() && (!isMdOverQuotaLimit || !metaDefenderQuotaSaver || isSuspiciousOrWorse)
         if (!metaDefenderKey.isNullOrBlank()) {
-            engineJobs.add(scanScope.launch {
-                try {
-                    val md = MetaDefenderProvider.queryHash(sha256, metaDefenderKey!!)
-                    if (md != null && md.totalEngines > 0) {
-                        val normalized = ThreatFamilyNormalizer.normalize(
-                            maliciousCount = md.enginesFlagged,
-                            totalEngines = md.totalEngines,
-                            rawFamilyLabels = md.detectedVendors,
-                            isVerifiedStoreApp = isVerifiedStoreApp
-                        )
-                        val score = normalized.adjustedScore
-                        val family = if (normalized.isFalsePositiveRisk) normalized.normalizedFamily else (md.threatName ?: normalized.displayCategory)
-                        val mdDetails = if (md.detectedVendors.isNotEmpty()) {
-                            listOf(normalized.consensusSummary) + md.detectedVendors
+            if (!shouldScanMd) {
+                onEngineFinished(
+                    "MetaDefender",
+                    score = 0,
+                    flagged = 0,
+                    total = 0,
+                    sourceLabel = "MetaDefender (Quota Preserved)",
+                    family = null,
+                    details = listOf(
+                        "File verified safe locally • Quota preserved",
+                        "Clean verified app: skipped to save daily 100-request quota.",
+                        "Toggle 'Always scan all' in Settings if preferred."
+                    )
+                )
+            } else {
+                engineJobs.add(scanScope.launch {
+                    try {
+                        val md = MetaDefenderProvider.queryHash(sha256, metaDefenderKey!!)
+                        if (md != null && md.totalEngines > 0) {
+                            val normalized = ThreatFamilyNormalizer.normalize(
+                                maliciousCount = md.enginesFlagged,
+                                totalEngines = md.totalEngines,
+                                rawFamilyLabels = md.detectedVendors,
+                                isVerifiedStoreApp = isVerifiedStoreApp
+                            )
+                            val score = normalized.adjustedScore
+                            val family = if (normalized.isFalsePositiveRisk) normalized.normalizedFamily else (md.threatName ?: normalized.displayCategory)
+                            val mdDetails = if (md.detectedVendors.isNotEmpty()) {
+                                listOf(normalized.consensusSummary) + md.detectedVendors
+                            } else {
+                                listOf("0/${md.totalEngines} commercial AV engines flagged in OPSWAT MetaDefender.")
+                            }
+                            onEngineFinished(
+                                "MetaDefender",
+                                score = score,
+                                flagged = md.enginesFlagged,
+                                total = md.totalEngines,
+                                sourceLabel = "MetaDefender (${md.enginesFlagged}/${md.totalEngines})",
+                                family = family,
+                                details = mdDetails
+                            )
+                        } else if (md != null) {
+                            onEngineFinished(
+                                "MetaDefender",
+                                score = 0,
+                                flagged = 0,
+                                total = 0,
+                                sourceLabel = "MetaDefender (Clean)",
+                                family = null,
+                                details = listOf("Verified safe across commercial AV vendor multiscanning.")
+                            )
                         } else {
-                            listOf("0/${md.totalEngines} commercial AV engines flagged in OPSWAT MetaDefender.")
+                            onEngineFailed("MetaDefender")
                         }
-                        onEngineFinished(
-                            "MetaDefender",
-                            score = score,
-                            flagged = md.enginesFlagged,
-                            total = md.totalEngines,
-                            sourceLabel = "MetaDefender (${md.enginesFlagged}/${md.totalEngines})",
-                            family = family,
-                            details = mdDetails
-                        )
-                    } else if (md != null) {
-                        onEngineFinished(
-                            "MetaDefender",
-                            score = 0,
-                            flagged = 0,
-                            total = 0,
-                            sourceLabel = "MetaDefender (Clean)",
-                            family = null,
-                            details = listOf("Verified safe across commercial AV vendor multiscanning.")
-                        )
-                    } else {
+                    } catch (_: Exception) {
                         onEngineFailed("MetaDefender")
                     }
-                } catch (_: Exception) {
-                    onEngineFailed("MetaDefender")
-                }
-            })
+                })
+            }
         }
 
         // Launch Hybrid Analysis
+        val shouldScanHa = !hybridAnalysisKey.isNullOrBlank() && (!isHaOverQuotaLimit || !hybridAnalysisQuotaSaver || isSuspiciousOrWorse)
         if (!hybridAnalysisKey.isNullOrBlank()) {
-            engineJobs.add(scanScope.launch {
-                try {
-                    val ha = HybridAnalysisProvider.queryHash(sha256, hybridAnalysisKey!!)
-                    if (ha != null) {
-                        val haDetails = mutableListOf<String>()
-                        haDetails.add("Falcon Threat Score: ${ha.threatScore}/100")
-                        if (!ha.verdict.isNullOrBlank()) haDetails.add("Detonation Verdict: ${ha.verdict}")
-                        if (!ha.vxFamily.isNullOrBlank()) haDetails.add("Malware Family: ${ha.vxFamily}")
-                        haDetails.add("Sandbox: Falcon Dynamic Behavioral Detonation")
-                        onEngineFinished(
-                            "Hybrid Analysis",
-                            score = ha.threatScore,
-                            flagged = if (ha.threatScore >= 50) 1 else 0,
-                            total = 1,
-                            sourceLabel = "Hybrid Analysis (${ha.threatScore}/100)",
-                            family = ha.vxFamily,
-                            details = haDetails
-                        )
-                    } else {
+            if (!shouldScanHa) {
+                onEngineFinished(
+                    "Hybrid Analysis",
+                    score = 0,
+                    flagged = 0,
+                    total = 0,
+                    sourceLabel = "Hybrid Analysis (Quota Preserved)",
+                    family = null,
+                    details = listOf(
+                        "File verified safe locally • Quota preserved",
+                        "Clean verified app: skipped to save daily Falcon sandbox quota.",
+                        "Toggle 'Always scan all' in Settings if preferred."
+                    )
+                )
+            } else {
+                engineJobs.add(scanScope.launch {
+                    try {
+                        val ha = HybridAnalysisProvider.queryHash(sha256, hybridAnalysisKey!!)
+                        if (ha != null) {
+                            val haDetails = mutableListOf<String>()
+                            haDetails.add("Falcon Threat Score: ${ha.threatScore}/100")
+                            if (!ha.verdict.isNullOrBlank()) haDetails.add("Detonation Verdict: ${ha.verdict}")
+                            if (!ha.vxFamily.isNullOrBlank()) haDetails.add("Malware Family: ${ha.vxFamily}")
+                            haDetails.add("Sandbox: Falcon Dynamic Behavioral Detonation")
+                            onEngineFinished(
+                                "Hybrid Analysis",
+                                score = ha.threatScore,
+                                flagged = if (ha.threatScore >= 50) 1 else 0,
+                                total = 1,
+                                sourceLabel = "Hybrid Analysis (${ha.threatScore}/100)",
+                                family = ha.vxFamily,
+                                details = haDetails
+                            )
+                        } else {
+                            onEngineFailed("Hybrid Analysis")
+                        }
+                    } catch (_: Exception) {
                         onEngineFailed("Hybrid Analysis")
                     }
-                } catch (_: Exception) {
-                    onEngineFailed("Hybrid Analysis")
-                }
-            })
+                })
+            }
         }
 
         // Launch Kaspersky OpenTIP
+        val shouldScanKas = !kasperskyKey.isNullOrBlank() && (!isKasOverQuotaLimit || !kasperskyQuotaSaver || isSuspiciousOrWorse)
         if (!kasperskyKey.isNullOrBlank()) {
-            engineJobs.add(scanScope.launch {
-                try {
-                    val kas = KasperskyOpenTipProvider.queryHash(sha256, kasperskyKey!!)
-                    if (kas != null) {
-                        val score = if (kas.zone.equals("Red", ignoreCase = true)) 100 else if (kas.zone.equals("Yellow", ignoreCase = true)) 60 else 0
-                        val kasDetails = mutableListOf<String>()
-                        kasDetails.add("Kaspersky Threat Zone: ${kas.zone}")
-                        if (!kas.threatFamily.isNullOrBlank()) kasDetails.add("Kaspersky: ${kas.threatFamily}")
-                        kasDetails.add("Enterprise Intelligence: Zone ${kas.zone} verified hash")
-                        onEngineFinished(
-                            "Kaspersky OpenTIP",
-                            score = score,
-                            flagged = if (score > 0) 1 else 0,
-                            total = 1,
-                            sourceLabel = "Kaspersky (${kas.zone})",
-                            family = kas.threatFamily,
-                            details = kasDetails
-                        )
-                    } else {
+            if (!shouldScanKas) {
+                onEngineFinished(
+                    "Kaspersky OpenTIP",
+                    score = 0,
+                    flagged = 0,
+                    total = 0,
+                    sourceLabel = "Kaspersky (Quota Preserved)",
+                    family = null,
+                    details = listOf(
+                        "File verified safe locally • Quota preserved",
+                        "Clean verified app: skipped to save daily OpenTIP lookup quota.",
+                        "Toggle 'Always scan all' in Settings if preferred."
+                    )
+                )
+            } else {
+                engineJobs.add(scanScope.launch {
+                    try {
+                        val kas = KasperskyOpenTipProvider.queryHash(sha256, kasperskyKey!!)
+                        if (kas != null) {
+                            val score = if (kas.zone.equals("Red", ignoreCase = true)) 100 else if (kas.zone.equals("Yellow", ignoreCase = true)) 60 else 0
+                            val kasDetails = mutableListOf<String>()
+                            kasDetails.add("Kaspersky Threat Zone: ${kas.zone}")
+                            if (!kas.threatFamily.isNullOrBlank()) kasDetails.add("Kaspersky: ${kas.threatFamily}")
+                            kasDetails.add("Enterprise Intelligence: Zone ${kas.zone} verified hash")
+                            onEngineFinished(
+                                "Kaspersky OpenTIP",
+                                score = score,
+                                flagged = if (score > 0) 1 else 0,
+                                total = 1,
+                                sourceLabel = "Kaspersky (${kas.zone})",
+                                family = kas.threatFamily,
+                                details = kasDetails
+                            )
+                        } else {
+                            onEngineFailed("Kaspersky OpenTIP")
+                        }
+                    } catch (_: Exception) {
                         onEngineFailed("Kaspersky OpenTIP")
                     }
-                } catch (_: Exception) {
-                    onEngineFailed("Kaspersky OpenTIP")
-                }
-            })
+                })
+            }
         }
 
         // Launch Filescan.io
+        val shouldScanFs = !filescanKey.isNullOrBlank() && (!isFsOverQuotaLimit || !filescanQuotaSaver || isSuspiciousOrWorse)
         if (!filescanKey.isNullOrBlank()) {
-            engineJobs.add(scanScope.launch {
-                try {
-                    val fs = FilescanProvider.queryHash(sha256, filescanKey!!)
-                    if (fs != null) {
-                        val fsDetails = mutableListOf<String>()
-                        fsDetails.add("Filescan Threat Score: ${fs.threatScore}/100")
-                        if (!fs.verdict.isNullOrBlank()) fsDetails.add("Verdict: ${fs.verdict}")
-                        fsDetails.add("Static Analysis & IOC Extraction Engine")
-                        onEngineFinished(
-                            "Filescan.io",
-                            score = fs.threatScore,
-                            flagged = if (fs.threatScore >= 50) 1 else 0,
-                            total = 1,
-                            sourceLabel = "Filescan.io (${fs.verdict})",
-                            family = null,
-                            details = fsDetails
-                        )
-                    } else {
+            if (!shouldScanFs) {
+                onEngineFinished(
+                    "Filescan.io",
+                    score = 0,
+                    flagged = 0,
+                    total = 0,
+                    sourceLabel = "Filescan.io (Quota Preserved)",
+                    family = null,
+                    details = listOf(
+                        "File verified safe locally • Quota preserved",
+                        "Clean verified app: skipped to save daily API rate limit.",
+                        "Toggle 'Always scan all' in Settings if preferred."
+                    )
+                )
+            } else {
+                engineJobs.add(scanScope.launch {
+                    try {
+                        val fs = FilescanProvider.queryHash(sha256, filescanKey!!)
+                        if (fs != null) {
+                            val fsDetails = mutableListOf<String>()
+                            fsDetails.add("Filescan Threat Score: ${fs.threatScore}/100")
+                            if (!fs.verdict.isNullOrBlank()) fsDetails.add("Verdict: ${fs.verdict}")
+                            fsDetails.add("Static Analysis & IOC Extraction Engine")
+                            onEngineFinished(
+                                "Filescan.io",
+                                score = fs.threatScore,
+                                flagged = if (fs.threatScore >= 50) 1 else 0,
+                                total = 1,
+                                sourceLabel = "Filescan.io (${fs.verdict})",
+                                family = null,
+                                details = fsDetails
+                            )
+                        } else {
+                            onEngineFailed("Filescan.io")
+                        }
+                    } catch (_: Exception) {
                         onEngineFailed("Filescan.io")
                     }
-                } catch (_: Exception) {
-                    onEngineFailed("Filescan.io")
-                }
-            })
+                })
+            }
         }
 
         // Wait for cloud engines with 5 second timeout
@@ -873,9 +984,11 @@ object RealtimeScanCoordinator {
         context: Context,
         file: File,
         customAppName: String? = null,
-        customPackageName: String? = null
+        customPackageName: String? = null,
+        isFullScan: Boolean = false,
+        totalScanCount: Int = 1
     ): ThreatReport {
-        return streamScan(context, file, customAppName, customPackageName)
+        return streamScan(context, file, customAppName, customPackageName, isFullScan, totalScanCount)
     }
 
     suspend fun applyUpdatedVtResult(

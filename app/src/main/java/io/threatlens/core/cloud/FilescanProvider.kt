@@ -80,7 +80,7 @@ object FilescanProvider {
 
             // 2. Fallback to reports/search if reputation endpoint had unexpected response
             val searchRequest = Request.Builder()
-                .url("https://www.filescan.io/api/reports/search?sha256=$cleanHash&page_size=1")
+                .url("https://www.filescan.io/api/reports/search?sha256=$cleanHash")
                 .addHeader("X-Api-Key", cleanKey)
                 .addHeader("Authorization", "Bearer $cleanKey")
                 .addHeader("User-Agent", "ThreatLens-Security/1.5.3")

@@ -60,6 +60,15 @@ fun SettingsScreen(
     var importJsonText by remember { mutableStateOf("") }
     val versionName = remember { io.threatlens.core.update.UpdateCheckService.getInstalledVersionName(context) }
     val validationStatusMap = remember { mutableStateMapOf<String, io.threatlens.core.validation.ValidationStatus>() }
+    val quotaSaverStateMap = remember {
+        mutableStateMapOf(
+            "vt" to viewModel.isQuotaSaverEnabled("vt"),
+            "metadefender" to viewModel.isQuotaSaverEnabled("metadefender"),
+            "ha" to viewModel.isQuotaSaverEnabled("ha"),
+            "kaspersky" to viewModel.isQuotaSaverEnabled("kaspersky"),
+            "filescan" to viewModel.isQuotaSaverEnabled("filescan")
+        )
+    }
     var isValidatingAll by remember { mutableStateOf(false) }
 
     fun validateAndSaveSingle(provider: String, key: String) {
@@ -972,7 +981,10 @@ fun SettingsScreen(
                 value = vtInput,
                 onValueChange = { vtInput = it },
                 status = validationStatusMap["vt"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
-                onSaveAndValidate = { validateAndSaveSingle("vt", vtInput) }
+                onSaveAndValidate = { validateAndSaveSingle("vt", vtInput) },
+                showQuotaSelector = true,
+                isQuotaSaverActive = quotaSaverStateMap["vt"] ?: true,
+                onQuotaModeChange = { quotaSaverStateMap["vt"] = it; viewModel.setQuotaSaverEnabled("vt", it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -987,7 +999,10 @@ fun SettingsScreen(
                 value = metaDefenderInput,
                 onValueChange = { metaDefenderInput = it },
                 status = validationStatusMap["metadefender"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
-                onSaveAndValidate = { validateAndSaveSingle("metadefender", metaDefenderInput) }
+                onSaveAndValidate = { validateAndSaveSingle("metadefender", metaDefenderInput) },
+                showQuotaSelector = true,
+                isQuotaSaverActive = quotaSaverStateMap["metadefender"] ?: true,
+                onQuotaModeChange = { quotaSaverStateMap["metadefender"] = it; viewModel.setQuotaSaverEnabled("metadefender", it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1002,7 +1017,10 @@ fun SettingsScreen(
                 value = haInput,
                 onValueChange = { haInput = it },
                 status = validationStatusMap["ha"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
-                onSaveAndValidate = { validateAndSaveSingle("ha", haInput) }
+                onSaveAndValidate = { validateAndSaveSingle("ha", haInput) },
+                showQuotaSelector = true,
+                isQuotaSaverActive = quotaSaverStateMap["ha"] ?: true,
+                onQuotaModeChange = { quotaSaverStateMap["ha"] = it; viewModel.setQuotaSaverEnabled("ha", it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1017,7 +1035,10 @@ fun SettingsScreen(
                 value = kasperskyInput,
                 onValueChange = { kasperskyInput = it },
                 status = validationStatusMap["kaspersky"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
-                onSaveAndValidate = { validateAndSaveSingle("kaspersky", kasperskyInput) }
+                onSaveAndValidate = { validateAndSaveSingle("kaspersky", kasperskyInput) },
+                showQuotaSelector = true,
+                isQuotaSaverActive = quotaSaverStateMap["kaspersky"] ?: true,
+                onQuotaModeChange = { quotaSaverStateMap["kaspersky"] = it; viewModel.setQuotaSaverEnabled("kaspersky", it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1032,7 +1053,10 @@ fun SettingsScreen(
                 value = filescanInput,
                 onValueChange = { filescanInput = it },
                 status = validationStatusMap["filescan"] ?: io.threatlens.core.validation.ValidationStatus.Idle,
-                onSaveAndValidate = { validateAndSaveSingle("filescan", filescanInput) }
+                onSaveAndValidate = { validateAndSaveSingle("filescan", filescanInput) },
+                showQuotaSelector = true,
+                isQuotaSaverActive = quotaSaverStateMap["filescan"] ?: true,
+                onQuotaModeChange = { quotaSaverStateMap["filescan"] = it; viewModel.setQuotaSaverEnabled("filescan", it) }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -1512,7 +1536,10 @@ fun ApiKeyFieldWithIcon(
     value: String,
     onValueChange: (String) -> Unit,
     status: io.threatlens.core.validation.ValidationStatus,
-    onSaveAndValidate: () -> Unit
+    onSaveAndValidate: () -> Unit,
+    showQuotaSelector: Boolean = false,
+    isQuotaSaverActive: Boolean = true,
+    onQuotaModeChange: (Boolean) -> Unit = {}
 ) {
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
 
@@ -1583,6 +1610,79 @@ fun ApiKeyFieldWithIcon(
                     Text("Validate & Save", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
+        }
+
+        if (showQuotaSelector) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Full Scan Mode:",
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+
+                // Option 1: Save Quota (Suspicious Only)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { onQuotaModeChange(true) }
+                        .padding(end = 8.dp)
+                ) {
+                    RadioButton(
+                        selected = isQuotaSaverActive,
+                        onClick = { onQuotaModeChange(true) },
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = NeonEmerald,
+                            unselectedColor = TextMuted
+                        ),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = "Save Quota",
+                        color = if (isQuotaSaverActive) NeonEmerald else TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = if (isQuotaSaverActive) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+
+                // Option 2: Always Query
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { onQuotaModeChange(false) }
+                ) {
+                    RadioButton(
+                        selected = !isQuotaSaverActive,
+                        onClick = { onQuotaModeChange(false) },
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = NeonCyan,
+                            unselectedColor = TextMuted
+                        ),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = "Always Query",
+                        color = if (!isQuotaSaverActive) NeonCyan else TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = if (!isQuotaSaverActive) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+            Text(
+                text = if (isQuotaSaverActive)
+                    "Preserves daily limit: full scan queries only suspicious apps if total files exceed daily limit (e.g. >100). Fresh downloads & installs are always fully scanned."
+                else
+                    "Always scan all files: queries this engine for every application without quota preservation.",
+                color = TextMuted,
+                fontSize = 10.sp,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
 
         // Status Feedback line

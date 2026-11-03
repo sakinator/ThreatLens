@@ -355,4 +355,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun syncKeysToCoordinator() {
         ApiKeyVault.syncToCoordinator(getApplication())
     }
+
+    fun isQuotaSaverEnabled(providerId: String): Boolean {
+        return ApiKeyVault.getQuotaSaverMode(getApplication(), providerId)
+    }
+
+    fun setQuotaSaverEnabled(providerId: String, enabled: Boolean) {
+        ApiKeyVault.setQuotaSaverMode(getApplication(), providerId, enabled)
+    }
 }

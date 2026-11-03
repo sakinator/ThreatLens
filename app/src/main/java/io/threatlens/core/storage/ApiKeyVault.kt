@@ -75,6 +75,35 @@ object ApiKeyVault {
         RealtimeScanCoordinator.metaDefenderKey = prefs.getString("metadefender_key", "")?.trim()?.ifBlank { null }
         RealtimeScanCoordinator.filescanKey = prefs.getString("filescan_key", "")?.trim()?.ifBlank { null }
         RealtimeScanCoordinator.bazaarKey = prefs.getString("bazaar_key", "")?.trim()?.ifBlank { null }
+
+        // Synchronize engine quota saver policies (default = true: suspicious & threats only)
+        RealtimeScanCoordinator.virusTotalQuotaSaver = prefs.getBoolean("quota_mode_vt", true)
+        RealtimeScanCoordinator.hybridAnalysisQuotaSaver = prefs.getBoolean("quota_mode_ha", true)
+        RealtimeScanCoordinator.kasperskyQuotaSaver = prefs.getBoolean("quota_mode_kaspersky", true)
+        RealtimeScanCoordinator.metaDefenderQuotaSaver = prefs.getBoolean("quota_mode_metadefender", true)
+        RealtimeScanCoordinator.filescanQuotaSaver = prefs.getBoolean("quota_mode_filescan", true)
+    }
+
+    fun getQuotaSaverMode(context: Context, providerId: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val norm = normalizeProvider(providerId)
+        return prefs.getBoolean("quota_mode_$norm", true)
+    }
+
+    fun setQuotaSaverMode(context: Context, providerId: String, suspiciousOnly: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val norm = normalizeProvider(providerId)
+        prefs.edit().putBoolean("quota_mode_$norm", suspiciousOnly).commit()
+        syncToCoordinator(context)
+    }
+
+    private fun normalizeProvider(providerId: String): String = when (providerId.lowercase()) {
+        "vt", "virustotal" -> "vt"
+        "ha", "hybridanalysis" -> "ha"
+        "kaspersky" -> "kaspersky"
+        "metadefender" -> "metadefender"
+        "filescan" -> "filescan"
+        else -> providerId.lowercase()
     }
 
     fun saveSingleKey(context: Context, provider: String, key: String) {
