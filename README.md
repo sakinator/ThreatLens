@@ -327,5 +327,18 @@ Download the official signed release directly from GitHub:
 
 ---
 
+## 💖 Support Open-Source Research
+
+ThreatLens is 100% free, autonomous, and open-source under the MIT license, with **zero ads, zero trackers, and zero paywalls**. If ThreatLens has helped protect your Android device or assisted your security workflow, you can optionally support the ongoing maintenance and threat signature synchronization:
+
+<p align="center">
+  <a href="https://ko-fi.com/saketsharma29"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi" height="38"/></a>
+</p>
+
+* 🌍 **International Supporters (Cards / Apple Pay / PayPal)**: [**ko-fi.com/saketsharma29**](https://ko-fi.com/saketsharma29)
+* 🇮🇳 **India / UPI**: `sakinator@ptaxis` (Google Pay, PhonePe, Paytm, BHIM)
+
+---
+
 ## 📄 License
 ThreatLens is licensed under the [MIT License](LICENSE).

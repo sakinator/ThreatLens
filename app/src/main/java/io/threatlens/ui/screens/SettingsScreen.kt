@@ -3,10 +3,14 @@ package io.threatlens.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -1624,6 +1628,91 @@ fun SettingsScreen(
                         Icon(Icons.Default.Refresh, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("CLEAR SCAN CACHE (FORCE DEEP RESCAN)", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Support Open-Source Research Card (Ko-fi & UPI)
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(NeonCrimson.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = null,
+                                tint = NeonCrimson,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Support Open-Source Research",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "ThreatLens is 100% free & ad-free. Support ongoing threat analysis!",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Ko-fi Button (International Cards / Apple Pay / PayPal)
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ko-fi.com/saketsharma29"))
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Coffee, contentDescription = null, tint = CyberBlack, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Ko-fi ($)", color = CyberBlack, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
+
+                        // Direct UPI Button (India - GPay, PhonePe, Paytm, BHIM)
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    val upiUri = Uri.parse("upi://pay?pa=sakinator@ptaxis&pn=ThreatLens%20Project&cu=INR")
+                                    val upiIntent = Intent(Intent.ACTION_VIEW, upiUri)
+                                    context.startActivity(Intent.createChooser(upiIntent, "Support via UPI"))
+                                } catch (_: Exception) {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("ThreatLens UPI ID", "sakinator@ptaxis"))
+                                    Toast.makeText(context, "✓ UPI ID 'sakinator@ptaxis' copied to clipboard!", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonEmerald),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Bolt, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("UPI (₹)", color = NeonEmerald, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
                     }
                 }
             }
