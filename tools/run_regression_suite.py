@@ -74,6 +74,7 @@ class RegressionTestRunner:
         self.suite_26_rate_limit_quota_saver()
         self.suite_27_multi_cloud_consensus_and_brand_logos()
         self.suite_28_realtime_safe_notifications_and_intent_routing()
+        self.suite_29_v157_consensus_brand_logos_and_storage_exhaustion()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -604,7 +605,7 @@ class RegressionTestRunner:
 
         # 3. ThreatDetailSheet: Full Engine Name De-truncation
         # Line 1 header must only have logo, title, and chevron; status badge moved to line 2
-        line1_has_no_status_badge = "EngineLogoIcon(sourceName" in sheet_code and "Text(\n                                        text = sourceName" in sheet_code
+        line1_has_no_status_badge = "EngineLogoIcon(sourceName" in sheet_code and (re.search(r'Text\(\s*text\s*=\s*sourceName', sheet_code) is not None)
         line2_has_status_badge = "padding(start = 32.dp)" in sheet_code and "engineBadgeText" in sheet_code and "FLAGGED" in sheet_code
         self.record("Engine Card Line 1 reserves full width for engine title without status pill", line1_has_no_status_badge)
         self.record("Engine Card Line 2 contains engine badge tag and status pill", line2_has_status_badge)
@@ -946,7 +947,7 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code))
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code))
 
     def suite_28_realtime_safe_notifications_and_intent_routing(self):
         print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
@@ -997,7 +998,120 @@ class RegressionTestRunner:
             "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
 
         # 4. Release version
-        self.record("Version bumped to 1.5.6 (versionCode 21)", 'versionName = "1.5.6"' in gradle_code and 'versionCode = 21' in gradle_code)
+        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code))
+
+    def suite_29_v157_consensus_brand_logos_and_storage_exhaustion(self):
+        print(f"\n{YELLOW}▶  SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation{RESET}")
+        import json
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        local_av_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+        manifest_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        db_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalSignatureDatabase.kt")
+        agg_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "CloudThreatAggregator.kt")
+        scorer_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scoring", "HybridThreatScorer.kt")
+        update_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "update", "SignatureUpdateService.kt")
+        sheet_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        logos_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "EngineLogos.kt")
+        drawable_dir = os.path.join(script_dir, "..", "app", "src", "main", "res", "drawable")
+        def_file = os.path.join(script_dir, "..", "definitions", "signatures.json")
+        gradle_file = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+
+        with open(local_av_file, "r", encoding="utf-8") as f:
+            local_av_code = f.read()
+        with open(manifest_file, "r", encoding="utf-8") as f:
+            manifest_code = f.read()
+        with open(db_file, "r", encoding="utf-8") as f:
+            db_code = f.read()
+        with open(agg_file, "r", encoding="utf-8") as f:
+            agg_code = f.read()
+        with open(scorer_file, "r", encoding="utf-8") as f:
+            scorer_code = f.read()
+        with open(update_file, "r", encoding="utf-8") as f:
+            update_code = f.read()
+        with open(sheet_file, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(logos_file, "r", encoding="utf-8") as f:
+            logos_code = f.read()
+        with open(gradle_file, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+
+        # 1. Targeted Storage Exhaustion Loops / DoS Heuristics (StorageFiller)
+        self.record("LocalAntivirusEngine defines SC_INSUFFICIENT_STORAGE bytecode pattern rule (score 80)",
+            "SC_INSUFFICIENT_STORAGE" in local_av_code and "DoS.AndroidOS.StorageFiller" in local_av_code and "80" in local_av_code)
+        self.record("LocalAntivirusEngine defines fillBuffer continuous buffer loop rule (score 75)",
+            "fillBuffer" in local_av_code and "DoS.AndroidOS.StorageFiller" in local_av_code and "75" in local_av_code)
+        self.record("ManifestHeuristicEngine flags unverified background apps requesting full storage write access",
+            "isStorageExhaustion = true" in manifest_code and "isLikelyStorageExhaustion" in manifest_code and "WRITE_EXTERNAL_STORAGE" in manifest_code)
+
+        # 2. Local Signature Database Preload & Ashishb Malware Research Corpus
+        storage_filler_hash = "abcffca708b60148c98b6b4d592d1639e7b76b6601bcff158de22eee5260c948"
+        self.record("LocalSignatureDatabase preloads StorageFiller APK hash",
+            storage_filler_hash in db_code and "DoS.AndroidOS.StorageFiller" in db_code)
+        self.record("LocalSignatureDatabase includes ashishb Android malware corpus (Towelroot, Dendroid, FakeBanker, xHelper)",
+            "ashishb/android-malware" in db_code and "Towelroot" in db_code and "Dendroid" in db_code and "FakeBanker" in db_code and "xHelper" in db_code)
+        self.record("LocalSignatureDatabase registers Ashishb corpus in DATABASE_SOURCES",
+            "Android Malware Research Corpus (ashishb)" in db_code)
+        self.record("LocalSignatureDatabase registers academic datasets in DATABASE_SOURCES (MalGenome, Drebin, CIC, MH-100K, MASCOT, Droidware, AndroZoo)",
+            "MalGenome" in db_code and "Drebin" in db_code and "CIC-AndMal" in db_code and "MH-100K" in db_code and "MASCOT-Android" in db_code and "Droidware" in db_code and "AndroZoo" in db_code)
+        self.record("LocalSignatureDatabase uses ConcurrentHashMap for thread-safe dynamic hot updates",
+            "ConcurrentHashMap" in db_code)
+        self.record("SignatureUpdateService exposes reactive totalSignatures StateFlow",
+            "val totalSignatures: StateFlow<Int>" in update_code)
+        self.record("SignatureUpdateService includes StorageFiller hash in fallback fresh signatures",
+            storage_filler_hash in update_code and "DoS.AndroidOS.StorageFiller" in update_code)
+
+        # 3. definitions/signatures.json Repository Integrity
+        sig_json_valid = False
+        sig_count = 0
+        if os.path.exists(def_file):
+            try:
+                with open(def_file, "r", encoding="utf-8") as f:
+                    sig_data = json.load(f)
+                    sig_count = len(sig_data.get("signatures", []))
+                    sig_json_valid = sig_count >= 75 and any(s.get("sha256") == storage_filler_hash for s in sig_data.get("signatures", []))
+            except Exception:
+                sig_json_valid = False
+        self.record(f"Definitions file definitions/signatures.json exists with 75+ verified signatures ({sig_count} entries)", sig_json_valid)
+
+        # 4. MetaDefender Clean Verdict Advisory Weightage on Android Executables
+        self.record("CloudThreatAggregator caps clean MetaDefender contribution to at most 1 advisory vote for totalCount",
+            "totalCount += 1" in agg_code and "Clean verdict from Enterprise Gateway daemons contributes at most 1 advisory vote" in agg_code)
+        self.record("HybridThreatScorer prevents MetaDefender-only clean verdict from suppressing on-device Android heuristics",
+            "isMetaDefenderOnlyClean" in scorer_code and "MetaDefender Enterprise Gateway reported clean" in scorer_code)
+
+        # 5. Engine Edition Badges & Divergence Reconciliation Notice
+        self.record("ThreatDetailSheet renders ENTERPRISE GATEWAY badge for MetaDefender",
+            'text = "ENTERPRISE GATEWAY"' in sheet_code and 'sourceName == "MetaDefender"' in sheet_code)
+        self.record("ThreatDetailSheet renders MOBILE & CLOUD ML badge for VirusTotal",
+            'text = "MOBILE & CLOUD ML"' in sheet_code and 'sourceName == "VirusTotal"' in sheet_code)
+        self.record("ThreatDetailSheet includes multi-scanner divergence reconciliation notice",
+            "Multi-Scanner Divergence Reconciled:" in sheet_code and "BitDefenderFalx ML" in sheet_code)
+
+        # 6. Exact Official Square-Fit Brand Logos (Multi-Pass Consensus)
+        vendor_pngs = [f for f in os.listdir(drawable_dir) if f.startswith("ic_vendor_") and f.endswith(".png")]
+        self.record(f"All 61 official high-resolution vendor PNG logos deployed in res/drawable ({len(vendor_pngs)} files)", len(vendor_pngs) >= 61)
+
+        # Validate PNG signatures
+        all_valid_png = True
+        for vp in vendor_pngs:
+            full_p = os.path.join(drawable_dir, vp)
+            with open(full_p, "rb") as f:
+                header = f.read(8)
+                if header != b"\x89PNG\r\n\x1a\n":
+                    all_valid_png = False
+                    break
+        self.record("All deployed vendor drawables are verified valid PNG images", all_valid_png)
+
+        # Verify critical user-reported logo fixes
+        critical_logos = ["rising", "avast", "alienvault", "crowdstrike", "tachyon", "zillya", "lionic", "tencent", "k7"]
+        critical_ok = all(os.path.exists(os.path.join(drawable_dir, f"ic_vendor_{name}.png")) for name in critical_logos)
+        self.record("Critical user-reported logos present (rising lion, neutral avast, alien head, crowdstrike falcon, tachyon, zillya, lionic, tencent, k7)", critical_ok)
+
+        self.record("EngineLogos.kt implements OfficialVendorLogo with ContentScale.Fit",
+            "fun OfficialVendorLogo" in logos_code and "ContentScale.Fit" in logos_code)
+
+        # 7. Release Version
+        self.record("Version bumped to 1.5.7 (versionCode 22)", 'versionName = "1.5.7"' in gradle_code and 'versionCode = 22' in gradle_code)
 
 
 if __name__ == "__main__":

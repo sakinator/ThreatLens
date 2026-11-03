@@ -15,6 +15,7 @@ object ManifestHeuristicEngine {
         val isLikelyBanker: Boolean,
         val isLikelySpyware: Boolean,
         val isLikelyRansomware: Boolean = false,
+        val isLikelyStorageExhaustion: Boolean = false,
         val permissionScore: Int = 0,
         val behavioralScore: Int = 0
     )
@@ -51,6 +52,7 @@ object ManifestHeuristicEngine {
         var isSpyware = false
         var isDropper = false
         var isRansomware = false
+        var isStorageExhaustion = false
         var isKnownTrustedVendor = false
         var hasAccessibility = false
         var hasOverlay = false
@@ -189,6 +191,15 @@ object ManifestHeuristicEngine {
                 behaviors.add("Stealth application: Disguises icon or hides from app launcher")
             }
 
+            // 8. Storage Exhaustion Loops / DoS Heuristic (StorageFiller Pattern)
+            val hasWriteStorage = permSet.contains("android.permission.WRITE_EXTERNAL_STORAGE") ||
+                                  permSet.contains("android.permission.MANAGE_EXTERNAL_STORAGE")
+            if (hasWriteStorage && !isKnownTrustedVendor && !hasLauncher) {
+                behaviorPts += 25
+                isStorageExhaustion = true
+                behaviors.add("Potential Storage Exhaustion Loop: Unverified background process requesting full external storage write access")
+            }
+
         } catch (e: Exception) {
             behaviors.add("Analysis error: ${e.message}")
         }
@@ -225,6 +236,7 @@ object ManifestHeuristicEngine {
             isLikelyBanker = isBanker && !isKnownTrustedVendor,
             isLikelySpyware = isSpyware && !isKnownTrustedVendor,
             isLikelyRansomware = isRansomware && !isKnownTrustedVendor,
+            isLikelyStorageExhaustion = isStorageExhaustion && !isKnownTrustedVendor,
             permissionScore = finalPermissionScore,
             behavioralScore = finalBehavioralScore
         )

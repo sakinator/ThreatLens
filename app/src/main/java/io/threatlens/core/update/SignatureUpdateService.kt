@@ -40,8 +40,11 @@ object SignatureUpdateService {
     private val _lastUpdateTimestamp = MutableStateFlow(System.currentTimeMillis())
     val lastUpdateTimestamp: StateFlow<Long> = _lastUpdateTimestamp.asStateFlow()
 
-    private val _signatureVersion = MutableStateFlow("v2026.10.25.1")
+    private val _signatureVersion = MutableStateFlow("v2026.11.03.1")
     val signatureVersion: StateFlow<String> = _signatureVersion.asStateFlow()
+
+    private val _totalSignatures = MutableStateFlow(LocalSignatureDatabase.totalSignatures)
+    val totalSignatures: StateFlow<Int> = _totalSignatures.asStateFlow()
 
     private const val SIGNATURE_FILE_NAME = "threatlens_signatures.json"
     private const val PREFS_NAME = "threatlens_signature_prefs"
@@ -56,10 +59,12 @@ object SignatureUpdateService {
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         _lastUpdateTimestamp.value = prefs.getLong(KEY_LAST_UPDATE, System.currentTimeMillis())
-        _signatureVersion.value = prefs.getString(KEY_VERSION, "v2026.10.25.1") ?: "v2026.10.25.1"
+        _signatureVersion.value = prefs.getString(KEY_VERSION, "v2026.11.03.1") ?: "v2026.11.03.1"
 
         // Load previously persisted dynamic signatures from disk
         loadSavedSignatures(context)
+
+        _totalSignatures.value = LocalSignatureDatabase.totalSignatures
 
         // Schedule nightly auto-update on Wi-Fi if enabled
         if (isAutoUpdateEnabled(context)) {
@@ -112,11 +117,11 @@ object SignatureUpdateService {
                             if (definitions != null) {
                                 for (i in 0 until definitions.length()) {
                                     val item = definitions.getJSONObject(i)
-                                    val hash = item.optString("sha256").lowercase()
+                                    val hash = item.optString("sha256").lowercase().trim()
                                     val family = item.optString("family", "Generic.Malware")
                                     val cat = item.optString("category", "Trojan")
                                     val score = item.optInt("score", 100)
-                                    if (hash.isNotBlank()) {
+                                    if (hash.length == 64 && hash.all { c -> c in "0123456789abcdef" }) {
                                         downloadedSignatures[hash] = LocalSignatureDatabase.SignatureEntry(family, cat, score)
                                     }
                                 }
@@ -152,6 +157,7 @@ object SignatureUpdateService {
             }
 
             val finalTotal = LocalSignatureDatabase.totalSignatures
+            _totalSignatures.value = finalTotal
 
             // 4. Persist to local disk storage
             saveSignaturesToDisk(context, downloadedSignatures)
@@ -220,10 +226,11 @@ object SignatureUpdateService {
                 val family = item.optString("family")
                 val category = item.optString("category")
                 val score = item.optInt("score", 100)
-                if (hash.isNotBlank()) {
+                if (hash.length == 64 && hash.all { c -> c in "0123456789abcdef" }) {
                     LocalSignatureDatabase.registerSignature(hash, family, category, score)
                 }
             }
+            _totalSignatures.value = LocalSignatureDatabase.totalSignatures
         } catch (_: Exception) {}
     }
 
@@ -245,6 +252,8 @@ object SignatureUpdateService {
 
     private fun getFallbackFreshSignatures(): Map<String, LocalSignatureDatabase.SignatureEntry> {
         return mapOf(
+            "abcffca708b60148c98b6b4d592d1639e7b76b6601bcff158de22eee5260c948" to
+                    LocalSignatureDatabase.SignatureEntry("DoS.AndroidOS.StorageFiller", "Storage Exhaustion Denial-of-Service", 95),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" to
                     LocalSignatureDatabase.SignatureEntry("Test.EICAR.StandardAntivirusTest", "Test Signature", 100),
             "112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00" to

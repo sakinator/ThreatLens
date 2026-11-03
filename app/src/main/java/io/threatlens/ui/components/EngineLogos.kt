@@ -1,6 +1,11 @@
 package io.threatlens.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import io.threatlens.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -242,468 +247,145 @@ object EngineRegistry {
 // AUTHENTIC BRAND LOGOS (VECTOR CANVAS EMBLEMS)
 // ---------------------------------------------------------------------------
 
-@Composable
-fun VirusTotalLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Blue shield/rounded container
-        drawRoundRect(
-            color = Color(0xFF0058FF),
-            cornerRadius = CornerRadius(w * 0.28f, h * 0.28f)
-        )
-        // Original VirusTotal geometric loop (stylized V and T polygon ribbon)
-        val path = Path().apply {
-            moveTo(w * 0.26f, h * 0.30f)
-            lineTo(w * 0.46f, h * 0.70f)
-            lineTo(w * 0.62f, h * 0.38f)
-            lineTo(w * 0.74f, h * 0.38f)
-            lineTo(w * 0.50f, h * 0.78f)
-            lineTo(w * 0.38f, h * 0.78f)
-            lineTo(w * 0.16f, h * 0.30f)
-            close()
-        }
-        drawPath(path, Color.White)
 
-        // Top horizontal T-bar
-        val barPath = Path().apply {
-            moveTo(w * 0.52f, h * 0.30f)
-            lineTo(w * 0.84f, h * 0.30f)
-            lineTo(w * 0.80f, h * 0.40f)
-            lineTo(w * 0.48f, h * 0.40f)
-            close()
-        }
-        drawPath(barPath, Color(0xFF00E5FF))
-    }
+@Composable
+fun OfficialVendorLogo(
+    drawableRes: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    Image(
+        painter = painterResource(id = drawableRes),
+        contentDescription = contentDescription,
+        modifier = modifier.clip(RoundedCornerShape(4.dp)),
+        contentScale = ContentScale.Fit
+    )
 }
 
 @Composable
-fun NortonLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Iconic Norton Golden Yellow Circle
-        drawCircle(
-            color = Color(0xFFFDB813),
-            radius = w * 0.48f,
-            center = Offset(w * 0.5f, h * 0.5f)
-        )
-        // Authentic black Norton checkmark with hook
-        val check = Path().apply {
-            moveTo(w * 0.25f, h * 0.52f)
-            lineTo(w * 0.44f, h * 0.74f)
-            lineTo(w * 0.78f, h * 0.28f)
-        }
-        drawPath(
-            path = check,
-            color = Color(0xFF1E1E1E),
-            style = Stroke(width = w * 0.14f, cap = StrokeCap.Round)
-        )
-    }
+fun VirusTotalLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_virustotal, "VirusTotal", modifier)
 }
+
 
 @Composable
-fun BitdefenderLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Bitdefender Iconic Red Background
-        drawRoundRect(
-            color = Color(0xFFED1C24),
-            cornerRadius = CornerRadius(w * 0.26f, h * 0.26f)
-        )
-        // White Bitdefender Flame / Stylized Dragon B
-        val flame = Path().apply {
-            moveTo(w * 0.28f, h * 0.24f)
-            lineTo(w * 0.56f, h * 0.24f)
-            cubicTo(w * 0.76f, h * 0.24f, w * 0.78f, h * 0.46f, w * 0.60f, h * 0.50f)
-            cubicTo(w * 0.82f, h * 0.54f, w * 0.78f, h * 0.76f, w * 0.54f, h * 0.76f)
-            lineTo(w * 0.28f, h * 0.76f)
-            close()
-        }
-        drawPath(flame, Color.White)
-
-        // Flame cut-outs inside
-        drawCircle(Color(0xFFED1C24), radius = w * 0.08f, center = Offset(w * 0.46f, h * 0.38f))
-        drawCircle(Color(0xFFED1C24), radius = w * 0.09f, center = Offset(w * 0.46f, h * 0.62f))
-    }
+fun NortonLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_norton, "Norton", modifier)
 }
+
 
 @Composable
-fun MicrosoftDefenderLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Dark blue shield backdrop
-        drawRoundRect(
-            color = Color(0xFF0F172A),
-            cornerRadius = CornerRadius(w * 0.24f, h * 0.24f)
-        )
-        // 4 Official Microsoft colored squares
-        val gap = w * 0.06f
-        val sq = w * 0.22f
-        val left = w * 0.24f
-        val top = h * 0.24f
-
-        // Red (Top-left)
-        drawRect(Color(0xFFF25022), topLeft = Offset(left, top), size = Size(sq, sq))
-        // Green (Top-right)
-        drawRect(Color(0xFF7FBA00), topLeft = Offset(left + sq + gap, top), size = Size(sq, sq))
-        // Blue (Bottom-left)
-        drawRect(Color(0xFF00A4EF), topLeft = Offset(left, top + sq + gap), size = Size(sq, sq))
-        // Yellow (Bottom-right)
-        drawRect(Color(0xFFFFB900), topLeft = Offset(left + sq + gap, top + sq + gap), size = Size(sq, sq))
-    }
+fun BitdefenderLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_bitdefender, "Bitdefender", modifier)
 }
+
 
 @Composable
-fun KasperskyLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Kaspersky Emerald Green
-        drawRoundRect(
-            color = Color(0xFF00A88E),
-            cornerRadius = CornerRadius(w * 0.26f, h * 0.26f)
-        )
-        // Sharp Geometric Kaspersky 'K'
-        val path = Path().apply {
-            // Left vertical pillar
-            moveTo(w * 0.28f, h * 0.24f)
-            lineTo(w * 0.40f, h * 0.24f)
-            lineTo(w * 0.40f, h * 0.76f)
-            lineTo(w * 0.28f, h * 0.76f)
-            close()
-            // Upper diagonal arm
-            moveTo(w * 0.44f, h * 0.54f)
-            lineTo(w * 0.66f, h * 0.24f)
-            lineTo(w * 0.78f, h * 0.24f)
-            lineTo(w * 0.52f, h * 0.58f)
-            close()
-            // Lower diagonal arm
-            moveTo(w * 0.50f, h * 0.52f)
-            lineTo(w * 0.78f, h * 0.76f)
-            lineTo(w * 0.65f, h * 0.76f)
-            lineTo(w * 0.42f, h * 0.57f)
-            close()
-        }
-        drawPath(path, Color.White)
-    }
+fun MicrosoftDefenderLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    // Official Microsoft Defender 4-color square brand palette: Red (0xFFF25022), Green (0xFF7FBA00), Blue (0xFF00A4EF), Yellow (0xFFFFB900)
+    OfficialVendorLogo(R.drawable.ic_vendor_microsoft, "Microsoft", modifier)
 }
+
 
 @Composable
-fun AvastLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Avast Orange
-        drawRoundRect(
-            color = Color(0xFFFF7800),
-            cornerRadius = CornerRadius(w * 0.35f, h * 0.35f)
-        )
-        // White lowercase 'a' emblem
-        val path = Path().apply {
-            moveTo(w * 0.64f, h * 0.36f)
-            lineTo(w * 0.64f, h * 0.70f)
-            lineTo(w * 0.52f, h * 0.70f)
-            lineTo(w * 0.52f, h * 0.62f)
-            cubicTo(w * 0.46f, h * 0.72f, w * 0.32f, h * 0.72f, w * 0.30f, h * 0.56f)
-            cubicTo(w * 0.28f, h * 0.42f, w * 0.42f, h * 0.38f, w * 0.60f, h * 0.38f)
-            close()
-        }
-        drawPath(path, Color.White)
-        drawCircle(Color(0xFFFF7800), radius = w * 0.08f, center = Offset(w * 0.45f, h * 0.53f))
-    }
+fun KasperskyLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_kaspersky, "Kaspersky", modifier)
 }
+
 
 @Composable
-fun EsetLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // ESET Cyan / Teal
-        drawRoundRect(
-            color = Color(0xFF00838F),
-            cornerRadius = CornerRadius(w * 0.28f, h * 0.28f)
-        )
-        // Stylized white 'e' / cyborg shield eye
-        val path = Path().apply {
-            moveTo(w * 0.26f, h * 0.50f)
-            lineTo(w * 0.74f, h * 0.50f)
-            cubicTo(w * 0.74f, h * 0.32f, w * 0.62f, h * 0.26f, w * 0.50f, h * 0.26f)
-            cubicTo(w * 0.34f, h * 0.26f, w * 0.26f, h * 0.38f, w * 0.26f, h * 0.50f)
-            cubicTo(w * 0.26f, h * 0.66f, w * 0.36f, h * 0.74f, w * 0.52f, h * 0.74f)
-            cubicTo(w * 0.64f, h * 0.74f, w * 0.70f, h * 0.68f, w * 0.72f, h * 0.64f)
-        }
-        drawPath(path, Color.White, style = Stroke(width = w * 0.11f, cap = StrokeCap.Round))
-    }
+fun AvastLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_avast, "Avast", modifier)
 }
+
 
 @Composable
-fun McAfeeLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // McAfee Crimson Red Shield
-        val shield = Path().apply {
-            moveTo(w * 0.50f, h * 0.14f)
-            lineTo(w * 0.86f, h * 0.26f)
-            lineTo(w * 0.86f, h * 0.56f)
-            cubicTo(w * 0.86f, h * 0.78f, w * 0.50f, h * 0.90f, w * 0.50f, h * 0.90f)
-            cubicTo(w * 0.50f, h * 0.90f, w * 0.14f, h * 0.78f, w * 0.14f, h * 0.56f)
-            lineTo(w * 0.14f, h * 0.26f)
-            close()
-        }
-        drawPath(shield, Color(0xFFC01818))
-
-        // White McAfee stylized angular 'M'
-        val mPath = Path().apply {
-            moveTo(w * 0.28f, h * 0.68f)
-            lineTo(w * 0.28f, h * 0.36f)
-            lineTo(w * 0.50f, h * 0.54f)
-            lineTo(w * 0.72f, h * 0.36f)
-            lineTo(w * 0.72f, h * 0.68f)
-        }
-        drawPath(mPath, Color.White, style = Stroke(width = w * 0.11f, cap = StrokeCap.Round))
-    }
+fun EsetLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_eset, "ESET", modifier)
 }
+
 
 @Composable
-fun SophosLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(
-            color = Color(0xFF0058A3),
-            cornerRadius = CornerRadius(w * 0.26f, h * 0.26f)
-        )
-        // Bold white 'S'
-        val sPath = Path().apply {
-            moveTo(w * 0.68f, h * 0.36f)
-            cubicTo(w * 0.60f, h * 0.26f, w * 0.36f, h * 0.26f, w * 0.36f, h * 0.40f)
-            cubicTo(w * 0.36f, h * 0.52f, w * 0.64f, h * 0.52f, w * 0.64f, h * 0.64f)
-            cubicTo(w * 0.64f, h * 0.76f, w * 0.40f, h * 0.76f, w * 0.32f, h * 0.66f)
-        }
-        drawPath(sPath, Color.White, style = Stroke(width = w * 0.13f, cap = StrokeCap.Round))
-    }
+fun McAfeeLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_mcafee, "McAfee", modifier)
 }
+
 
 @Composable
-fun GoogleProtectLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Google Play Protect 4-color Shield
-        val shield = Path().apply {
-            moveTo(w * 0.50f, h * 0.12f)
-            lineTo(w * 0.86f, h * 0.24f)
-            lineTo(w * 0.86f, h * 0.54f)
-            cubicTo(w * 0.86f, h * 0.76f, w * 0.50f, h * 0.88f, w * 0.50f, h * 0.88f)
-            cubicTo(w * 0.50f, h * 0.88f, w * 0.14f, h * 0.76f, w * 0.14f, h * 0.54f)
-            lineTo(w * 0.14f, h * 0.24f)
-            close()
-        }
-        drawPath(shield, Color(0xFF4285F4))
-
-        // Inner checkmark
-        val check = Path().apply {
-            moveTo(w * 0.32f, h * 0.50f)
-            lineTo(w * 0.46f, h * 0.64f)
-            lineTo(w * 0.68f, h * 0.36f)
-        }
-        drawPath(check, Color(0xFF34A853), style = Stroke(width = w * 0.12f, cap = StrokeCap.Round))
-    }
+fun SophosLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_sophos, "Sophos", modifier)
 }
+
 
 @Composable
-fun TrendMicroLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawCircle(Color(0xFFD71920), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.5f))
-        // White dynamic crescent / swoop
-        val arc = Path().apply {
-            moveTo(w * 0.70f, h * 0.30f)
-            cubicTo(w * 0.32f, h * 0.24f, w * 0.24f, h * 0.62f, w * 0.48f, h * 0.76f)
-            cubicTo(w * 0.72f, h * 0.84f, w * 0.80f, h * 0.62f, w * 0.76f, h * 0.50f)
-        }
-        drawPath(arc, Color.White, style = Stroke(width = w * 0.12f, cap = StrokeCap.Round))
-    }
+fun GoogleProtectLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_google, "Google Play Protect", modifier)
 }
 
-@Composable
-fun MalwarebytesLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFF0073D1), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
-        // Sharp white 'M'
-        val path = Path().apply {
-            moveTo(w * 0.26f, h * 0.72f)
-            lineTo(w * 0.26f, h * 0.28f)
-            lineTo(w * 0.50f, h * 0.52f)
-            lineTo(w * 0.74f, h * 0.28f)
-            lineTo(w * 0.74f, h * 0.72f)
-        }
-        drawPath(path, Color.White, style = Stroke(width = w * 0.12f, cap = StrokeCap.Round))
-    }
-}
 
 @Composable
-fun ClamAvLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFFE65100), cornerRadius = CornerRadius(w * 0.28f, h * 0.28f))
-        // Clam shell radiating fan
-        val shell = Path().apply {
-            moveTo(w * 0.50f, h * 0.76f)
-            lineTo(w * 0.24f, h * 0.38f)
-            cubicTo(w * 0.34f, h * 0.24f, w * 0.66f, h * 0.24f, w * 0.76f, h * 0.38f)
-            close()
-        }
-        drawPath(shell, Color.White)
-        drawLine(Color(0xFFE65100), start = Offset(w * 0.50f, h * 0.76f), end = Offset(w * 0.50f, h * 0.26f), strokeWidth = w * 0.05f)
-        drawLine(Color(0xFFE65100), start = Offset(w * 0.50f, h * 0.76f), end = Offset(w * 0.36f, h * 0.30f), strokeWidth = w * 0.04f)
-        drawLine(Color(0xFFE65100), start = Offset(w * 0.50f, h * 0.76f), end = Offset(w * 0.64f, h * 0.30f), strokeWidth = w * 0.04f)
-    }
+fun TrendMicroLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_trendmicro, "Trend Micro", modifier)
 }
 
-@Composable
-fun DrWebLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawCircle(Color(0xFF43A047), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.5f))
-        // Spider body + legs
-        drawCircle(Color.White, radius = w * 0.16f, center = Offset(w * 0.5f, h * 0.54f))
-        drawCircle(Color.White, radius = w * 0.10f, center = Offset(w * 0.5f, h * 0.34f))
-        // Legs
-        drawLine(Color.White, start = Offset(w * 0.38f, h * 0.46f), end = Offset(w * 0.18f, h * 0.32f), strokeWidth = w * 0.05f, cap = StrokeCap.Round)
-        drawLine(Color.White, start = Offset(w * 0.62f, h * 0.46f), end = Offset(w * 0.82f, h * 0.32f), strokeWidth = w * 0.05f, cap = StrokeCap.Round)
-        drawLine(Color.White, start = Offset(w * 0.38f, h * 0.58f), end = Offset(w * 0.18f, h * 0.68f), strokeWidth = w * 0.05f, cap = StrokeCap.Round)
-        drawLine(Color.White, start = Offset(w * 0.62f, h * 0.58f), end = Offset(w * 0.82f, h * 0.68f), strokeWidth = w * 0.05f, cap = StrokeCap.Round)
-    }
-}
 
 @Composable
-fun QuickHealLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFFFF6F00), cornerRadius = CornerRadius(w * 0.28f, h * 0.28f))
-        // White 'Q' loop and slash
-        drawCircle(Color.White, radius = w * 0.22f, center = Offset(w * 0.5f, h * 0.46f), style = Stroke(width = w * 0.09f))
-        drawLine(Color.White, start = Offset(w * 0.54f, h * 0.54f), end = Offset(w * 0.74f, h * 0.74f), strokeWidth = w * 0.09f, cap = StrokeCap.Round)
-    }
+fun MalwarebytesLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_malwarebytes, "Malwarebytes", modifier)
 }
 
-@Composable
-fun AhnLabLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFF005BAC), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
-        // V3 mark
-        val vPath = Path().apply {
-            moveTo(w * 0.24f, h * 0.32f)
-            lineTo(w * 0.44f, h * 0.72f)
-            lineTo(w * 0.54f, h * 0.32f)
-        }
-        drawPath(vPath, Color.White, style = Stroke(width = w * 0.08f, cap = StrokeCap.Round))
-        // 3 curves
-        val three = Path().apply {
-            moveTo(w * 0.62f, h * 0.34f)
-            cubicTo(w * 0.78f, h * 0.34f, w * 0.78f, h * 0.50f, w * 0.64f, h * 0.52f)
-            cubicTo(w * 0.80f, h * 0.54f, w * 0.80f, h * 0.70f, w * 0.62f, h * 0.70f)
-        }
-        drawPath(three, Color.White, style = Stroke(width = w * 0.08f, cap = StrokeCap.Round))
-    }
-}
 
 @Composable
-fun AviraLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        // Modern Avira Red Rounded Square Emblem (as in MetaDefender)
-        drawRoundRect(
-            color = Color(0xFFD32F2F),
-            cornerRadius = CornerRadius(w * 0.24f, h * 0.24f)
-        )
-        // Open white umbrella
-        val dome = Path().apply {
-            moveTo(w * 0.20f, h * 0.48f)
-            cubicTo(w * 0.22f, h * 0.24f, w * 0.78f, h * 0.24f, w * 0.80f, h * 0.48f)
-            close()
-        }
-        drawPath(dome, Color.White)
-        drawLine(Color.White, start = Offset(w * 0.50f, h * 0.40f), end = Offset(w * 0.50f, h * 0.72f), strokeWidth = w * 0.06f, cap = StrokeCap.Round)
-        val hook = Path().apply {
-            moveTo(w * 0.50f, h * 0.72f)
-            cubicTo(w * 0.50f, h * 0.80f, w * 0.40f, h * 0.80f, w * 0.40f, h * 0.74f)
-        }
-        drawPath(hook, Color.White, style = Stroke(width = w * 0.06f, cap = StrokeCap.Round))
-    }
+fun ClamAvLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_clamav, "ClamAV", modifier)
 }
+
+
+@Composable
+fun DrWebLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_drweb, "Dr.Web", modifier)
+}
+
+
+@Composable
+fun QuickHealLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_quickheal, "Quick Heal", modifier)
+}
+
+
+@Composable
+fun AhnLabLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_ahnlab, "AhnLab", modifier)
+}
+
+
+@Composable
+fun AviraLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_avira, "Avira", modifier)
+}
+
 
 // ---------------------------------------------------------------------------
 // CLOUD SCANNERS BRAND LOGOS
 // ---------------------------------------------------------------------------
 
 @Composable
-fun HybridAnalysisLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFF0F172A), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
-        // Falcon cyber eye with cyan iris
-        val eye = Path().apply {
-            moveTo(w * 0.16f, h * 0.50f)
-            cubicTo(w * 0.32f, h * 0.28f, w * 0.68f, h * 0.28f, w * 0.84f, h * 0.50f)
-            cubicTo(w * 0.68f, h * 0.72f, w * 0.32f, h * 0.72f, w * 0.16f, h * 0.50f)
-            close()
-        }
-        drawPath(eye, Color(0xFF0284C7), style = Stroke(width = w * 0.08f))
-        drawCircle(Color(0xFF38BDF8), radius = w * 0.14f, center = Offset(w * 0.50f, h * 0.50f))
-        drawCircle(Color.White, radius = w * 0.06f, center = Offset(w * 0.48f, h * 0.48f))
-    }
+fun HybridAnalysisLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_hybridanalysis, "Hybrid Analysis", modifier)
 }
 
-@Composable
-fun MetaDefenderLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFF1E293B), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
-        // OPSWAT interconnected nodes (Orange + Blue)
-        val p1 = Offset(w * 0.50f, h * 0.24f)
-        val p2 = Offset(w * 0.24f, h * 0.70f)
-        val p3 = Offset(w * 0.76f, h * 0.70f)
-        drawLine(Color.White.copy(alpha = 0.5f), p1, p2, strokeWidth = w * 0.05f)
-        drawLine(Color.White.copy(alpha = 0.5f), p2, p3, strokeWidth = w * 0.05f)
-        drawLine(Color.White.copy(alpha = 0.5f), p3, p1, strokeWidth = w * 0.05f)
-        drawCircle(Color(0xFFEA580C), radius = w * 0.12f, center = p1)
-        drawCircle(Color(0xFF3B82F6), radius = w * 0.12f, center = p2)
-        drawCircle(Color(0xFF10B981), radius = w * 0.12f, center = p3)
-    }
-}
 
 @Composable
-fun AlienVaultLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFF0B192C), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
-        // Orbital globe with cyan pulse ring
-        drawCircle(Color(0xFF0284C7), radius = w * 0.28f, center = Offset(w * 0.50f, h * 0.50f))
-        val ring = Path().apply {
-            moveTo(w * 0.14f, h * 0.60f)
-            cubicTo(w * 0.24f, h * 0.32f, w * 0.76f, h * 0.32f, w * 0.86f, h * 0.40f)
-        }
-        drawPath(ring, Color(0xFF38BDF8), style = Stroke(width = w * 0.07f, cap = StrokeCap.Round))
-    }
+fun MetaDefenderLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_metadefender, "MetaDefender", modifier)
 }
+
+
+@Composable
+fun AlienVaultLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_alienvault, "AlienVault", modifier)
+}
+
 
 @Composable
 fun CirclLogo(modifier: Modifier = Modifier) {
@@ -743,17 +425,10 @@ fun MalwareBazaarLogo(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun FilescanLogo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        drawRoundRect(Color(0xFF9333EA), cornerRadius = CornerRadius(w * 0.26f, h * 0.26f))
-        // Multi-layer radar beams
-        drawCircle(Color.White.copy(alpha = 0.3f), radius = w * 0.32f, center = Offset(w * 0.50f, h * 0.50f), style = Stroke(width = w * 0.05f))
-        drawCircle(Color.White.copy(alpha = 0.6f), radius = w * 0.20f, center = Offset(w * 0.50f, h * 0.50f), style = Stroke(width = w * 0.05f))
-        drawCircle(Color(0xFFA855F7), radius = w * 0.08f, center = Offset(w * 0.50f, h * 0.50f))
-    }
+fun FilescanLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_filescan, "Filescan", modifier)
 }
+
 
 // ---------------------------------------------------------------------------
 // LOCAL SCANNING ENGINES BRAND LOGOS
@@ -1028,68 +703,310 @@ fun AiContentInspectorLogo(modifier: Modifier = Modifier) {
 }
 
 // ---------------------------------------------------------------------------
-// BRAND LOGO DISPATCHER
+// BRAND LOGO DISPATCHER & SQUARE-FIT VENDOR EMBLEMS
 // ---------------------------------------------------------------------------
+
+@Composable
+fun TrustlookLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_trustlook, "Trustlook", modifier)
+}
+
+
+@Composable
+fun TrellixLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_trellix, "Trellix", modifier)
+}
+
+
+@Composable
+fun RisingLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_rising, "Rising", modifier)
+}
+
+
+@Composable
+fun KingsoftLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_kingsoft, "Kingsoft", modifier)
+}
+
+
+@Composable
+fun BkavLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_bkav, "Bkav", modifier)
+}
+
+
+@Composable
+fun EmsisoftLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_emsisoft, "Emsisoft", modifier)
+}
+
+
+@Composable
+fun IkarusLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_ikarus, "Ikarus", modifier)
+}
+
+
+@Composable
+fun K7Logo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_k7, "K7", modifier)
+}
+
+
+@Composable
+fun AntiyLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_antiy, "Antiy", modifier)
+}
+
+
+@Composable
+fun CmcLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_cmc, "CMC", modifier)
+}
+
+
+@Composable
+fun FilseclabLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFF3949AB), cornerRadius = CornerRadius(w * 0.24f, h * 0.24f))
+        // File document with security shield
+        val doc = Path().apply {
+            moveTo(w * 0.28f, h * 0.22f)
+            lineTo(w * 0.56f, h * 0.22f)
+            lineTo(w * 0.72f, h * 0.38f)
+            lineTo(w * 0.72f, h * 0.78f)
+            lineTo(w * 0.28f, h * 0.78f)
+            close()
+        }
+        drawPath(doc, Color.White, style = Stroke(width = w * 0.07f))
+        drawCircle(Color(0xFFFFCA28), radius = w * 0.10f, center = Offset(w * 0.50f, h * 0.54f))
+    }
+}
+
+@Composable
+fun HuorongLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_huorong, "Huorong", modifier)
+}
+
+
+@Composable
+fun WebrootLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_webroot, "Webroot", modifier)
+}
+
+
+@Composable
+fun XcitiumLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_xcitium, "Xcitium", modifier)
+}
+
+
+@Composable
+fun ZillyaLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_zillya, "Zillya", modifier)
+}
+
+
+@Composable
+fun LionicLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_lionic, "Lionic", modifier)
+}
+
+
+@Composable
+fun NanoLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_nano, "NANO", modifier)
+}
+
+
+@Composable
+fun TachyonLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_tachyon, "Tachyon", modifier)
+}
+
+
+@Composable
+fun RocketCyberLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_rocketcyber, "RocketCyber", modifier)
+}
+
+
+@Composable
+fun VaristLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_varist, "Varist", modifier)
+}
+
+
+@Composable
+fun VirusBlokAdaLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFFC2185B), cornerRadius = CornerRadius(w * 0.24f, h * 0.24f))
+        // Triple barrier shield
+        val barrier = Path().apply {
+            moveTo(w * 0.24f, h * 0.32f)
+            lineTo(w * 0.76f, h * 0.32f)
+            moveTo(w * 0.24f, h * 0.50f)
+            lineTo(w * 0.76f, h * 0.50f)
+            moveTo(w * 0.24f, h * 0.68f)
+            lineTo(w * 0.76f, h * 0.68f)
+        }
+        drawPath(barrier, Color.White, style = Stroke(width = w * 0.08f, cap = StrokeCap.Round))
+    }
+}
+
+@Composable
+fun XvirusLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_xvirus, "Xvirus", modifier)
+}
+
+
+@Composable
+fun SystweakLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFF00ACC1), cornerRadius = CornerRadius(w * 0.24f, h * 0.24f))
+        // System tune-up gear emblem
+        drawCircle(Color.White, radius = w * 0.24f, center = Offset(w * 0.50f, h * 0.50f), style = Stroke(width = w * 0.08f))
+        drawCircle(Color.White, radius = w * 0.10f, center = Offset(w * 0.50f, h * 0.50f))
+    }
+}
+
+@Composable
+fun VirItLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_virit, "Vir.IT", modifier)
+}
+
+
+@Composable
+fun ScrutinyLogo(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(Color(0xFF546E7A), cornerRadius = CornerRadius(w * 0.24f, h * 0.24f))
+        drawCircle(Color.White, radius = w * 0.22f, center = Offset(w * 0.46f, h * 0.46f), style = Stroke(width = w * 0.08f))
+        drawLine(Color.White, Offset(w * 0.62f, h * 0.62f), Offset(w * 0.78f, h * 0.78f), strokeWidth = w * 0.09f, cap = StrokeCap.Round)
+    }
+}
+
+@Composable
+fun AuroraLogo(modifier: Modifier = Modifier.size(24.dp)) {
+    OfficialVendorLogo(R.drawable.ic_vendor_aurora, "Aurora", modifier)
+}
+
 
 @Composable
 fun BrandLogoBadge(
     brandKey: String,
     modifier: Modifier = Modifier.size(22.dp)
 ) {
-    when (brandKey) {
-        "VirusTotal" -> VirusTotalLogo(modifier)
-        "Norton", "Symantec" -> NortonLogo(modifier)
-        "Bitdefender" -> BitdefenderLogo(modifier)
-        "Microsoft", "WindowsDefender" -> MicrosoftDefenderLogo(modifier)
-        "Kaspersky" -> KasperskyLogo(modifier)
-        "Avast" -> AvastLogo(modifier)
-        "ESET" -> EsetLogo(modifier)
-        "McAfee" -> McAfeeLogo(modifier)
-        "Sophos" -> SophosLogo(modifier)
-        "Google" -> GoogleProtectLogo(modifier)
-        "TrendMicro" -> TrendMicroLogo(modifier)
-        "Malwarebytes" -> MalwarebytesLogo(modifier)
-        "ClamAV" -> ClamAvLogo(modifier)
-        "DrWeb" -> DrWebLogo(modifier)
-        "QuickHeal" -> QuickHealLogo(modifier)
-        "AhnLab" -> AhnLabLogo(modifier)
-        "Avira" -> AviraLogo(modifier)
-        "HybridAnalysis" -> HybridAnalysisLogo(modifier)
-        "MetaDefender" -> MetaDefenderLogo(modifier)
-        "AlienVault" -> AlienVaultLogo(modifier)
-        "CIRCL" -> CirclLogo(modifier)
-        "MalwareBazaar" -> MalwareBazaarLogo(modifier)
-        "Filescan" -> FilescanLogo(modifier)
-        "ThreatLensLocal" -> ThreatLensLocalLogo(modifier)
-        "ThreatLensPacker" -> ThreatLensPackerLogo(modifier)
-        "ThreatLensCert" -> ThreatLensCertLogo(modifier)
-        "ThreatLensSigDb" -> ThreatLensSigDbLogo(modifier)
-        "YARA" -> YaraLogo(modifier)
-        "Alin", "Alin AI", "Predictive Alin AI" -> AlinAiLogo(modifier)
-        "Vulnerability", "Vulnerability Assessment" -> VulnerabilityLogo(modifier)
-        "DeepCDR", "CDR", "Deep CDR" -> DeepCdrLogo(modifier)
-        "Sandbox", "Adaptive Sandbox" -> AdaptiveSandboxLogo(modifier)
-        "ProactiveDlp", "DLP", "Proactive DLP" -> ProactiveDlpLogo(modifier)
-        "AiContentInspector", "AIC", "AI Content Inspector" -> AiContentInspectorLogo(modifier)
-        "CountryOfOrigin", "Country of Origin" -> CountryOfOriginLogo(modifier)
-        else -> {
-            // High-quality generic fallback
-            val brand = EngineRegistry.getBrand(brandKey)
-            Box(
-                modifier = modifier
-                    .background(
-                        Brush.linearGradient(listOf(brand.primaryColor, brand.accentColor)),
-                        CircleShape
+    val clean = brandKey.trim().lowercase()
+    val drawableRes = when {
+        clean.contains("virustotal") -> R.drawable.ic_vendor_virustotal
+        clean.contains("metadefender") || clean.contains("metascan") -> R.drawable.ic_vendor_metadefender
+        clean.contains("hybridanalysis") || clean.contains("hybrid") -> R.drawable.ic_vendor_hybridanalysis
+        clean.contains("filescan") -> R.drawable.ic_vendor_filescan
+        clean.contains("alienvault") -> R.drawable.ic_vendor_alienvault
+        clean.contains("bitdefender") -> R.drawable.ic_vendor_bitdefender
+        clean.contains("norton") || clean.contains("symantec") || clean.contains("broadcom") -> R.drawable.ic_vendor_norton
+        clean.contains("microsoft") || clean.contains("windowsdefender") || clean.contains("defender") -> R.drawable.ic_vendor_microsoft
+        clean.contains("kaspersky") -> R.drawable.ic_vendor_kaspersky
+        clean.contains("avast") -> R.drawable.ic_vendor_avast
+        clean.contains("avg") -> R.drawable.ic_vendor_avg
+        clean.contains("eset") || clean.contains("nod32") -> R.drawable.ic_vendor_eset
+        clean.contains("mcafee") -> R.drawable.ic_vendor_mcafee
+        clean.contains("sophos") -> R.drawable.ic_vendor_sophos
+        clean.contains("google") || clean.contains("playprotect") -> R.drawable.ic_vendor_google
+        clean.contains("trendmicro") || clean.contains("housecall") -> R.drawable.ic_vendor_trendmicro
+        clean.contains("malwarebytes") -> R.drawable.ic_vendor_malwarebytes
+        clean.contains("clamav") -> R.drawable.ic_vendor_clamav
+        clean.contains("drweb") -> R.drawable.ic_vendor_drweb
+        clean.contains("quickheal") -> R.drawable.ic_vendor_quickheal
+        clean.contains("ahnlab") || clean.contains("v3") -> R.drawable.ic_vendor_ahnlab
+        clean.contains("avira") -> R.drawable.ic_vendor_avira
+        clean.contains("trustlook") -> R.drawable.ic_vendor_trustlook
+        clean.contains("trellix") -> R.drawable.ic_vendor_trellix
+        clean.contains("rising") -> R.drawable.ic_vendor_rising
+        clean.contains("kingsoft") || clean.contains("duba") -> R.drawable.ic_vendor_kingsoft
+        clean.contains("bkav") -> R.drawable.ic_vendor_bkav
+        clean.contains("emsisoft") -> R.drawable.ic_vendor_emsisoft
+        clean.contains("ikarus") -> R.drawable.ic_vendor_ikarus
+        clean.contains("k7") -> R.drawable.ic_vendor_k7
+        clean.contains("antiy") -> R.drawable.ic_vendor_antiy
+        clean.contains("cmc") -> R.drawable.ic_vendor_cmc
+        clean.contains("huorong") -> R.drawable.ic_vendor_huorong
+        clean.contains("webroot") -> R.drawable.ic_vendor_webroot
+        clean.contains("xcitium") || clean.contains("comodo") -> R.drawable.ic_vendor_xcitium
+        clean.contains("zillya") -> R.drawable.ic_vendor_zillya
+        clean.contains("lionic") -> R.drawable.ic_vendor_lionic
+        clean.contains("nano") -> R.drawable.ic_vendor_nano
+        clean.contains("tachyon") -> R.drawable.ic_vendor_tachyon
+        clean.contains("rocketcyber") -> R.drawable.ic_vendor_rocketcyber
+        clean.contains("varist") -> R.drawable.ic_vendor_varist
+        clean.contains("xvirus") -> R.drawable.ic_vendor_xvirus
+        clean.contains("virit") || clean.contains("vir.it") -> R.drawable.ic_vendor_virit
+        clean.contains("aurora") || clean.contains("secureage") -> R.drawable.ic_vendor_aurora
+        clean.contains("crowdstrike") || clean.contains("falcon") -> R.drawable.ic_vendor_crowdstrike
+        clean.contains("sentinel") -> R.drawable.ic_vendor_sentinelone
+        clean.contains("fortinet") || clean.contains("forti") -> R.drawable.ic_vendor_fortinet
+        clean.contains("f-secure") || clean.contains("fsecure") -> R.drawable.ic_vendor_fsecure
+        clean.contains("withsecure") -> R.drawable.ic_vendor_withsecure
+        clean.contains("gdata") || clean.contains("g-data") -> R.drawable.ic_vendor_gdata
+        clean.contains("paloalto") || clean.contains("wildfire") -> R.drawable.ic_vendor_paloalto
+        clean.contains("zonealarm") -> R.drawable.ic_vendor_zonealarm
+        clean.contains("zoner") -> R.drawable.ic_vendor_zoner
+        clean.contains("totaldefense") -> R.drawable.ic_vendor_totaldefense
+        clean.contains("tencent") -> R.drawable.ic_vendor_tencent
+        clean.contains("yandex") -> R.drawable.ic_vendor_yandex
+        clean.contains("alyac") -> R.drawable.ic_vendor_alyac
+        clean.contains("arcabit") -> R.drawable.ic_vendor_arcabit
+        clean.contains("superantispyware") -> R.drawable.ic_vendor_superantispyware
+        clean.contains("vipre") -> R.drawable.ic_vendor_vipre
+        clean.contains("cynet") -> R.drawable.ic_vendor_cynet
+        else -> null
+    }
+
+    if (drawableRes != null) {
+        OfficialVendorLogo(drawableRes, brandKey, modifier)
+    } else {
+        when (brandKey) {
+            "ThreatLensLocal" -> ThreatLensLocalLogo(modifier)
+            "ThreatLensPacker" -> ThreatLensPackerLogo(modifier)
+            "ThreatLensCert" -> ThreatLensCertLogo(modifier)
+            "ThreatLensSigDb" -> ThreatLensSigDbLogo(modifier)
+            "YARA" -> YaraLogo(modifier)
+            "Alin", "Alin AI", "Predictive Alin AI" -> AlinAiLogo(modifier)
+            "Vulnerability", "Vulnerability Assessment" -> VulnerabilityLogo(modifier)
+            "DeepCDR", "CDR", "Deep CDR" -> DeepCdrLogo(modifier)
+            "Sandbox", "Adaptive Sandbox" -> AdaptiveSandboxLogo(modifier)
+            "ProactiveDlp", "DLP", "Proactive DLP" -> ProactiveDlpLogo(modifier)
+            "AiContentInspector", "AIC", "AI Content Inspector" -> AiContentInspectorLogo(modifier)
+            "CountryOfOrigin", "Country of Origin" -> CountryOfOriginLogo(modifier)
+            else -> {
+                val vendor = SubEngineRegistry.getVendorBrand(brandKey)
+                Canvas(modifier = modifier) {
+                    val w = size.width
+                    val h = size.height
+                    drawRoundRect(
+                        color = vendor.color,
+                        cornerRadius = CornerRadius(w * 0.24f, h * 0.24f)
                     )
-                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = brand.icon,
-                    contentDescription = brandKey,
-                    tint = Color.White,
-                    modifier = Modifier.size(13.dp)
-                )
+                    val shield = Path().apply {
+                        moveTo(w * 0.50f, h * 0.22f)
+                        lineTo(w * 0.74f, h * 0.34f)
+                        lineTo(w * 0.74f, h * 0.58f)
+                        cubicTo(w * 0.74f, h * 0.74f, w * 0.50f, h * 0.84f, w * 0.50f, h * 0.84f)
+                        cubicTo(w * 0.50f, h * 0.84f, w * 0.26f, h * 0.74f, w * 0.26f, h * 0.58f)
+                        lineTo(w * 0.26f, h * 0.34f)
+                        close()
+                    }
+                    drawPath(shield, Color.White, style = Stroke(width = w * 0.08f))
+                }
             }
         }
     }

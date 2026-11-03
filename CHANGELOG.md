@@ -4,6 +4,38 @@ All notable changes to ThreatLens are documented in this file.
 
 ---
 
+## [v1.5.7] - 2026-11-03
+### 🦁 61 Official Brand Logos, Storage Exhaustion DoS Heuristics & Multi-Scanner Consensus Reconciliation
+* **Exact Official Square-Fit Brand Logos (Multi-Pass Consensus)**: Verified and deployed 61 authentic, high-resolution 256x256 square brand logos into `app/src/main/res/drawable/ic_vendor_*.png` without distortion or canvas approximation. Direct user-reported fixes include:
+  - **Rising**: Official Rising lion head mascot emblem (`Icon_512.png`).
+  - **Avast**: Neutral, timeless Avast brand emblem (removed "2026" promotional banner).
+  - **AlienVault OTX**: Official AlienVault green/black alien head emblem (replaced contributor avatar).
+  - **CrowdStrike**: High-resolution official red Falcon emblem.
+  - **Tachyon**: Official TACHYON Mobile Security brand icon.
+  - **Zillya!**: Official Zillya! Antivirus brand icon.
+  - **Lionic**: Official Lionic Antivirus shield emblem.
+  - **Tencent**: Official Tencent penguin mascot emblem.
+  - **K7 Security**: Mounted on high-contrast clean card surface to ensure crisp visibility against dark backgrounds.
+* **Engine Edition Badges & Context Notes**:
+  - **MetaDefender**: Tagged with `[ENTERPRISE GATEWAY]` badge; includes context note explaining perimeter server daemons focus on Windows PE/macros and exclude Android mobile PUA/adware by default.
+  - **VirusTotal**: Tagged with `[MOBILE & CLOUD ML]` badge highlighting dedicated mobile ML classifiers (BitDefenderFalx, Trustlook).
+  - **Multi-Scanner Divergence Reconciliation**: Dynamic notice automatically reconciles cases where mobile engines flag APK adware/PUA while enterprise gateway daemons return clean.
+* **Storage Exhaustion Loops / Denial-of-Service Heuristics (`StorageFiller`)**:
+  - Implemented targeted bytecode rules for `SC_INSUFFICIENT_STORAGE` (score 80) and `fillBuffer` (score 75) mapped to `DoS.AndroidOS.StorageFiller`.
+  - Manifest heuristic flag (`isLikelyStorageExhaustion`) catches unverified background apps demanding full storage write access (`WRITE_EXTERNAL_STORAGE` / `MANAGE_EXTERNAL_STORAGE`) without a launcher activity.
+* **MetaDefender Advisory Weightage on Android Executables**:
+  - When MetaDefender returns a clean verdict for Android APKs/DEX files, it contributes at most 1 advisory gateway vote to `totalCount` instead of 32, preventing perimeter server policies from crushing mobile detections.
+  - In `HybridThreatScorer.kt`, MetaDefender 0/32 clean verdicts are barred from diluting on-device Android heuristic findings.
+* **Curated Mobile Malware Corpus Preloaded (13 Academic & Research Datasets)**:
+  - Preloaded 80 verified mobile malware signatures into `LocalSignatureDatabase.kt` and `definitions/signatures.json` covering Banking Trojans (Anatsa, TeaBot, SharkBot, Cerberus, FluBot, Godfather, SOVA, BRATA, Octo, FakeBanker), Commercial Spyware/RATs (SpyNote, AhMyth, Pegasus IOCs, Dendroid, Exodus, Malbus, Comebot), Ransomware (SimpleLocker, DoubleLocker, WannaLocker, Koler, DSEncrypt), Persistent Droppers/Rootkits (xHelper, Towelroot, Triada, GhostPush, Rootnik), and DoS Storage Exhaustion (`StorageFiller`).
+  - Registered 13 academic and intelligence datasets in `DATABASE_SOURCES`: `ashishb/android-malware`, `Android Malware Genome Project (MalGenome)`, `The Drebin Dataset (NDSS)`, `Canadian Institute for Cybersecurity (CIC-AndMal)`, `Malware-Hunter MH-100K`, `MASCOT-Android (arXiv:2606.16072)`, `Droidware (Mendeley Data)`, `AndroZoo`, `Abuse.ch MalwareBazaar`, `CIRCL & MISP`, `MITRE ATT&CK Mobile`, `VX-Underground`, and `ThreatLens YARA Engine`.
+* **Dynamic Database Update & Hot-Reloading Mechanism**:
+  - Implemented thread-safe `ConcurrentHashMap` in `LocalSignatureDatabase` allowing live, hot registration of new threat signatures without app restarts.
+  - Upgraded `SignatureUpdateService.kt` with dual-mirror fallback synchronization, strict 64-hex SHA-256 validation, local encrypted persistence (`threatlens_signatures.json`), and reactive `totalSignatures` StateFlows.
+  - Connected real-time reactive counters and expandable dataset source explorer directly in `SettingsScreen.kt`.
+
+---
+
 ## [v1.5.6] - 2026-11-03
 ### 🚀 Real-Time Safe Scan Notifications & Direct Result Sheet Navigation
 * **Real-Time Safe Scan Notifications ("Sense of Security")**: When newly downloaded files or newly installed apps are scanned and verified clean, ThreatLens now posts a reassuring notification (`✓ Verified Safe: [App / File Name] • No threats detected • Verified safe to use`) so users know the real-time background shield is actively protecting them.

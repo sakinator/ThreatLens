@@ -207,12 +207,18 @@ class CloudThreatAggregator(
                 successfulEngines.add("MetaDefender")
                 if (md.totalEngines > 0) {
                     sources.add("MetaDefender (${md.enginesFlagged}/${md.totalEngines})")
-                    flaggedCount += md.enginesFlagged
-                    totalCount += md.totalEngines
-                    if (md.enginesFlagged >= 3) {
-                        highestScore = maxOf(highestScore, 95)
-                    } else if (md.threatFound) {
-                        highestScore = maxOf(highestScore, 45)
+                    if (md.enginesFlagged > 0) {
+                        flaggedCount += md.enginesFlagged
+                        totalCount += md.totalEngines
+                        if (md.enginesFlagged >= 3) {
+                            highestScore = maxOf(highestScore, 95)
+                        } else if (md.threatFound) {
+                            highestScore = maxOf(highestScore, 45)
+                        }
+                    } else {
+                        // Clean verdict from Enterprise Gateway daemons contributes at most 1 advisory vote to totalCount
+                        // ensuring perimeter server policies do not dilute dedicated mobile Android engines.
+                        totalCount += 1
                     }
                     if (detectedFamily == null && !md.threatName.isNullOrBlank()) {
                         detectedFamily = md.threatName

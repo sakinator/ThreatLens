@@ -56,11 +56,19 @@ object HybridThreatScorer {
         } else {
             // Cloud engines successfully responded:
             val cloudScore = cloudVerdict.cloudScore
-            if (cloudVerdict.totalEngines >= 30 && cloudVerdict.enginesFlagged == 0 && localScore < 60) {
-                // False Positive Mitigation: 30+ reputable cloud AV engines confirmed clean.
+            val isMetaDefenderOnlyClean = cloudVerdict.sources.any { it.contains("MetaDefender", ignoreCase = true) } &&
+                                          cloudVerdict.sources.none { it.contains("VirusTotal", ignoreCase = true) }
+            val effectiveCleanEngines = if (isMetaDefenderOnlyClean) minOf(cloudVerdict.totalEngines, 1) else cloudVerdict.totalEngines
+
+            if (effectiveCleanEngines >= 30 && cloudVerdict.enginesFlagged == 0 && localScore < 60) {
+                // False Positive Mitigation: 30+ reputable mobile & cloud AV engines confirmed clean.
                 // Mitigates mild local heuristic noise safely down.
-                reasons.add("Verified Clean across ${cloudVerdict.totalEngines} cloud threat engines")
+                reasons.add("Verified Clean across $effectiveCleanEngines cloud threat engines")
                 (localScore * 0.30).toInt()
+            } else if (isMetaDefenderOnlyClean && cloudVerdict.enginesFlagged == 0) {
+                // MetaDefender enterprise gateway clean verdict (focused on Windows PE/macros) is advisory and does NOT dilute Android mobile on-device heuristics
+                reasons.add("MetaDefender Enterprise Gateway reported clean (Android executable policies advisory)")
+                localScore
             } else if (localScore >= 75) {
                 // Severe on-device finding (e.g. Banking Overlay abuse): never crushed down
                 maxOf(localScore, cloudScore)

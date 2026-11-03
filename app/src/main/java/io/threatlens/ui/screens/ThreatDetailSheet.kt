@@ -531,14 +531,50 @@ fun ThreatDetailSheet(
                                     EngineLogoIcon(sourceName, modifier = Modifier.size(22.dp))
                                     Spacer(modifier = Modifier.width(10.dp))
 
-                                    Text(
-                                        text = sourceName,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp,
-                                        maxLines = 2,
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.weight(1f)
-                                    )
+                                    ) {
+                                        Text(
+                                            text = sourceName,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        if (sourceName == "MetaDefender") {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                color = CyberAmber.copy(alpha = 0.15f),
+                                                shape = RoundedCornerShape(4.dp),
+                                                border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberAmber.copy(alpha = 0.4f))
+                                            ) {
+                                                Text(
+                                                    text = "ENTERPRISE GATEWAY",
+                                                    color = CyberAmber,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        } else if (sourceName == "VirusTotal") {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                color = NeonCyan.copy(alpha = 0.15f),
+                                                shape = RoundedCornerShape(4.dp),
+                                                border = androidx.compose.foundation.BorderStroke(0.8.dp, NeonCyan.copy(alpha = 0.4f))
+                                            ) {
+                                                Text(
+                                                    text = "MOBILE & CLOUD ML",
+                                                    color = NeonCyan,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -697,7 +733,8 @@ fun ThreatDetailSheet(
                                                 "CIRCL Hashlookup" -> "Validated against NIST National Software Reference Library (NSRL) and CIRCL CERT feeds."
                                                 "VirusTotal" -> "Multi-scanner aggregating 70+ industry antivirus scanning engines."
                                                 "MalwareBazaar" -> "Abuse.ch community database collecting known malware samples and signatures."
-                                                "MetaDefender" -> "OPSWAT multiscanning cloud verifying binaries against commercial vendor engines."
+                                                "MetaDefender" -> "OPSWAT Enterprise Gateway Edition: Multiscanning via Linux server daemons (Windows PE/macro perimeter focus; excludes Android mobile PUA/adware by default)."
+                                                "VirusTotal" -> "Google Cloud / Chronicle Mobile & Cloud ML Edition: Aggregates 70+ industry engines including mobile ML classifiers (BitDefenderFalx, Trustlook)."
                                                 "Hybrid Analysis" -> "Falcon Sandbox behavioral analysis providing deep dynamic detonation."
                                                 "Kaspersky OpenTIP" -> "Kaspersky Threat Intelligence Portal enterprise hash intelligence."
                                                 "Filescan.io" -> "Next-generation automated malware analysis and IOC extraction."
@@ -707,6 +744,61 @@ fun ThreatDetailSheet(
                                             fontSize = 11.sp,
                                             lineHeight = 15.sp
                                         )
+
+                                        if (sourceName == "MetaDefender") {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Surface(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                color = CyberAmber.copy(alpha = 0.08f),
+                                                shape = RoundedCornerShape(8.dp),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, CyberAmber.copy(alpha = 0.35f))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Info,
+                                                        contentDescription = "Enterprise Gateway Note",
+                                                        tint = CyberAmber,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = "Enterprise Gateway Note: MetaDefender multi-scans using Linux server daemons with a primary perimeter focus on Windows PE executables & macros. Android mobile PUA/adware heuristics are excluded by default.",
+                                                        color = CyberAmber,
+                                                        fontSize = 10.sp,
+                                                        lineHeight = 14.sp
+                                                    )
+                                                }
+                                            }
+
+                                            val vtVerdict = report.engineVerdictMap["VirusTotal"] ?: ""
+                                            val isVtFlagged = vtVerdict.contains("Flagged", ignoreCase = true) || vtVerdict.contains("Malicious", ignoreCase = true)
+                                            if (isClean && isVtFlagged) {
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Surface(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    color = NeonCyan.copy(alpha = 0.08f),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.35f))
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(text = "⚡", fontSize = 14.sp)
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text(
+                                                            text = "Multi-Scanner Divergence Reconciled: VirusTotal mobile engines (e.g., BitDefenderFalx ML, Trustlook) flagged mobile PUA/adware threats, whereas MetaDefender enterprise server gateways operate under perimeter Windows PE policies.",
+                                                            color = NeonCyan,
+                                                            fontSize = 10.sp,
+                                                            lineHeight = 14.sp
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
 
                                         val webReportUrl = CloudThreatAggregator.getEngineWebReportUrl(sourceName, report.sha256)
                                         if (!webReportUrl.isNullOrBlank()) {

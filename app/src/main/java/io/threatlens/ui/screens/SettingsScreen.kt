@@ -84,6 +84,7 @@ fun SettingsScreen(
     val isUpdatingSignatures by SignatureUpdateService.isUpdating.collectAsState()
     val signatureStatus by SignatureUpdateService.status.collectAsState()
     val signatureVersion by SignatureUpdateService.signatureVersion.collectAsState()
+    val totalSignatures by SignatureUpdateService.totalSignatures.collectAsState()
     val lastUpdateTimestamp by SignatureUpdateService.lastUpdateTimestamp.collectAsState()
     var autoUpdateEnabled by remember { mutableStateOf(SignatureUpdateService.isAutoUpdateEnabled(context)) }
     var showSourcesDetail by remember { mutableStateOf(false) }
@@ -408,7 +409,7 @@ fun SettingsScreen(
                                 fontSize = 11.sp
                             )
                             Text(
-                                text = "${LocalSignatureDatabase.totalSignatures} Verified Signatures",
+                                text = "$totalSignatures Verified Signatures",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
