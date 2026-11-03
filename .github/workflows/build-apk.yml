@@ -59,29 +59,19 @@ jobs:
           path: release_output/ThreatLens.apk
           if-no-files-found: error
 
+      - name: Extract Release Notes from Changelog
+        run: |
+          python3 tools/extract_release_notes.py "${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.5.6' }}"
+
       - name: Create or Update GitHub Release with APK
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.3.0' }}
-          name: ThreatLens ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.3.0' }} — Real App Identity, VPN Defense & Enhanced Controls
+          tag_name: ${{ github.ref_name }}
+          name: ThreatLens ${{ github.ref_name }}
           draft: false
           prerelease: false
           files: release_output/ThreatLens.apk
-          body: |
-            ## 🛡️ ThreatLens Release
-            
-            ### 🚀 Highlights:
-            * **Real Application Identity & App Logos**: Displays human-readable app titles (e.g. WhatsApp, Google Chrome) instead of generic `base.apk`, with actual Android app icons loaded dynamically and detected APK names preserved.
-            * **Uninstall vs Delete Action Separation**: Distinguishes between installed apps and downloaded APK files. Installed apps trigger Android's system uninstaller, while downloaded APKs are permanently deleted from storage. Misleading "quarantine" labels eliminated.
-            * **Confirmation Dialogs & Action Toasts**: Added confirmation popups before uninstalling apps or deleting files to prevent accidental removal, complete with instant Toast notifications.
-            * **Full Scan Threat Details & Multi-Source Engine Breakdown**: Clicking any threat in Full Scan opens a comprehensive bottom sheet detailing exact verdicts from each individual engine (ThreatLens Local Engine, MalwareBazaar, VirusTotal, MetaDefender, Hybrid Analysis, Kaspersky OpenTIP, Filescan.io).
-            * **Scan Progress & Device Risk Layout**: Active percentage and item count gauge remains visible during scans. When threats are flagged in-progress, a prominent "Device at Risk" alert sits neatly under the progress ring, taking full space only upon scan completion.
-            * **Pause, Resume & Abort Controls**: On-demand system scans can now be paused, resumed, or cleanly aborted at any moment.
-            * **API Keys Validation & Portal Hyperlinks**: Each key setting includes a direct "Get key here ↗" portal hyperlink, individual "Validate & Save" testing with live HTTP status indicators, and a bulk "SAVE & VALIDATE ALL KEYS" option.
-            * **Fresh Regional News for India**: Upgraded geolocation to HTTPS and integrated CERT-In, digital arrest, and Indian banking fraud feeds (`when:7d`, `hl=en-IN`), displaying human-friendly relative time ("2h ago", "Today").
-            * **Fixed VPN Crash on Android 14**: Added `FOREGROUND_SERVICE_SPECIAL_USE` permissions, defensive service wrappers, and standard subnet prefixing (`10.111.222.1/24`).
-            * **Minimalist Blue Shield Logo**: Sleek, modern electric blue and neon cyan shield on deep cyber black background (`#070B14`) matching app internals.
-            * **Signed Release Build**: Permanent keystore signature (`release.jks`) for seamless update over previous installations.
+          body_path: release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

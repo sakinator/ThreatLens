@@ -10,7 +10,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg" alt="License"/></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android_8.0+-00E5FF.svg" alt="Platform"/></a>
   <a href="#zero-idle-battery-performance"><img src="https://img.shields.io/badge/Battery-Zero--Idle_Drain-brightgreen.svg" alt="Battery Mode"/></a>
-  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-244%2F244_Passing-brightgreen.svg" alt="Regression Tests"/></a>
+  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-302%2F302_Passing-brightgreen.svg" alt="Regression Tests"/></a>
 </p>
 
 **ThreatLens** is an open-source, hybrid Android cybersecurity system combining:
@@ -129,8 +129,24 @@ When an untrusted link or malicious APK host is intercepted:
 * **Offline Ransomware Pattern Recognition**: Flags crypto-ransomware and screen-locker patterns (combining storage traversal, cryptographic file encryption, and device admin / lockout overrides) locally without requiring cloud engines.
 * **Heuristic Score Capping & AI Assessment Alignment**: Unconfirmed behavioral patterns and minor cloud vendor divergence (e.g. 1-3 engines on VirusTotal) are capped at 50..55/100 (`SUSPICIOUS` / `HIGH_RISK`), strictly aligning with the AI Executive Threat Assessment (*"Not a confirmed destructive Trojan"*). True `MALICIOUS (75..100)` is reserved for confirmed Trojan signatures or strong multi-vendor consensus.
 * **Reassuring, Calm Remediation Guidance**: Non-alarmist, informative advisories for modded utilities and unconfirmed heuristics; urgent removal steps reserved exclusively for confirmed malware.
-* **Redesigned Scanner Tab Cards**: Generous, unconstrained horizontal space eliminating awkward single-letter word wrapping, accompanied by dedicated provenance/detection badge rows and a meaningful 1-line finding rationale.
-* **Enhanced Virus Signature Database Card**: Structured layout with authentic brand logos for all integrated offline engines (ClamAV, YARA, ThreatLens DB, CIRCL).
+
+---
+
+### 🌐 13. Multi-Cloud Dynamic Consensus Grid & Smart Quota Economy (v1.5.4 - v1.5.5)
+* **Federated Multi-Cloud Intelligence**: Aggregates live hash reputation from VirusTotal, MetaDefender Cloud, Filescan.io, Hybrid Analysis (Falcon Sandbox), Kaspersky OpenTIP, MalwareBazaar, AlienVault OTX, and CIRCL Hashlookup.
+* **Dynamic Quorum Rebalancing**: If VirusTotal or any other cloud engine is offline, rate-limited (HTTP 429), or missing an API key, ThreatLens dynamically recalibrates consensus across available online providers without diluting scores or raising false alarms.
+* **Multi-Cloud Corroboration**: Confirmed malware verdicts require multi-provider corroboration or verified signature matches, eliminating the single-AV false-positive trap on legitimate applications.
+* **Consensus-Clean Suppression**: Clean consensus across online cloud engines suppresses noisy local heuristics to `0–15/100` for verified store applications.
+* **MetaDefender Active Module Filtering**: Inactive modules are cleanly hidden; active modules clearly show clean vs detected status with commercial AV vendor breakdowns (Avira, AhnLab, Bitdefender).
+* **Smart Daily Rate Limit Quota Saver**: Preserves daily API lookups on verified safe store apps while dynamically triggering deep sandbox analysis only on suspicious sideloaded files. Includes interactive "Save Quota" vs "Always Query" radio controls in Settings.
+
+---
+
+### 🔔 14. Real-Time Safe Scan Notifications & Direct Forensic Navigation (v1.5.6)
+* **Real-Time Safe Scan Notifications ("Sense of Security")**: When newly downloaded files or newly installed apps are scanned and verified clean, ThreatLens posts a reassuring notification (`✓ Verified Safe: [App / File Name] • No threats detected`) so users know the real-time background shield is actively protecting them.
+* **Quiet Bulk Scans**: Full system audits of 100–200+ installed applications remain quiet and do not flood the notification shade with clean files.
+* **Direct Forensic Sheet Navigation**: Tapping any scan notification (malware alert or safe verification) directly opens ThreatLens, switches to the Dashboard, retrieves the scan report from cache in <1ms, and automatically expands the `ThreatDetailSheet` with the full multi-engine breakdown.
+* **Focused Android Executable Filter**: Gated real-time scanning strictly to Android-executable and exploitable vectors (`.apk`, `.dex`, `.jar`, `.so`, `.bin`, and installed packages), ignoring non-executable formats (`.com`, `.exe`, `.txt`, `.jpg`, `.mp3`) to preserve device battery and CPU.
 
 ---
 
@@ -168,7 +184,7 @@ When an untrusted link or malicious APK host is intercepted:
 
 ## 🧪 Regression Testing Suite
 
-ThreatLens features a comprehensive, 22-suite automated regression audit tool validating all core security capabilities:
+ThreatLens features a comprehensive, 28-suite automated regression audit tool validating all core security capabilities:
 
 ```bash
 # Run full automated regression suite on PC:
@@ -186,7 +202,7 @@ python tools/run_regression_suite.py
 ▶ SUITE 5:  Heuristic & Signature Engine
 ▶ SUITE 6:  Multi-LLM & Offline Threat Explainer Fallbacks
 ▶ SUITE 7:  Multi-Cloud Intelligence & Sub-Engine Vendor Registry
-▶ SUITE 8:  Static Kotlin Codebase Integrity & Verification (74 files)
+▶ SUITE 8:  Static Kotlin Codebase Integrity & Verification (75 files)
 ▶ SUITE 9:  AI Analysis Formatting & Inactive Engine Isolation
 ▶ SUITE 10: Cisco ClamAV Open-Source Rule & Hash Engine
 ▶ SUITE 11: VirusTotal YARA Mobile Threat Pattern Rules
@@ -203,8 +219,12 @@ python tools/run_regression_suite.py
 ▶ SUITE 22: v1.5.0 Multi-Store Provenance, Whitelist & Fast Scan Cache
 ▶ SUITE 23: v1.5.1 Authentic Brand Logos, Heuristic Score Reconciliation & Offline Ransomware
 ▶ SUITE 24: v1.5.2 False-Positive Elimination, Dynamic Counts, Scan Export & Sorting
+▶ SUITE 25: v1.5.3 Cloud API Key Validation & Endpoint Hardening
+▶ SUITE 26: v1.5.4 Smart Daily Rate Limit Quota Saver & Radio Controls
+▶ SUITE 27: v1.5.5 Multi-Cloud Dynamic Consensus, MetaDefender Active Modules & Engine Brand Logos
+▶ SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing
 ----------------------------------------------------------------------
-Regression Result: 244/244 Tests Passed (0 failed)
+Regression Result: 302/302 Tests Passed (0 failed)
 ----------------------------------------------------------------------
 ```
 

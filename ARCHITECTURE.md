@@ -94,32 +94,44 @@ Audits the device security posture against active Man-in-the-Middle attacks:
 
 ---
 
-## 4. Hybrid Threat Scoring Model (0 - 100)
+## 4. Dynamic Multi-Cloud Consensus & Scoring Model (0 - 100)
 
-$$\text{Final Threat Score} = \min\left(100, W_{\text{local}} \cdot S_{\text{local}} + W_{\text{cloud}} \cdot S_{\text{cloud}}\right)$$
+ThreatLens implements a **fault-tolerant, federated consensus grid** instead of rigid static weights:
 
-### Weights and Signals:
-* **Local Known Signature (Override)**: An exact SHA-256 match in the offline known-malware database results in an **immediate 100 score** and `MALICIOUS` verdict without requiring network queries.
-* **Cloud High-Confidence (Override)**: If $\ge 4$ VirusTotal engines or MalwareBazaar report malicious, score $\implies 100$.
-* **Manifest & Permission Heuristics ($W = 0.45$)**:
-  * `BIND_ACCESSIBILITY_SERVICE` + `SYSTEM_ALERT_WINDOW` (+45 pts)
-  * `RECEIVE_SMS` + `INTERNET` (+30 pts)
-  * `REQUEST_INSTALL_PACKAGES` + `RECEIVE_BOOT_COMPLETED` (+25 pts)
-  * `BIND_DEVICE_ADMIN` (+35 pts)
-  * Stealth / No Launcher Activity (+20 pts)
-* **Cloud Reputation ($W = 0.55$)**:
-  * VirusTotal Public API (v3)
-  * MalwareBazaar (Abuse.ch)
-  * Hybrid Analysis (Falcon Sandbox)
-  * Kaspersky OpenTIP
-  * MetaDefender Cloud
-  * Filescan.io
+$$\text{Final Threat Score} = \mathcal{F}\left(S_{\text{local}}, S_{\text{cloud}}, \mathcal{Q}_{\text{online}}\right)$$
+
+### Key Scoring Branches:
+1. **Confirmed Malware Corroboration**:
+   - Elevated to **`75 – 100` (`MALICIOUS`)** when confirmed by:
+     - Local database match (ThreatLens Offline DB, Cisco ClamAV CVD rule, or VirusTotal YARA mobile rule match).
+     - Multi-cloud corroboration: $\ge 2$ independent cloud providers flag threat (e.g. VirusTotal + MetaDefender, or MetaDefender + Filescan).
+     - Single cloud high confidence: A cloud engine reports a threat score $\ge 85$ or MetaDefender Metascan flags $\ge 6$ individual commercial AV engines.
+2. **Consensus-Clean Suppression (False Positive Elimination)**:
+   - When online cloud scanners respond with 0 threats (`flaggingCloudProviders.isEmpty()`):
+     - Verified Play Store apps: score reduced to **`0` (`SAFE`)**.
+     - Sideloaded apps with local heuristic noise: suppressed to **`0 – 15` (`SAFE`)** or **`0 – 30`** (if uncorroborated permissions exceed 60).
+3. **Single-Cloud Divergence Calibration**:
+   - When only 1 cloud provider flags low-level detections (1–4 noisy engines):
+     - Calibrated to **`25 – 55` (`SUSPICIOUS` / `HIGH_RISK`)** rather than triggering destructive false alarms.
+4. **Pure On-Device Graceful Degradation (Offline Mode / Quota Preserved)**:
+   - When zero cloud engines respond (Airplane mode or API rate limits preserved):
+     - Confirmed local signatures score **`75 – 100` (`MALICIOUS`)**.
+     - Pure behavioral heuristics without signature corroboration are hard-capped at **`50` (`HIGH_RISK` / `SUSPICIOUS`)**, guaranteeing that uncorroborated patterns can never generate a 100/100 false alarm.
+
+### Online Grid Quorum:
+* **VirusTotal Public API (v3)** (Multi-scanner aggregating 70+ industry engines)
+* **MetaDefender Cloud v4** (Multiscanning with modular inspection: Avira, AhnLab, Bitdefender, Alin AI, Vulnerability Assessment, Deep CDR, Adaptive Sandbox)
+* **Filescan.io** (Automated static analysis, IOC extraction & reputation lookup)
+* **Hybrid Analysis** (Falcon Dynamic Detonation Sandbox)
+* **Kaspersky OpenTIP** (Threat Intelligence Portal enterprise hash intelligence)
+* **MalwareBazaar** (Abuse.ch community database collecting known malware samples)
+* **AlienVault OTX & CIRCL Hashlookup** (Zero-key public threat pulses & NIST NSRL hash verification)
 
 ### Verdict Thresholds:
 * **0 – 24**: **SAFE (Clean)**
-* **25 – 49**: **SUSPICIOUS (Adware / PUP / High Risk Permissions)**
-* **50 – 74**: **HIGH RISK (Potential Trojan / Stealth Dropper)**
-* **75 – 100**: **CRITICAL MALWARE (Banking Trojan / Spyware / Ransomware)**
+* **25 – 49**: **SUSPICIOUS (Adware / PUP / Minor Cloud Divergence)**
+* **50 – 74**: **HIGH RISK (Potential Trojan / Sideload Dropper)**
+* **75 – 100**: **CRITICAL MALWARE (Confirmed Banking Trojan / Spyware / Ransomware)**
 
 ---
 
@@ -131,7 +143,15 @@ When a threat is detected, ThreatLens translates obscure vendor names into actio
 
 ---
 
-## 6. Permanent Signature Keystore & Update Continuity
+## 6. Real-Time Notifications & Direct Result Sheet Navigation
+
+1. **Focused Android Executable Filter**: The real-time kernel inotify watcher strictly intercepts Android-executable vectors (`.apk`, `.dex`, `.jar`, `.so`, `.bin`, and installed packages). Non-executable files (`.jpg`, `.mp4`, `.pdf`, `.txt`, `.com`) are dropped in <0.05ms to preserve battery.
+2. **Sense-of-Security Reassuring Notifications**: Clean real-time download and install scans trigger a reassuring `✓ Verified Safe: [App / File Name]` notification. Bulk full-system audits remain quiet and avoid notification shade spam.
+3. **Direct Forensic Navigation**: Tapping any scan notification (malware alert or safe verification) routes directly to `DashboardScreen` and automatically expands the `ThreatDetailSheet` with live multi-engine telemetry.
+
+---
+
+## 7. Permanent Signature Keystore & Update Continuity
 
 ThreatLens is signed with a permanent 30-year RSA-4096 keystore (`keystore/release.jks`) configured identically for both `release` and `debug` build types. This guarantees that:
 * Every new version installs directly over existing installations without signature collision (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
