@@ -1133,6 +1133,9 @@ object RealtimeScanCoordinator {
 
         if (finalReport.severity == ThreatSeverity.MALICIOUS || finalReport.severity == ThreatSeverity.HIGH_RISK) {
             ThreatNotificationManager.showThreatAlert(context, finalReport)
+        } else if (!isFullScan) {
+            // Realtime scanner: download or package install verified clean!
+            ThreatNotificationManager.showSafeScanNotification(context, finalReport)
         }
         return@withContext finalReport
     }

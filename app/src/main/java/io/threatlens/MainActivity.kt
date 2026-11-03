@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import io.threatlens.ui.screens.DashboardScreen
 import io.threatlens.ui.screens.FullScanScreen
 import io.threatlens.ui.screens.NewsScreen
@@ -32,6 +35,7 @@ import io.threatlens.ui.viewmodel.MainViewModel
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private val currentTabState = mutableStateOf("dashboard")
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -47,7 +51,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ThreatLensTheme {
-                var currentTab by remember { mutableStateOf("dashboard") }
+                var currentTab by currentTabState
 
                 Scaffold(
                     containerColor = CyberBlack,
@@ -215,12 +219,40 @@ class MainActivity : ComponentActivity() {
         val threatId = intent?.getStringExtra("THREAT_ID")
         val threatSha256 = intent?.getStringExtra("THREAT_SHA256")
         if (threatId != null || threatSha256 != null) {
+            currentTabState.value = "dashboard"
+
+            // 1. Check in-memory real-time cache first (<1ms)
+            val cached = if (!threatSha256.isNullOrBlank()) {
+                io.threatlens.core.realtime.ScanThrottleManager.getCachedReport(threatSha256)
+            } else null
+
+            if (cached != null) {
+                viewModel.selectReport(cached)
+                return
+            }
+
+            // 2. Check current ViewModel scansList
             val matched = viewModel.scansList.value.firstOrNull {
                 (threatId != null && it.id == threatId) ||
                 (threatSha256 != null && it.sha256.equals(threatSha256, ignoreCase = true))
             }
             if (matched != null) {
                 viewModel.selectReport(matched)
+                return
+            }
+
+            // 3. Fallback: Observe StateFlow to select the moment it arrives
+            lifecycleScope.launch {
+                viewModel.scansList.collect { list ->
+                    val lateMatch = list.firstOrNull {
+                        (threatId != null && it.id == threatId) ||
+                        (threatSha256 != null && it.sha256.equals(threatSha256, ignoreCase = true))
+                    }
+                    if (lateMatch != null) {
+                        viewModel.selectReport(lateMatch)
+                        cancel()
+                    }
+                }
             }
         }
     }

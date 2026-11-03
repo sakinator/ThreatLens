@@ -21,6 +21,7 @@ object ThreatNotificationManager {
 
     const val SHIELD_CHANNEL_ID = "threatlens_shield_status"
     const val THREAT_ALERT_CHANNEL_ID = "threatlens_threat_alerts"
+    const val SAFE_SCAN_CHANNEL_ID = "threatlens_safe_results"
     const val FOREGROUND_NOTIFICATION_ID = 2001
 
     fun createChannels(context: Context) {
@@ -48,8 +49,19 @@ object ThreatNotificationManager {
                 setShowBadge(true)
             }
 
+            // Reassuring channel for clean realtime download / install verification
+            val safeChannel = NotificationChannel(
+                SAFE_SCAN_CHANNEL_ID,
+                "Realtime Scan Verification",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Reassuring notifications when realtime downloads or installed apps are verified safe"
+                setShowBadge(false)
+            }
+
             manager.createNotificationChannel(shieldChannel)
             manager.createNotificationChannel(alertChannel)
+            manager.createNotificationChannel(safeChannel)
         }
     }
 
@@ -198,6 +210,57 @@ object ThreatNotificationManager {
             .setContentIntent(pendingIntent)
 
         // Attach dynamic app icon to notification
+        val appBitmap = loadAppIconBitmap(context, report)
+        if (appBitmap != null) {
+            builder.setLargeIcon(appBitmap)
+        }
+
+        manager.notify(report.id.hashCode(), builder.build())
+    }
+
+    fun showSafeScanNotification(context: Context, report: ThreatReport) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra("THREAT_ID", report.id)
+            putExtra("THREAT_SHA256", report.sha256)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, report.id.hashCode(), launchIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val displayName = resolveAppDisplayName(context, report)
+        val title = "✓ Verified Safe: $displayName"
+        val subtitle = if (report.targetName.endsWith(".apk", ignoreCase = true) || !report.packageName.isNullOrBlank()) {
+            "No threats detected • Verified safe to use"
+        } else {
+            "No threats detected • Download verified safe"
+        }
+        val rationale = report.scoreBreakdown?.rationale ?: "Multi-engine security inspection completed (Score: 0/100)"
+
+        val bigText = buildString {
+            appendLine("File / Application: $displayName")
+            if (!report.packageName.isNullOrBlank()) {
+                appendLine("Package: ${report.packageName}")
+            }
+            if (!report.targetName.equals(displayName, ignoreCase = true)) {
+                appendLine("Target: ${report.targetName}")
+            }
+            appendLine("Verdict: Verified Safe • Threat Score: ${report.finalScore}/100")
+            appendLine("Status: $rationale")
+        }
+
+        val builder = NotificationCompat.Builder(context, SAFE_SCAN_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(subtitle)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+            .setSmallIcon(R.drawable.ic_notification_shield)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+
         val appBitmap = loadAppIconBitmap(context, report)
         if (appBitmap != null) {
             builder.setLargeIcon(appBitmap)

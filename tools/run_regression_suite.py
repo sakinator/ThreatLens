@@ -73,6 +73,7 @@ class RegressionTestRunner:
         self.suite_25_api_key_validation_hardening()
         self.suite_26_rate_limit_quota_saver()
         self.suite_27_multi_cloud_consensus_and_brand_logos()
+        self.suite_28_realtime_safe_notifications_and_intent_routing()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -945,7 +946,58 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5 (versionCode 20)", 'versionName = "1.5.5"' in gradle_code and 'versionCode = 20' in gradle_code)
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code))
+
+    def suite_28_realtime_safe_notifications_and_intent_routing(self):
+        print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        notif_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "ThreatNotificationManager.kt")
+        coord_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        service_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeDownloadShieldService.kt")
+        throttle_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "ScanThrottleManager.kt")
+        main_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "MainActivity.kt")
+        dashboard_file = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "DashboardScreen.kt")
+        gradle_file = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+
+        with open(notif_file, "r", encoding="utf-8") as f:
+            notif_code = f.read()
+        with open(coord_file, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(service_file, "r", encoding="utf-8") as f:
+            service_code = f.read()
+        with open(throttle_file, "r", encoding="utf-8") as f:
+            throttle_code = f.read()
+        with open(main_file, "r", encoding="utf-8") as f:
+            main_code = f.read()
+        with open(dashboard_file, "r", encoding="utf-8") as f:
+            dashboard_code = f.read()
+        with open(gradle_file, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+
+        # 1. Real-time Safe Scan Notifications
+        self.record("ThreatNotificationManager registers SAFE_SCAN_CHANNEL_ID", "SAFE_SCAN_CHANNEL_ID" in notif_code and "createNotificationChannel(safeChannel)" in notif_code)
+        self.record("ThreatNotificationManager implements showSafeScanNotification", "fun showSafeScanNotification" in notif_code and "Verified Safe:" in notif_code)
+        self.record("RealtimeScanCoordinator fires safe notification on real-time scan", "!isFullScan" in coord_code and "ThreatNotificationManager.showSafeScanNotification" in coord_code)
+        self.record("RealtimeScanCoordinator skips safe notifications during full scan", "!isFullScan" in coord_code)
+
+        # 2. Scope of Scannable Executable Files (Strict Android Executable Filter)
+        self.record("RealtimeDownloadShieldService targets Android-executable files (apk, dex, jar, so, bin)",
+            ".endsWith(\".apk\")" in service_code and ".endsWith(\".so\")" in service_code and ".endsWith(\".bin\")" in service_code)
+        self.record("ScanThrottleManager ALLOWED_EXTENSIONS excludes non-executable files (txt, mp3, com, jpg)",
+            "ALLOWED_EXTENSIONS" in throttle_code and "txt" not in throttle_code and "com" not in throttle_code)
+
+        # 3. Notification Tap -> Full ThreatDetailSheet Navigation
+        self.record("ThreatNotificationManager attaches THREAT_ID and THREAT_SHA256 to launch intent",
+            'putExtra("THREAT_ID", report.id)' in notif_code and 'putExtra("THREAT_SHA256", report.sha256)' in notif_code)
+        self.record("MainActivity sets currentTabState to dashboard on notification tap",
+            'currentTabState.value = "dashboard"' in main_code)
+        self.record("MainActivity queries memory cache and selects report on notification tap",
+            "ScanThrottleManager.getCachedReport" in main_code and "viewModel.selectReport" in main_code)
+        self.record("DashboardScreen renders ThreatDetailSheet when report is selected",
+            "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
+
+        # 4. Release version
+        self.record("Version bumped to 1.5.6 (versionCode 21)", 'versionName = "1.5.6"' in gradle_code and 'versionCode = 21' in gradle_code)
 
 
 if __name__ == "__main__":

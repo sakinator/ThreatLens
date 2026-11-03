@@ -86,7 +86,7 @@ class RealtimeDownloadShieldService : Service() {
                     if (path.isNullOrBlank()) return
                     // Fast filter on thread before scheduling any work
                     val lower = path.lowercase()
-                    if (lower.endsWith(".apk") || lower.endsWith(".dex") || lower.endsWith(".jar")) {
+                    if (lower.endsWith(".apk") || lower.endsWith(".dex") || lower.endsWith(".jar") || lower.endsWith(".so") || lower.endsWith(".bin")) {
                         val targetFile = File(downloadsDir, path)
                         RealtimeScanCoordinator.scanFileAsync(applicationContext, targetFile)
                     }
