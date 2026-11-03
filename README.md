@@ -10,7 +10,7 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg" alt="License"/></a>
   <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android_8.0+-00E5FF.svg" alt="Platform"/></a>
   <a href="#zero-idle-battery-performance"><img src="https://img.shields.io/badge/Battery-Zero--Idle_Drain-brightgreen.svg" alt="Battery Mode"/></a>
-  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-302%2F302_Passing-brightgreen.svg" alt="Regression Tests"/></a>
+  <a href="#-regression-testing-suite"><img src="https://img.shields.io/badge/Tests-323%2F323_Passing-brightgreen.svg" alt="Regression Tests"/></a>
 </p>
 
 **ThreatLens** is an open-source, hybrid Android cybersecurity system combining:
@@ -150,6 +150,16 @@ When an untrusted link or malicious APK host is intercepted:
 
 ---
 
+### 🦁 15. Exact Brand Logos, Storage Exhaustion DoS Heuristics & Dynamic DB Updates (v1.5.7)
+* **Exact Official Square-Fit Brand Logos (Multi-Pass Consensus)**: Verified and deployed 61 authentic, high-resolution 256x256 square brand logos into `app/src/main/res/drawable/ic_vendor_*.png` without distortion or canvas approximation. Includes the iconic Rising golden lion shield, neutral modern Avast emblem, official AlienVault alien head, and CrowdStrike red falcon.
+* **Storage Exhaustion Loops / Denial-of-Service Heuristics (`StorageFiller`)**: Targeted bytecode rules (`SC_INSUFFICIENT_STORAGE` and `fillBuffer`) and manifest inspection flagging unverified background apps demanding full storage write access without launcher activities.
+* **MetaDefender Advisory Weightage on Android Executables**: Clean verdicts from MetaDefender contribute at most 1 advisory gateway vote to `totalCount` instead of 32 for Android executables, preventing server perimeter policies from suppressing mobile detections.
+* **Multi-Scanner Divergence Reconciliation Notice**: Informs the user when VirusTotal mobile ML engines flag APK adware/PUA threats while MetaDefender enterprise server gateways return clean.
+* **Curated Mobile Malware Corpus (13 Academic & Research Datasets)**: Preloaded 80 verified mobile malware signatures into `LocalSignatureDatabase.kt` and `definitions/signatures.json`.
+* **Dynamic Database Update & Hot-Reloading Mechanism**: Thread-safe `ConcurrentHashMap` runtime hot-reloading with dual-mirror synchronization, local persistence, and reactive settings counters.
+
+---
+
 ## 🏗️ Architecture Matrix
 
 ```
@@ -223,10 +233,75 @@ python tools/run_regression_suite.py
 ▶ SUITE 26: v1.5.4 Smart Daily Rate Limit Quota Saver & Radio Controls
 ▶ SUITE 27: v1.5.5 Multi-Cloud Dynamic Consensus, MetaDefender Active Modules & Engine Brand Logos
 ▶ SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing
+▶ SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation
 ----------------------------------------------------------------------
-Regression Result: 302/302 Tests Passed (0 failed)
+Regression Result: 323/323 Tests Passed (0 failed)
 ----------------------------------------------------------------------
 ```
+
+---
+
+## 🎖️ Credits, Academic Research & Open-Source Acknowledgments
+
+ThreatLens stands on the shoulders of the global cybersecurity research community, open-source developers, academic institutions, and threat intelligence initiatives. Below is an overview of what components and datasets are incorporated into ThreatLens, who created them, and why they are essential to our security architecture:
+
+### 🔬 1. Academic Datasets & Mobile Malware Research Corpora
+
+| Resource / Corpus | Primary Authors / Organization | What We Use | Why We Use It |
+|---|---|---|---|
+| **`ashishb/android-malware`** | Ashish Bhatia (GitHub) | Real-world curated Android malware specimens (`StorageFiller`, `Towelroot`, `Dendroid`, `FakeBanker`, `xHelper`, `Exodus`, `Comebot`) | Provides ground-truth, uncompiled and decompiled real Android malware to calibrate local signatures and evaluate on-device detection without synthetic bias. |
+| **Android Malware Genome Project (MalGenome)** | Yajin Zhou & Xuxian Jiang (NC State University / IEEE S&P 2012) | Historical malware lineage data (`DroidKungFu`, `GingerMaster`, `BaseBridge`, `GoldDream`) | Serves as the foundational benchmark for privilege escalation, root exploits, and historical behavioral signatures. |
+| **The Drebin Dataset** | Daniel Arp, Michael Spreitzenbarth, Malte Huebner, Hugo Gascon, Konrad Rieck (NDSS 2014) | Static feature mappings & 179 family labels (`FakeInstaller`, `Opfake`, `Plankton`, `Geinimi`) | Standardizes permission and intent combinations for ML feature engineering and baseline behavioral rules. |
+| **Canadian Institute for Cybersecurity (CIC-AndMal2017 & CCCS-CIC-AndMal2020)** | University of New Brunswick (UNB) & Canadian Centre for Cyber Security (CCCS) | Category-specific malware behavior matrices (Mobile Adware, Ransomware, Scareware, SMS Trojans) | Provides balanced behavioral ground truth for classifying modern evasive Android malware. |
+| **Malware-Hunter MH-100K Dataset** | Hendrio Brilhante et al. (Figshare / Hugging Face) | Multidimensional dataset spanning 101,975 APKs (2010–2022) with VirusTotal consensus labeling | Validates heuristic accuracy against big-data real-world samples across more than a decade of evolving Android threats. |
+| **MASCOT-Android Research Corpus** | Academic Research Consortium (arXiv:2606.16072) | Curated Android malware source code specimens, packers, and evasion patterns | Informs ThreatLens's on-device static analysis of commercial crypters (Bangcle, Jiagu, SecNeo) and anti-analysis evasion tactics. |
+| **Droidware Android Malware Dataset** | Arvind Prasad & Sumit Kumar (GLA University / Mendeley Data `10.17632/x7sb4g2kkv.2`) | Function call graph features, permission metadata, and decompiled code markers | Ground truth for static API call graphs and permission abuse models. |
+| **AndroZoo** | Kevin Allix, Tegawendé Bissyandé, Jacques Klein, Yves Le Traon (University of Luxembourg) | Reference hash lists and multi-engine detection matrices across 24M+ APKs | Massive reference library for hash verification and threat evolution tracking. |
+| **Exploit-DB & HackTricks Mobile Forensics** | Offensive Security & Carlos Polop (HackTricks) | Mobile penetration testing methodologies, rootkits, su binary paths, and post-exploitation IOCs | Guides detection of advanced rootkits, su binaries, and kernel vulnerability vectors. |
+
+---
+
+### 🌐 2. Threat Intelligence Platforms & Multiscanners
+
+| Platform | Organization | What We Use | Why We Use It |
+|---|---|---|---|
+| **VirusTotal (v3 API)** | Google Cloud / Chronicle | Multi-scanner aggregating 70+ commercial AV engines and mobile ML models (BitDefenderFalx, Trustlook) | Provides global commercial threat consensus for APKs and detects mobile PUA/adware threats. |
+| **MetaDefender Cloud (v4 API)** | OPSWAT Cyber Security | Enterprise multiscanning via Linux server daemons with deep modules (Metascan, Alin AI, Deep CDR, Sandbox) | Provides enterprise perimeter gateway analysis; ThreatLens integrates its active modules while safely adapting its clean weighting to prevent server daemons from suppressing mobile PUP detections. |
+| **MalwareBazaar & URLhaus** | Abuse.ch (Bern University of Applied Sciences / Swiss Cyber Community) | Live community malware feeds, hash reputation, and C2 URLs | Delivers real-time indicators for active mobile banking Trojans and phishing campaigns. |
+| **CIRCL Hashlookup & NIST NSRL** | Computer Incident Response Center Luxembourg (CIRCL) | Zero-key hash reputation against the National Software Reference Library (NSRL) | Validates known-good benign packages to eliminate false positives on system and store apps. |
+| **Hybrid Analysis (Falcon Sandbox)** | CrowdStrike | Automated static analysis and Falcon dynamic behavioral sandbox detonation | Validates zero-day sideloaded binaries with behavioral execution reports. |
+| **Filescan.io** | OPSWAT Cloud / Next-Gen Sandbox | Automated contextual analysis, IOC extraction, and file unpacking | Unpacks multi-stage droppers and provides IOC telemetry. |
+| **AlienVault OTX** | AT&T Cybersecurity | Community-driven Open Threat Exchange pulses and threat indicators | Free, zero-key threat pulses for broad community intelligence. |
+
+---
+
+### 🛠️ 3. Core Technologies & Open-Source Security Engines
+
+| Technology / Library | Maintainer / Project | Purpose in ThreatLens |
+|---|---|---|
+| **Cisco ClamAV Engine** | Cisco Talos | Daily mobile CVD definitions and open-source signature matching. |
+| **YARA Pattern Matching** | VirusTotal / Google | Static bytecode pattern matching against Android DEX files and packed stagers. |
+| **Android VpnService** | Google Android Open Source Project (AOSP) | 100% on-device virtual TUN DNS filtering without remote proxy servers or latency. |
+| **Linux Kernel inotify** | Linux Kernel Community | Event-driven passive download and sideload monitoring with <0.5% daily battery drain. |
+| **OkHttp & Kotlin Coroutines** | Square / JetBrains | High-concurrency, asynchronous, non-blocking network queries with graceful timeout isolation. |
+| **Jetpack Compose & Material 3** | Google Android Team | Ultra-responsive, modern reactive UI with dark-cyber aesthetics and accessible high-contrast design. |
+
+---
+
+### 🛡️ 4. DNS Filter Feeds & Privacy Resolvers
+
+ThreatLens integrates domain intelligence from top open-source blocklist maintainers:
+* **HaGeZi (Multi / Threat)**: Curated comprehensive ad and malware protection.
+* **Phishing Army**: Active anti-phishing indicators.
+* **StevenBlack Hosts**: Unified ad and telemetry blocking list.
+* **OISD**: High-coverage, zero-breakage domain filter.
+* **Privacy DNS Partners**: AdGuard DNS, Cloudflare Security (1.1.1.2), Quad9, Control D, NextDNS, Mullvad, and Google Public DNS.
+
+---
+
+### 🎨 5. Brand Trademarks & Emblems Notice
+
+All antivirus, security provider, and corporate logos displayed within ThreatLens (e.g., Kaspersky, Microsoft Defender, Norton, Bitdefender, ESET, Sophos, Avast, Rising, CrowdStrike, AlienVault, Tachyon, Zillya!, Lionic, Tencent, K7) are the registered trademarks of their respective owners. ThreatLens uses these logos solely for authentic vendor identification, multi-engine transparency, and provenance attribution.
 
 ---
 
