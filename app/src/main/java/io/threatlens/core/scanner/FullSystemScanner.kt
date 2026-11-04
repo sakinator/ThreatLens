@@ -11,6 +11,7 @@ import io.threatlens.core.diagnostics.AppDiagnosticLogger
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.realtime.RealtimeScanCoordinator
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

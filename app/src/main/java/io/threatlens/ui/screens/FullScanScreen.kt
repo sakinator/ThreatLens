@@ -136,6 +136,34 @@ fun FullScanScreen(
         allReportsList.filter { it.severity != ThreatSeverity.SAFE }
     }
 
+    // Display Scanned Items based on scan state, filter and sort order
+    val displayList = remember(allReportsList, effectiveThreats, selectedFilter, selectedSortOption) {
+        val baseList = when (selectedFilter) {
+            ScanResultFilter.THREATS -> effectiveThreats
+            ScanResultFilter.SAFE -> allReportsList.filter { it.severity == ThreatSeverity.SAFE }
+            ScanResultFilter.ALL -> allReportsList
+        }
+
+        when (selectedSortOption) {
+            ScanSortOption.SCORE_DESC -> baseList.sortedWith(
+                compareByDescending<ThreatReport> { it.currentScore }
+                    .thenBy { (it.appName ?: it.targetName).lowercase() }
+            )
+            ScanSortOption.MALWARE_FIRST -> baseList.sortedWith(
+                compareBy<ThreatReport> { report ->
+                    when (report.severity) {
+                        ThreatSeverity.MALICIOUS -> 0
+                        ThreatSeverity.HIGH_RISK -> 1
+                        ThreatSeverity.SUSPICIOUS -> 2
+                        ThreatSeverity.SAFE -> 3
+                    }
+                }.thenByDescending { it.currentScore }
+                 .thenBy { (it.appName ?: it.targetName).lowercase() }
+            )
+            ScanSortOption.NAME_ASC -> baseList.sortedBy { (it.appName ?: it.targetName).lowercase() }
+        }
+    }
+
     Scaffold(
         containerColor = CyberBlack,
         topBar = {
@@ -818,34 +846,6 @@ fun FullScanScreen(
                             }
                         }
                     }
-                }
-            }
-
-            // Display Scanned Items based on scan state, filter and sort order
-            val displayList = remember(allReportsList, effectiveThreats, selectedFilter, selectedSortOption) {
-                val baseList = when (selectedFilter) {
-                    ScanResultFilter.THREATS -> effectiveThreats
-                    ScanResultFilter.SAFE -> allReportsList.filter { it.severity == ThreatSeverity.SAFE }
-                    ScanResultFilter.ALL -> allReportsList
-                }
-
-                when (selectedSortOption) {
-                    ScanSortOption.SCORE_DESC -> baseList.sortedWith(
-                        compareByDescending<ThreatReport> { it.currentScore }
-                            .thenBy { (it.appName ?: it.targetName).lowercase() }
-                    )
-                    ScanSortOption.MALWARE_FIRST -> baseList.sortedWith(
-                        compareBy<ThreatReport> { report ->
-                            when (report.severity) {
-                                ThreatSeverity.MALICIOUS -> 0
-                                ThreatSeverity.HIGH_RISK -> 1
-                                ThreatSeverity.SUSPICIOUS -> 2
-                                ThreatSeverity.SAFE -> 3
-                            }
-                        }.thenByDescending { it.currentScore }
-                         .thenBy { (it.appName ?: it.targetName).lowercase() }
-                    )
-                    ScanSortOption.NAME_ASC -> baseList.sortedBy { (it.appName ?: it.targetName).lowercase() }
                 }
             }
 
