@@ -1646,7 +1646,7 @@ class RegressionTestRunner:
 
         # 4. ThreatLens AI Logo & Spacing Optimization
         self.record("ThreatDetailSheet renders ic_threatlens_emblem for ThreatLens AI",
-            "ic_threatlens_emblem" in sheet_code and "ThreatLens AI Threat Analysis" in sheet_code)
+            "EngineLogoIcon(\"ThreatLens AI\"" in sheet_code and "ThreatLens AI Threat Analysis" in sheet_code)
         self.record("ThreatDetailSheet gives Multi-Engine heading Column Modifier.weight(1f)",
             "Column(modifier = Modifier.weight(1f))" in sheet_code and "Multi-Engine Threat Intelligence" in sheet_code)
         self.record("EngineLogos maps threatlens and gemini brand queries to ic_threatlens_emblem",

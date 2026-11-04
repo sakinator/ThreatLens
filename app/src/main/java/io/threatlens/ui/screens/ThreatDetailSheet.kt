@@ -461,11 +461,7 @@ fun ThreatDetailSheet(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_threatlens_emblem),
-                                contentDescription = "ThreatLens AI Logo",
-                                modifier = Modifier.size(24.dp)
-                            )
+                            EngineLogoIcon("ThreatLens AI", modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = if (report.isFinal) "ThreatLens AI Threat Analysis" else "ThreatLens AI Initial Assessment (Live Scanning...)",
