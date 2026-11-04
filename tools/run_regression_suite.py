@@ -82,6 +82,7 @@ class RegressionTestRunner:
         self.suite_34_doh_resolvers_and_live_threat_feed_sync()
         self.suite_35_block_webpage_sinkhole_and_whitelist_manager()
         self.suite_36_persistence_battery_mitm_and_manual_multiscan()
+        self.suite_37_card_and_detailed_report_knowledge_matrix()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -1458,6 +1459,43 @@ class RegressionTestRunner:
             gradle_code = f.read()
         self.record("Version bumped to 1.7.0 (versionCode 25)",
             'versionName = "1.7.0"' in gradle_code and 'versionCode = 25' in gradle_code)
+
+    # 37. Test Card & Detailed Report Knowledge Matrix, Educational Privacy & Dual-Stage Indicators
+    def suite_37_card_and_detailed_report_knowledge_matrix(self):
+        print(f"\n{YELLOW}▶  SUITE 37: Educational Clarity, Security Capabilities & 5-Pillar Matrix{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        components_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "CyberComponents.kt")
+        detail_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+
+        self.record("CyberComponents.kt exists", os.path.exists(components_path))
+        with open(components_path, "r", encoding="utf-8") as f:
+            comp_code = f.read()
+
+        self.record("computeSecurityCapabilities and SecurityCapabilityBadge defined",
+            "data class SecurityCapabilityBadge" in comp_code and "fun computeSecurityCapabilities(" in comp_code)
+        self.record("ThreatItemRow computes human-friendly capability chips",
+            "computeSecurityCapabilities(report)" in comp_code and "Zero Sensitive Privileges" in comp_code)
+        self.record("ThreatItemRow renders clear dual-stage audit status (PENDING vs COMPLETE)",
+            "⏳ CLOUD AUDIT RUNNING" in comp_code and "✓ AUDIT COMPLETE" in comp_code)
+
+        self.record("ThreatDetailSheet.kt exists", os.path.exists(detail_path))
+        with open(detail_path, "r", encoding="utf-8") as f:
+            detail_code = f.read()
+
+        self.record("ThreatDetailSheet renders ExecutiveAssessmentCard",
+            "fun ExecutiveAssessmentCard(" in detail_code and "Executive Threat Assessment" in detail_code)
+        self.record("ThreatDetailSheet renders SecurityPillarsMatrix",
+            "fun SecurityPillarsMatrix(" in detail_code and "5-Pillar Security & Privacy Matrix" in detail_code)
+        self.record("SecurityPillarsMatrix evaluates all 5 critical domains",
+            "1. Banking & Financial Security" in detail_code and
+            "2. 2FA, OTP & Message Privacy" in detail_code and
+            "3. Location & Sensory Privacy" in detail_code and
+            "4. Device Storage & Files" in detail_code and
+            "5. Network & C2 Transmission" in detail_code)
+        self.record("ThreatDetailSheet renders Plain-English Permission Explainer",
+            "fun getPermissionExplainer(" in detail_code and "Security & Privacy Impact:" in detail_code)
+        self.record("ThreatDetailSheet renders Two-Stage Scan Status & Verification Indicator",
+            "Two-Stage Threat Audit in Progress" in detail_code and "Dual-Stage Threat Audit Complete" in detail_code)
 
 
 if __name__ == "__main__":

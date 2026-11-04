@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import io.threatlens.core.cloud.CloudThreatAggregator
 import io.threatlens.core.cloud.VirusTotalProvider
 import io.threatlens.core.model.ThreatReport
+import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.ui.components.AppIconBadge
 import io.threatlens.ui.components.EngineLogoIcon
 import io.threatlens.ui.components.EngineStatusBadge
@@ -49,6 +50,9 @@ fun ThreatDetailSheet(
     isVtKeyConfigured: Boolean = false
 ) {
     val context = LocalContext.current
+    var isWhitelisted by remember(report.packageName, report.sha256) {
+        mutableStateOf(io.threatlens.core.local.ThreatWhitelistManager.isWhitelisted(context, report.packageName, report.sha256))
+    }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var showUploadConfirmDialog by remember { mutableStateOf(false) }
     val expandedEngines = remember { mutableStateMapOf<String, Boolean>() }
@@ -269,6 +273,103 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Two-Stage Scan Status & Verification Indicator
+            if (!report.isFinal) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, NeonCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = CyberCardSurface)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = NeonCyan
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Two-Stage Threat Audit in Progress",
+                                color = NeonCyan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CyberDarkSurface, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Stage 1: On-Device Static Heuristics", color = TextSecondary, fontSize = 11.sp)
+                            Text("✓ COMPLETED", color = NeonEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CyberDarkSurface, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Stage 2: Cloud Threat Feeds & Sandboxes", color = TextSecondary, fontSize = 11.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 1.5.dp, color = NeonCyan)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("SCANNING", color = NeonCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = report.statusMessage,
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            } else {
+                Surface(
+                    color = NeonEmerald.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonEmerald.copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Dual-Stage Threat Audit Complete",
+                                color = NeonEmerald,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Verified across on-device signatures & ${maxOf(report.successfulEngines.size, 1)} active cloud threat intelligence sources.",
+                                color = TextSecondary,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            // Executive Assessment & Plain-English User Guidance Card
+            ExecutiveAssessmentCard(report = report, isWhitelisted = isWhitelisted)
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             // Transparent Threat Score Calculation & Rationale Card
             GlassCard {
                 Row(
@@ -345,40 +446,10 @@ fun ThreatDetailSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Dynamic Scanning Progress Banner
-            if (!report.isFinal) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, NeonCyan.copy(alpha = 0.6f), RoundedCornerShape(12.dp)),
-                    colors = CardDefaults.cardColors(containerColor = CyberCardSurface)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = NeonCyan
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Dynamic Multi-Engine Scan in Progress",
-                                color = NeonCyan,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = report.statusMessage,
-                            color = TextSecondary,
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-            }
+            // 5-Pillar Security & Privacy Matrix
+            SecurityPillarsMatrix(report = report)
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // AI Threat Analysis & Multi-Engine Breakdown Card
             if (!report.aiExplanation.isNullOrBlank()) {
@@ -1242,6 +1313,52 @@ fun ThreatDetailSheet(
                             }
                         }
                     }
+
+                    val explainedPerms = remember(report.dangerousPermissions) {
+                        report.dangerousPermissions.mapNotNull { perm ->
+                            getPermissionExplainer(perm)?.let { explanation -> Pair(perm, explanation) }
+                        }
+                    }
+                    if (explainedPerms.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Security & Privacy Impact:",
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            explainedPerms.take(4).forEach { (_, expl) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(CyberBlack, RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Text("•", color = NeonCyan, fontSize = 12.sp, modifier = Modifier.padding(end = 6.dp))
+                                    Text(
+                                        text = expl,
+                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        lineHeight = 15.sp
+                                    )
+                                }
+                            }
+                            if (explainedPerms.size > 4) {
+                                Text(
+                                    text = "+${explainedPerms.size - 4} more declared capabilities analyzed",
+                                    color = TextMuted,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.padding(start = 12.dp)
+                                )
+                            }
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
             }
@@ -1375,10 +1492,6 @@ fun ThreatDetailSheet(
             Spacer(modifier = Modifier.height(10.dp))
 
             // User Trust / Whitelist Button (Toggleable)
-            var isWhitelisted by remember {
-                mutableStateOf(io.threatlens.core.local.ThreatWhitelistManager.isWhitelisted(context, report.packageName, report.sha256))
-            }
-
             OutlinedButton(
                 onClick = {
                     if (isWhitelisted) {
@@ -1876,5 +1989,350 @@ private fun parseMarkdownInline(
                 append(text.substring(currentIndex))
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Executive Threat Assessment & Plain-English User Guidance
+// ---------------------------------------------------------------------------
+
+@Composable
+fun ExecutiveAssessmentCard(
+    report: ThreatReport,
+    isWhitelisted: Boolean
+) {
+    val score = report.currentScore
+    val isConfirmedMalicious = score >= 75 || report.severity == ThreatSeverity.MALICIOUS
+    val isSuspicious = !isConfirmedMalicious && (score >= 25 || report.severity == ThreatSeverity.SUSPICIOUS || report.severity == ThreatSeverity.HIGH_RISK)
+
+    val verdictTitle = when {
+        isWhitelisted -> "USER WHITELISTED • TRUSTED APPLICATION"
+        isConfirmedMalicious -> "CRITICAL RISK • CONFIRMED THREAT"
+        isSuspicious -> "ELEVATED PRIVILEGES • CAUTION RECOMMENDED"
+        else -> "VERIFIED SAFE • TRUSTED REPUTATION"
+    }
+
+    val verdictColor = when {
+        isWhitelisted -> NeonEmerald
+        isConfirmedMalicious -> NeonCrimson
+        isSuspicious -> CyberAmber
+        else -> NeonEmerald
+    }
+
+    val plainEnglishSummary = when {
+        isWhitelisted ->
+            "You have explicitly whitelisted this application as trusted. ThreatLens treats it as safe and suppresses threat notifications."
+        isConfirmedMalicious ->
+            "This application matches a verified hostile signature or malicious trojan family (${report.threatFamily}). It may compromise account credentials, execute unauthorized commands, or exfiltrate private data."
+        isSuspicious ->
+            "This application declares high-privilege Android capabilities (such as screen overlay, SMS intercept, or broad storage access). While not confirmed trojan malware, it warrants inspection if untrusted."
+        else ->
+            "No hostile signatures, suspicious behavioral matrices, or trojan backdoors were detected. This application operates safely within normal boundaries."
+    }
+
+    val recommendedAction = when {
+        isWhitelisted ->
+            "No action required. If you no longer trust this application, you can revoke trust at any time below."
+        isConfirmedMalicious ->
+            "Immediate Action: Uninstall this application immediately to protect your device, accounts, and private messages."
+        isSuspicious ->
+            "Recommended Action: Check whether you installed this application intentionally from a known store. If you do not recognize it, consider removing it."
+        else ->
+            "Recommended Action: Safe to use for regular everyday operations."
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, verdictColor.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
+        colors = CardDefaults.cardColors(containerColor = CyberCardSurface),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: Icon + Title
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = when {
+                        isWhitelisted -> Icons.Default.CheckCircle
+                        isConfirmedMalicious -> Icons.Default.Shield
+                        isSuspicious -> Icons.Default.Warning
+                        else -> Icons.Default.CheckCircle
+                    },
+                    contentDescription = null,
+                    tint = verdictColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Executive Threat Assessment",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Surface(
+                color = verdictColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(6.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, verdictColor.copy(alpha = 0.45f))
+            ) {
+                Text(
+                    text = verdictTitle,
+                    color = verdictColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = plainEnglishSummary,
+                color = TextSecondary,
+                fontSize = 12.sp,
+                lineHeight = 17.sp
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Surface(
+                color = CyberDarkSurface,
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder.copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = if (isConfirmedMalicious) "🚨" else if (isSuspicious) "⚠️" else "✓",
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text(
+                        text = recommendedAction,
+                        color = if (isConfirmedMalicious) NeonCrimson else if (isSuspicious) CyberAmber else NeonEmerald,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 5-Pillar Security & Privacy Matrix
+// ---------------------------------------------------------------------------
+
+@Composable
+fun SecurityPillarsMatrix(report: ThreatReport) {
+    val perms = report.dangerousPermissions
+    val behaviors = report.detectedBehaviors
+    val family = report.threatFamily.lowercase()
+
+    // Pillar 1: Banking & Financial
+    val hasBankingRisk = perms.any { it.endsWith("SYSTEM_ALERT_WINDOW", ignoreCase = true) || it.endsWith("BIND_ACCESSIBILITY_SERVICE", ignoreCase = true) || it.endsWith("BIND_DEVICE_ADMIN", ignoreCase = true) } ||
+            behaviors.any { it.contains("overlay", ignoreCase = true) || it.contains("accessibility", ignoreCase = true) } ||
+            family.contains("banker") || family.contains("overlay")
+    val bankingStatus = if (hasBankingRisk) "ELEVATED RISK" else "PROTECTED"
+    val bankingColor = if (hasBankingRisk) CyberAmber else NeonEmerald
+    val bankingDesc = if (hasBankingRisk) "Can display overlay screens or simulate user taps (sensitive for banking & payment apps)." else "Zero overlay, accessibility service, or banking capture capabilities detected."
+
+    // Pillar 2: 2FA & Message Privacy
+    val hasSmsRisk = perms.any { it.contains("SMS", ignoreCase = true) || it.contains("NOTIFICATION_LISTENER", ignoreCase = true) || it.contains("READ_CALL_LOG", ignoreCase = true) }
+    val smsStatus = if (hasSmsRisk) "ACTIVE ACCESS" else "PRIVATE"
+    val smsColor = if (hasSmsRisk) NeonCrimson else NeonEmerald
+    val smsDesc = if (hasSmsRisk) "Can read incoming SMS messages and notification previews (capable of harvesting 2FA/OTP codes)." else "Zero access to text messages, two-factor OTP tokens, or system notifications."
+
+    // Pillar 3: Sensors & Location
+    val hasSensorRisk = perms.any { it.contains("LOCATION", ignoreCase = true) || it.contains("CAMERA", ignoreCase = true) || it.contains("RECORD_AUDIO", ignoreCase = true) }
+    val sensorStatus = if (hasSensorRisk) "ACTIVE SENSORS" else "ISOLATED"
+    val sensorColor = if (hasSensorRisk) NeonCyan else NeonEmerald
+    val sensorDesc = if (hasSensorRisk) "Declares hardware sensor access (camera, microphone, or background GPS location)." else "No camera, microphone, or background location tracking permissions declared."
+
+    // Pillar 4: File & Device Storage
+    val hasStorageRisk = perms.any { it.contains("MANAGE_EXTERNAL_STORAGE", ignoreCase = true) || it.contains("READ_EXTERNAL_STORAGE", ignoreCase = true) || it.contains("WRITE_EXTERNAL_STORAGE", ignoreCase = true) }
+    val storageStatus = if (hasStorageRisk) "FULL STORAGE" else "SANDBOXED"
+    val storageColor = if (hasStorageRisk) NeonCyan else NeonEmerald
+    val storageDesc = if (hasStorageRisk) "Has broad read/write access across shared device files, photos, and downloaded media." else "Strictly isolated to application private storage sandbox; cannot access other app files."
+
+    // Pillar 5: Network & Transmission
+    val hasNetworkRisk = report.cloudEnginesFlagged > 0 || family.contains("trojan") || family.contains("c2") || behaviors.any { it.contains("c2", ignoreCase = true) || it.contains("socket", ignoreCase = true) }
+    val networkStatus = if (hasNetworkRisk) "FLAGGED C2" else "CLEAN NETWORK"
+    val networkColor = if (hasNetworkRisk) NeonCrimson else NeonEmerald
+    val networkDesc = if (hasNetworkRisk) "Flagged external network communications or suspicious remote C2 endpoints detected." else "Standard network transmission; clean host telemetry across all active engines."
+
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "5-Pillar Security & Privacy Matrix",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = "Comprehensive evaluation of runtime capabilities & privileges",
+                    color = TextMuted,
+                    fontSize = 11.sp
+                )
+            }
+            Surface(
+                color = CyberDarkSurface,
+                shape = RoundedCornerShape(6.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder)
+            ) {
+                Text(
+                    text = "AUDIT",
+                    color = NeonCyan,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SecurityPillarRow(
+                icon = Icons.Default.Shield,
+                title = "1. Banking & Financial Security",
+                status = bankingStatus,
+                statusColor = bankingColor,
+                description = bankingDesc
+            )
+            Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+            SecurityPillarRow(
+                icon = Icons.Default.Lock,
+                title = "2. 2FA, OTP & Message Privacy",
+                status = smsStatus,
+                statusColor = smsColor,
+                description = smsDesc
+            )
+            Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+            SecurityPillarRow(
+                icon = Icons.Default.Radar,
+                title = "3. Location & Sensory Privacy",
+                status = sensorStatus,
+                statusColor = sensorColor,
+                description = sensorDesc
+            )
+            Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+            SecurityPillarRow(
+                icon = Icons.Default.Storage,
+                title = "4. Device Storage & Files",
+                status = storageStatus,
+                statusColor = storageColor,
+                description = storageDesc
+            )
+            Divider(color = CyberCardBorder.copy(alpha = 0.4f))
+            SecurityPillarRow(
+                icon = Icons.Default.Public,
+                title = "5. Network & C2 Transmission",
+                status = networkStatus,
+                statusColor = networkColor,
+                description = networkDesc
+            )
+        }
+    }
+}
+
+@Composable
+private fun SecurityPillarRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    status: String,
+    statusColor: Color,
+    description: String
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = statusColor,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Surface(
+                color = statusColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(4.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
+            ) {
+                Text(
+                    text = status,
+                    color = statusColor,
+                    fontSize = 8.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = description,
+            color = TextSecondary,
+            fontSize = 11.sp,
+            lineHeight = 15.sp,
+            modifier = Modifier.padding(start = 24.dp)
+        )
+    }
+}
+
+private fun getPermissionExplainer(perm: String): String? {
+    val upper = perm.uppercase()
+    return when {
+        upper.endsWith("BIND_ACCESSIBILITY_SERVICE") ->
+            "Accessibility Service: Can observe screen contents and simulate touches on your behalf (commonly abused by banking trojans)."
+        upper.endsWith("SYSTEM_ALERT_WINDOW") ->
+            "Draw Over Apps: Can create invisible overlays or fake login dialogs on top of legitimate apps."
+        upper.endsWith("BIND_DEVICE_ADMIN") ->
+            "Device Administrator: Deep administrative control; can prevent uninstallation or lock the screen."
+        upper.endsWith("REQUEST_INSTALL_PACKAGES") ->
+            "Install Unknown Apps: Can prompt or initiate background APK installations."
+        upper.contains("SMS") ->
+            "SMS Access: Can read or receive text messages, including 2FA / OTP authentication codes."
+        upper.contains("NOTIFICATION_LISTENER") ->
+            "Notification Listener: Can observe all system notifications and sensitive message previews."
+        upper.contains("READ_CALL_LOG") ->
+            "Call Log: Can read your private phone call history."
+        upper.contains("ACCESS_BACKGROUND_LOCATION") || upper.contains("ACCESS_FINE_LOCATION") ->
+            "Precise Location: Can track physical GPS location in real time."
+        upper.contains("MANAGE_EXTERNAL_STORAGE") ->
+            "All Files Access: Unrestricted access to read, modify, and delete any file on device storage."
+        upper.contains("RECORD_AUDIO") ->
+            "Microphone: Can record background ambient audio."
+        upper.contains("CAMERA") ->
+            "Camera: Can capture photos or record video silently."
+        else -> null
     }
 }

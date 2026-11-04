@@ -141,6 +141,68 @@ fun ScoreBadge(score: Int, severity: ThreatSeverity, isFinal: Boolean = true) {
     }
 }
 
+data class SecurityCapabilityBadge(
+    val label: String,
+    val iconEmoji: String,
+    val color: Color
+)
+
+fun computeSecurityCapabilities(report: ThreatReport): List<SecurityCapabilityBadge> {
+    val list = mutableListOf<SecurityCapabilityBadge>()
+    val perms = report.dangerousPermissions
+    val behaviors = report.detectedBehaviors
+    val family = report.threatFamily.lowercase()
+
+    // 1. Banking & Overlay risk
+    val hasOverlay = perms.any { it.endsWith("SYSTEM_ALERT_WINDOW", ignoreCase = true) } ||
+            perms.any { it.endsWith("BIND_ACCESSIBILITY_SERVICE", ignoreCase = true) } ||
+            behaviors.any { it.contains("overlay", ignoreCase = true) || it.contains("accessibility", ignoreCase = true) } ||
+            family.contains("banker") || family.contains("overlay")
+    if (hasOverlay) {
+        list.add(SecurityCapabilityBadge("Overlay & Accessibility", "🏦", CyberAmber))
+    }
+
+    // 2. 2FA / OTP & SMS Access
+    val hasSms = perms.any { it.contains("SMS", ignoreCase = true) } ||
+            perms.any { it.contains("NOTIFICATION_LISTENER", ignoreCase = true) } ||
+            perms.any { it.contains("READ_CALL_LOG", ignoreCase = true) }
+    if (hasSms) {
+        list.add(SecurityCapabilityBadge("2FA & SMS Intercept", "💬", NeonCrimson))
+    }
+
+    // 3. Location / GPS
+    val hasLocation = perms.any { it.contains("LOCATION", ignoreCase = true) }
+    if (hasLocation) {
+        list.add(SecurityCapabilityBadge("Background GPS", "📍", NeonCyan))
+    }
+
+    // 4. File Storage Access
+    val hasStorage = perms.any { it.contains("MANAGE_EXTERNAL_STORAGE", ignoreCase = true) || it.contains("READ_EXTERNAL_STORAGE", ignoreCase = true) || it.contains("WRITE_EXTERNAL_STORAGE", ignoreCase = true) }
+    if (hasStorage) {
+        list.add(SecurityCapabilityBadge("Broad File Storage", "📁", NeonCyan))
+    }
+
+    // 5. Hardware Sensors (Camera / Mic)
+    val hasSensors = perms.any { it.contains("CAMERA", ignoreCase = true) || it.contains("RECORD_AUDIO", ignoreCase = true) }
+    if (hasSensors) {
+        list.add(SecurityCapabilityBadge("Camera / Mic", "🎙️", CyberAmber))
+    }
+
+    // 6. Dropper / App Installer
+    val hasInstaller = perms.any { it.contains("REQUEST_INSTALL_PACKAGES", ignoreCase = true) || it.contains("INSTALL_PACKAGES", ignoreCase = true) }
+    if (hasInstaller) {
+        list.add(SecurityCapabilityBadge("Silent Installer", "📦", CyberAmber))
+    }
+
+    // If zero sensitive privileges
+    if (list.isEmpty()) {
+        list.add(SecurityCapabilityBadge("Zero Sensitive Privileges", "🛡️", NeonEmerald))
+    }
+
+    return list
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ThreatItemRow(
     report: ThreatReport,
@@ -156,16 +218,24 @@ fun ThreatItemRow(
         } else null
     }
 
+    val capabilities = remember(report.dangerousPermissions, report.detectedBehaviors, report.threatFamily) {
+        computeSecurityCapabilities(report)
+    }
+
+    val cardBorderColor = when {
+        !report.isFinal -> NeonCyan.copy(alpha = 0.55f)
+        isWhitelisted -> NeonEmerald.copy(alpha = 0.45f)
+        report.currentScore >= 75 || report.severity == ThreatSeverity.MALICIOUS -> NeonCrimson.copy(alpha = 0.55f)
+        report.currentScore >= 25 || report.severity == ThreatSeverity.SUSPICIOUS || report.severity == ThreatSeverity.HIGH_RISK -> CyberAmber.copy(alpha = 0.45f)
+        else -> CyberCardBorder.copy(alpha = 0.6f)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 5.dp)
             .clickable { onClick() }
-            .border(
-                1.dp,
-                if (!report.isFinal) NeonCyan.copy(alpha = 0.5f) else CyberCardBorder.copy(alpha = 0.6f),
-                RoundedCornerShape(12.dp)
-            ),
+            .border(1.dp, cardBorderColor, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = CyberCardSurface),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -219,13 +289,38 @@ fun ThreatItemRow(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Line 2: Tags & Provenance Badges Row
-            Row(
+            // Line 2: Responsive Badges Row (Audit Status + Provenance + Target + Detection Type + Family)
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // 1. Audit Status Pill (Clear pending vs completed indication)
+                val (statusText, statusBg, statusColor) = when {
+                    !report.isFinal -> Triple("⏳ CLOUD AUDIT RUNNING", NeonCyan.copy(alpha = 0.18f), NeonCyan)
+                    isWhitelisted -> Triple("🛡️ WHITELISTED", NeonEmerald.copy(alpha = 0.18f), NeonEmerald)
+                    report.currentScore >= 75 || report.severity == ThreatSeverity.MALICIOUS -> Triple("🚨 MALICIOUS THREAT", NeonCrimson.copy(alpha = 0.20f), NeonCrimson)
+                    report.currentScore >= 25 || report.severity == ThreatSeverity.SUSPICIOUS || report.severity == ThreatSeverity.HIGH_RISK -> Triple("⚠️ ELEVATED RISK", CyberAmber.copy(alpha = 0.18f), CyberAmber)
+                    else -> Triple("✓ AUDIT COMPLETE", NeonEmerald.copy(alpha = 0.18f), NeonEmerald)
+                }
+                Surface(
+                    color = statusBg,
+                    shape = RoundedCornerShape(4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = statusText,
+                        color = statusColor,
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+
+                // 2. App Provenance / Store Vector
                 if (provenance != null && provenance.source != io.threatlens.core.local.AppProvenanceVerifier.ProvenanceSource.SIDELOAD_OR_UNKNOWN) {
                     val provColor = when {
                         provenance.isHighRiskVector -> NeonCrimson
@@ -235,44 +330,44 @@ fun ThreatItemRow(
                     }
                     Surface(
                         color = provColor.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(3.dp),
+                        shape = RoundedCornerShape(4.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, provColor.copy(alpha = 0.5f))
                     ) {
                         Text(
                             text = provenance.badgeLabel,
                             color = provColor,
-                            fontSize = 8.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
                 }
 
+                // 3. Target File Name (if different from base.apk or app name)
                 if (!report.targetName.equals("base.apk", ignoreCase = true) && !report.targetName.equals(report.appName, ignoreCase = true)) {
                     Surface(
                         color = CyberDarkSurface,
-                        shape = RoundedCornerShape(3.dp)
+                        shape = RoundedCornerShape(4.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberCardBorder)
                     ) {
                         Text(
                             text = report.targetName,
                             color = NeonCyan,
-                            fontSize = 8.sp,
+                            fontSize = 8.5.sp,
                             fontFamily = FontFamily.Monospace,
                             maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
                 }
 
+                // 4. Detection Type Pill
                 val effectiveBadgeType = if (report.currentScore < 25 || report.severity == ThreatSeverity.SAFE) {
                     io.threatlens.core.model.DetectionType.CLEAN
                 } else {
                     report.detectionType
                 }
-
                 Surface(
                     color = when (effectiveBadgeType) {
                         io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson.copy(alpha = 0.18f)
@@ -280,7 +375,7 @@ fun ThreatItemRow(
                         io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber.copy(alpha = 0.18f)
                         io.threatlens.core.model.DetectionType.CLEAN -> NeonEmerald.copy(alpha = 0.18f)
                     },
-                    shape = RoundedCornerShape(3.dp)
+                    shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
                         text = when (effectiveBadgeType) {
@@ -295,15 +390,14 @@ fun ThreatItemRow(
                             io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber
                             io.threatlens.core.model.DetectionType.CLEAN -> NeonEmerald
                         },
-                        fontSize = 8.sp,
+                        fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
-
+                // 5. Threat Family Name (if elevated)
                 val rawDisplay = when {
                     report.currentScore < 25 || report.severity == ThreatSeverity.SAFE || report.threatFamily == "Clean" -> "Clean"
                     report.threatFamily.startsWith("Heuristic.", ignoreCase = true) -> report.threatFamily.substringAfter("Heuristic.")
@@ -312,29 +406,86 @@ fun ThreatItemRow(
                     else -> report.threatFamily
                 }
                 val displayFamily = io.threatlens.core.cloud.ThreatFamilyNormalizer.cleanVendorString(rawDisplay)
-                val familyColor = when {
-                    report.severity == ThreatSeverity.MALICIOUS || report.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson
-                    report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS || report.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber
-                    else -> NeonEmerald
+                if (displayFamily != "Clean") {
+                    val familyColor = when {
+                        report.severity == ThreatSeverity.MALICIOUS || report.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE -> NeonCrimson
+                        report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS || report.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN -> CyberAmber
+                        else -> NeonEmerald
+                    }
+                    Surface(
+                        color = familyColor.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(4.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, familyColor.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = displayFamily,
+                            color = familyColor,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
                 }
-
-                Text(
-                    text = displayFamily,
-                    color = familyColor,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Line 3: Meaningful 1-Line Finding Rationale
+            // Line 3: Human Security & Privacy Capabilities Chips
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                capabilities.take(3).forEach { cap ->
+                    Surface(
+                        color = cap.color.copy(alpha = 0.10f),
+                        shape = RoundedCornerShape(4.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, cap.color.copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(text = cap.iconEmoji, fontSize = 9.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = cap.label,
+                                color = cap.color,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+                }
+                if (capabilities.size > 3) {
+                    Surface(
+                        color = CyberDarkSurface,
+                        shape = RoundedCornerShape(4.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberCardBorder)
+                    ) {
+                        Text(
+                            text = "+${capabilities.size - 3} more",
+                            color = TextMuted,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Line 4: Meaningful Finding Rationale & User Knowledge Banner
             val rawFamily = report.threatFamily.lowercase()
             val findingSummary = when {
-                isWhitelisted -> "🛡️ User Whitelisted • Trusted application"
+                !report.isFinal ->
+                    "⚡ Stage 1 Passed (0 local signatures) • Stage 2 in progress: Querying cloud intelligence..."
+                isWhitelisted ->
+                    "🛡️ User Whitelisted • Trusted application excluded from security alerts"
                 report.currentScore < 25 || report.severity == ThreatSeverity.SAFE ->
                     "✓ Verified Safe • 0 threat signatures across active scanning engines"
                 report.detectionType == io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE ->
@@ -363,16 +514,18 @@ fun ThreatItemRow(
             ) {
                 Text(
                     text = findingSummary,
-                    color = TextSecondary,
+                    color = if (!report.isFinal) NeonCyan else TextSecondary,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
+                    maxLines = 2,
+                    softWrap = true,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    lineHeight = 15.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                 )
             }
 
-            // Mini Brand Engine Logos (showing active scanning engines when info is available)
+            // Line 5: Engine Logos or Live Pending Scanner
             val scannedEngines = remember(report.engineVerdictMap) {
                 report.engineVerdictMap.keys.filter {
                     it != "ThreatLens Exclusions" &&
@@ -380,7 +533,29 @@ fun ThreatItemRow(
                     report.engineVerdictMap[it]?.contains("Unreachable", ignoreCase = true) != true
                 }
             }
-            if (scannedEngines.isNotEmpty()) {
+
+            if (!report.isFinal) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(11.dp),
+                        strokeWidth = 1.6.dp,
+                        color = NeonCyan
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (report.statusMessage.isNotBlank()) report.statusMessage else "Querying multi-engine threat feeds...",
+                        color = NeonCyan,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            } else if (scannedEngines.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -405,19 +580,6 @@ fun ThreatItemRow(
                         )
                     }
                 }
-            }
-
-            // Line 4: Live status message or scan status line
-            if (!report.isFinal || report.statusMessage.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = if (!report.isFinal) "⚡ ${report.statusMessage}" else report.statusMessage,
-                    color = if (!report.isFinal) NeonCyan else TextMuted,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
             }
         }
     }
