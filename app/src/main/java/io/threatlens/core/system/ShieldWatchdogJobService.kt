@@ -42,11 +42,18 @@ class ShieldWatchdogJobService : JobService() {
         private const val WATCHDOG_JOB_ID = 8850
 
         fun scheduleWatchdog(context: Context) {
+            val prefs = context.getSharedPreferences("threatlens_prefs", Context.MODE_PRIVATE)
+            val isEnabled = prefs.getBoolean("key_realtime_shield_enabled", true)
+            if (!isEnabled) {
+                cancelWatchdog(context)
+                return
+            }
+
             val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as? JobScheduler ?: return
             val component = ComponentName(context, ShieldWatchdogJobService::class.java)
 
             val jobInfo = JobInfo.Builder(WATCHDOG_JOB_ID, component)
-                .setPeriodic(15 * 60 * 1000L) // 15 minutes batch interval
+                .setPeriodic(60 * 60 * 1000L) // Battery-optimized 60-minute window
                 .setPersisted(true) // Survives device reboots
                 .build()
 
@@ -59,6 +66,13 @@ class ShieldWatchdogJobService : JobService() {
         }
 
         fun ensureShieldRunning(context: Context) {
+            val prefs = context.getSharedPreferences("threatlens_prefs", Context.MODE_PRIVATE)
+            val isEnabled = prefs.getBoolean("key_realtime_shield_enabled", true)
+            if (!isEnabled) {
+                cancelWatchdog(context)
+                return
+            }
+
             if (!isServiceRunning(context, RealtimeDownloadShieldService::class.java)) {
                 val intent = Intent(context, RealtimeDownloadShieldService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

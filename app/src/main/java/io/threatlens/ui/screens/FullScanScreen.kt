@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.scanner.FullScanStatus
+import io.threatlens.ui.components.AppSelectionSheet
 import io.threatlens.ui.components.GlassCard
 import io.threatlens.ui.components.ThreatItemRow
 import io.threatlens.ui.theme.*
@@ -56,6 +57,7 @@ fun FullScanScreen(
     val uploadProgress by viewModel.uploadProgress.collectAsState()
     val vtKey by viewModel.vtKey.collectAsState()
     var showConfirmDeleteAllDialog by remember { mutableStateOf(false) }
+    var showAppSelectSheet by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(ScanResultFilter.ALL) }
     var selectedSortOption by remember { mutableStateOf(ScanSortOption.MALWARE_FIRST) }
     var showSortDropdown by remember { mutableStateOf(false) }
@@ -383,14 +385,23 @@ fun FullScanScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Custom File Picker Scan
+                    // Folder Picker Launcher
+                    val folderPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+                    ) { uri ->
+                        if (uri != null) {
+                            viewModel.startFolderScan(uri)
+                        }
+                    }
+
+                    // File Picker Launcher
                     val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
                     ) { uri ->
                         if (uri != null) {
                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                 try {
-                                    val tempFile = java.io.File(context.cacheDir, "manual_scan_target.apk")
+                                    val tempFile = java.io.File(context.cacheDir, "manual_scan_${System.currentTimeMillis()}.apk")
                                     context.contentResolver.openInputStream(uri)?.use { input ->
                                         tempFile.outputStream().use { output -> input.copyTo(output) }
                                     }
@@ -403,16 +414,48 @@ fun FullScanScreen(
                         }
                     }
 
+                    // Targeted Manual Scans: Apps & Folder
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showAppSelectSheet = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(46.dp)
+                        ) {
+                            Icon(Icons.Default.Apps, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("SCAN APPS", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = { folderPickerLauncher.launch(null) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(46.dp)
+                        ) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("SCAN FOLDER", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     OutlinedButton(
                         onClick = { filePickerLauncher.launch("*/*") },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
                         border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(46.dp)
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
                     ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.InsertDriveFile, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("CUSTOM SCAN (SELECT FILE / APK)", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("SCAN SPECIFIC FILE / APK", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -839,6 +882,14 @@ fun FullScanScreen(
             onUploadSample = { viewModel.uploadSampleToVirusTotal(it) },
             uploadProgress = uploadProgress,
             isVtKeyConfigured = vtKey.isNotBlank()
+        )
+    }
+
+    // Modal Bottom Sheet for App Selection
+    if (showAppSelectSheet) {
+        AppSelectionSheet(
+            onDismiss = { showAppSelectSheet = false },
+            onScanSelected = { packages -> viewModel.startSelectedAppsScan(packages) }
         )
     }
 }

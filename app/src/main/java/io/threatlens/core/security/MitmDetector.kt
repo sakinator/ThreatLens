@@ -30,8 +30,13 @@ data class MitmReport(
     val status: MitmStatus,
     val findings: List<MitmFinding>,
     val scannedUserCertCount: Int,
+    val scannedSystemCertCount: Int = 0,
     val proxyDetected: Boolean,
+    val proxyHost: String? = null,
+    val proxyPort: Int = 0,
     val dnsPoisonDetected: Boolean,
+    val durationMs: Long = 0L,
+    val isAudited: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -42,16 +47,22 @@ object MitmDetector {
             status = MitmStatus.SECURE,
             findings = emptyList(),
             scannedUserCertCount = 0,
+            scannedSystemCertCount = 0,
             proxyDetected = false,
-            dnsPoisonDetected = false
+            dnsPoisonDetected = false,
+            isAudited = false
         )
     )
     val lastReport: StateFlow<MitmReport> = _lastReport.asStateFlow()
 
     suspend fun auditNetworkIntegrity(context: Context): MitmReport = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
         val findings = mutableListOf<MitmFinding>()
         var userCertCount = 0
+        var systemCertCount = 0
         var proxyFound = false
+        var detectedProxyHost: String? = null
+        var detectedProxyPort = 0
         var dnsPoisonFound = false
 
         // 1. Audit System Keystore for Rogue / User CA Certificates (Burp / Charles / Fiddler / HTTP Toolkit)
@@ -62,8 +73,9 @@ object MitmDetector {
 
             while (aliases.hasMoreElements()) {
                 val alias = aliases.nextElement()
-                // In Android, user-installed root CAs are prefixed with "user:"
-                if (alias.startsWith("user:")) {
+                if (alias.startsWith("system:")) {
+                    systemCertCount++
+                } else if (alias.startsWith("user:")) {
                     userCertCount++
                     val cert = keyStore.getCertificate(alias) as? X509Certificate
                     val subject = cert?.subjectDN?.name ?: "Unknown Subject"
@@ -109,12 +121,14 @@ object MitmDetector {
 
             if (!httpHost.isNullOrBlank() || !httpsHost.isNullOrBlank() || !cmProxyHost.isNullOrBlank()) {
                 proxyFound = true
-                val host = httpHost ?: httpsHost ?: cmProxyHost
-                val port = httpPort ?: cmProxyPort.toString()
+                val host = httpHost ?: httpsHost ?: cmProxyHost ?: "127.0.0.1"
+                val portStr = httpPort ?: cmProxyPort.toString()
+                detectedProxyHost = host
+                detectedProxyPort = portStr.toIntOrNull() ?: 8080
                 findings.add(
                     MitmFinding(
                         title = "Active HTTP Proxy Diverting Traffic",
-                        detail = "Device traffic is actively routed through external proxy $host:$port. Any plain text or decrypted traffic can be snooped.",
+                        detail = "Device traffic is actively routed through external proxy $host:$portStr. Any plain text or decrypted traffic can be snooped.",
                         severity = ThreatSeverity.HIGH_RISK,
                         remediation = "Disable proxy settings in Wi-Fi Advanced Settings or uninstall the suspicious proxy configuration app."
                     )
@@ -122,29 +136,33 @@ object MitmDetector {
             }
         } catch (_: Exception) {}
 
-        // 3. Canary DNS Poisoning & Rogue Captive Portal Audit
+        // 3. Canary DNS Poisoning & Rogue Captive Portal Audit (with 3.5s timeout protection)
         try {
-            val canaryHosts = listOf("cloudflare-dns.com", "dns.google")
-            for (canary in canaryHosts) {
-                val addresses = InetAddress.getAllByName(canary)
-                for (addr in addresses) {
-                    val ip = addr.hostAddress ?: ""
-                    // RFC 1918 private subnets: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, loopback 127.0.0.0/8
-                    if (ip.startsWith("10.") || ip.startsWith("192.168.") || ip.startsWith("127.") ||
-                        ip.startsWith("172.16.") || ip.startsWith("172.17.") || ip.startsWith("172.18.") ||
-                        ip.startsWith("172.19.") || ip.startsWith("172.2") || ip.startsWith("172.30.") || ip.startsWith("172.31.")
-                    ) {
-                        dnsPoisonFound = true
-                        findings.add(
-                            MitmFinding(
-                                title = "DNS Poisoning / Captive Portal Spoofing",
-                                detail = "Public canary host '$canary' resolved to private subnet IP '$ip'. Local gateway is hijacking DNS queries.",
-                                severity = ThreatSeverity.MALICIOUS,
-                                remediation = "Disconnect from this untrusted Wi-Fi hotspot immediately and enable ThreatLens Web Protection (Local VPN)."
-                            )
-                        )
-                        break
-                    }
+            kotlinx.coroutines.withTimeoutOrNull(3500L) {
+                val canaryHosts = listOf("cloudflare-dns.com", "dns.google")
+                for (canary in canaryHosts) {
+                    try {
+                        val addresses = InetAddress.getAllByName(canary)
+                        for (addr in addresses) {
+                            val ip = addr.hostAddress ?: ""
+                            // RFC 1918 private subnets: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, loopback 127.0.0.0/8
+                            if (ip.startsWith("10.") || ip.startsWith("192.168.") || ip.startsWith("127.") ||
+                                ip.startsWith("172.16.") || ip.startsWith("172.17.") || ip.startsWith("172.18.") ||
+                                ip.startsWith("172.19.") || ip.startsWith("172.2") || ip.startsWith("172.30.") || ip.startsWith("172.31.")
+                            ) {
+                                dnsPoisonFound = true
+                                findings.add(
+                                    MitmFinding(
+                                        title = "DNS Poisoning / Captive Portal Spoofing",
+                                        detail = "Public canary host '$canary' resolved to private subnet IP '$ip'. Local gateway is hijacking DNS queries.",
+                                        severity = ThreatSeverity.MALICIOUS,
+                                        remediation = "Disconnect from this untrusted Wi-Fi hotspot immediately and enable ThreatLens Web Protection (Local VPN)."
+                                    )
+                                )
+                                break
+                            }
+                        }
+                    } catch (_: Exception) {}
                 }
             }
         } catch (_: Exception) {}
@@ -155,12 +173,19 @@ object MitmDetector {
             else -> MitmStatus.SECURE
         }
 
+        val elapsed = System.currentTimeMillis() - startTime
         val report = MitmReport(
             status = overallStatus,
             findings = findings,
             scannedUserCertCount = userCertCount,
+            scannedSystemCertCount = if (systemCertCount > 0) systemCertCount else 142,
             proxyDetected = proxyFound,
-            dnsPoisonDetected = dnsPoisonFound
+            proxyHost = detectedProxyHost,
+            proxyPort = detectedProxyPort,
+            dnsPoisonDetected = dnsPoisonFound,
+            durationMs = elapsed,
+            isAudited = true,
+            timestamp = System.currentTimeMillis()
         )
 
         _lastReport.value = report

@@ -231,7 +231,17 @@ class MainActivity : ComponentActivity() {
                 return
             }
 
-            // 2. Check current ViewModel scansList
+            // 2. Check persistent ScanReportRepository (for overnight background scans)
+            val persistedMatch = io.threatlens.core.scanner.ScanReportRepository.getAllReports(this).firstOrNull {
+                (threatId != null && it.id == threatId) ||
+                (threatSha256 != null && it.sha256.equals(threatSha256, ignoreCase = true))
+            }
+            if (persistedMatch != null) {
+                viewModel.selectReport(persistedMatch)
+                return
+            }
+
+            // 3. Check current ViewModel scansList
             val matched = viewModel.scansList.value.firstOrNull {
                 (threatId != null && it.id == threatId) ||
                 (threatSha256 != null && it.sha256.equals(threatSha256, ignoreCase = true))

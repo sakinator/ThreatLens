@@ -45,16 +45,24 @@ class ScheduledAuditJobService : JobService() {
         val packages = pm.getInstalledPackages(0)
 
         var threatsFound = 0
+        val threatsToPersist = mutableListOf<io.threatlens.core.model.ThreatReport>()
+
         for (pkg in packages) {
             val sourceDir = pkg.applicationInfo.sourceDir ?: continue
             val apkFile = java.io.File(sourceDir)
             if (apkFile.exists() && apkFile.canRead()) {
                 val report = RealtimeScanCoordinator.streamScan(context, apkFile, isFullScan = true)
-                if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK) {
+                if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
                     threatsFound++
+                    threatsToPersist.add(report)
                     ThreatNotificationManager.showThreatAlert(context, report)
                 }
             }
+        }
+
+        // Persist all identified threats so they survive process death and appear in UI
+        if (threatsToPersist.isNotEmpty()) {
+            io.threatlens.core.scanner.ScanReportRepository.saveReports(context, threatsToPersist)
         }
 
         // Update last scheduled audit timestamp in settings
@@ -73,6 +81,8 @@ class ScheduledAuditJobService : JobService() {
         private const val KEY_ENABLED = "key_scheduled_audit_enabled"
         private const val KEY_INTERVAL_HOURS = "key_interval_hours"
         private const val KEY_LAST_AUDIT_TIMESTAMP = "key_last_audit_timestamp"
+        const val DEFAULT_INTERVAL_HOURS = 168 // Default: 7 days (1 week)
+        const val DEFAULT_INTERVAL_DAYS = 7
 
         fun isEnabled(context: Context): Boolean {
             return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -81,7 +91,12 @@ class ScheduledAuditJobService : JobService() {
 
         fun getIntervalHours(context: Context): Int {
             return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getInt(KEY_INTERVAL_HOURS, 24)
+                .getInt(KEY_INTERVAL_HOURS, DEFAULT_INTERVAL_HOURS)
+        }
+
+        fun getIntervalDays(context: Context): Int {
+            val hours = getIntervalHours(context)
+            return (hours / 24).coerceIn(1, 7)
         }
 
         fun getLastAuditTimestamp(context: Context): Long {
@@ -89,7 +104,7 @@ class ScheduledAuditJobService : JobService() {
                 .getLong(KEY_LAST_AUDIT_TIMESTAMP, 0L)
         }
 
-        fun setEnabled(context: Context, enabled: Boolean, intervalHours: Int = 24) {
+        fun setEnabled(context: Context, enabled: Boolean, intervalHours: Int = DEFAULT_INTERVAL_HOURS) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             prefs.edit()
                 .putBoolean(KEY_ENABLED, enabled)
@@ -103,7 +118,14 @@ class ScheduledAuditJobService : JobService() {
             }
         }
 
-        fun scheduleAudit(context: Context, intervalHours: Int = 24) {
+        fun setIntervalDays(context: Context, days: Int) {
+            val clampedDays = days.coerceIn(1, 7)
+            val hours = clampedDays * 24
+            val enabled = isEnabled(context)
+            setEnabled(context, enabled, hours)
+        }
+
+        fun scheduleAudit(context: Context, intervalHours: Int = DEFAULT_INTERVAL_HOURS) {
             val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as? JobScheduler ?: return
             val component = ComponentName(context, ScheduledAuditJobService::class.java)
 

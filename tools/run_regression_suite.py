@@ -81,6 +81,7 @@ class RegressionTestRunner:
         self.suite_33_per_app_firewall_and_scheduled_deep_audit()
         self.suite_34_doh_resolvers_and_live_threat_feed_sync()
         self.suite_35_block_webpage_sinkhole_and_whitelist_manager()
+        self.suite_36_persistence_battery_mitm_and_manual_multiscan()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -953,7 +954,7 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code))
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code))
 
     def suite_28_realtime_safe_notifications_and_intent_routing(self):
         print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
@@ -1004,7 +1005,7 @@ class RegressionTestRunner:
             "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
 
         # 4. Release version
-        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code))
+        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
 
     def suite_29_v157_consensus_brand_logos_and_storage_exhaustion(self):
         print(f"\n{YELLOW}▶  SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation{RESET}")
@@ -1117,7 +1118,7 @@ class RegressionTestRunner:
             "fun OfficialVendorLogo" in logos_code and "ContentScale.Fit" in logos_code)
 
         # 7. Release Version
-        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code))
+        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
 
 
 
@@ -1171,7 +1172,7 @@ class RegressionTestRunner:
 
         # 8. Version bumped to 1.5.8 (versionCode 23)
         self.record("Version bumped to 1.5.8+ (versionCode >= 23)",
-            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code))
+            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
 
 
 
@@ -1369,8 +1370,95 @@ class RegressionTestRunner:
 
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
-        self.record("Version bumped to 1.6.0 (versionCode 24)",
-            'versionName = "1.6.0"' in gradle_code and 'versionCode = 24' in gradle_code)
+        self.record("Version bumped to 1.6.0+ (versionCode >= 24)",
+            ('versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and
+            ('versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
+
+    # 36. Test Suite: Persistence, Battery Optimization, 7-Day Scheduled Audit & Manual Multi-Scan
+    def suite_36_persistence_battery_mitm_and_manual_multiscan(self):
+        print(f"\n{YELLOW}▶  SUITE 36: Persistence, Battery Optimization & Manual Multi-Scan{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "ScanReportRepository.kt")
+        pkg_rx_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "PackageInstallReceiver.kt")
+        manifest_path = os.path.join(script_dir, "..", "app", "src", "main", "AndroidManifest.xml")
+        sched_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "ScheduledAuditJobService.kt")
+        settings_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "SettingsScreen.kt")
+        mitm_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "security", "MitmDetector.kt")
+        web_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "WebProtectionScreen.kt")
+        shield_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeDownloadShieldService.kt")
+        watchdog_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "system", "ShieldWatchdogJobService.kt")
+        scanner_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        sheet_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "AppSelectionSheet.kt")
+        fullscan_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+        gradle_path = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+
+        self.record("ScanReportRepository.kt exists", os.path.exists(repo_path))
+        with open(repo_path, "r", encoding="utf-8") as f:
+            repo_code = f.read()
+        self.record("ScanReportRepository implements atomic disk save and auto-pruning of missing targets",
+            "saveReport" in repo_code and "saveReports" in repo_code and "removeReportByPackage" in repo_code and "removeReportBySha256" in repo_code and "pruneMissing" in repo_code)
+
+        with open(pkg_rx_path, "r", encoding="utf-8") as f:
+            pkg_rx_code = f.read()
+        self.record("PackageInstallReceiver prunes uninstalled packages from ScanReportRepository",
+            "ACTION_PACKAGE_REMOVED" in pkg_rx_code and "removeReportByPackage" in pkg_rx_code)
+
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest_code = f.read()
+        self.record("AndroidManifest.xml registers ACTION_PACKAGE_REMOVED for uninstall lifecycle tracking",
+            "android.intent.action.PACKAGE_REMOVED" in manifest_code and "android.intent.action.PACKAGE_FULLY_REMOVED" in manifest_code)
+
+        with open(sched_path, "r", encoding="utf-8") as f:
+            sched_code = f.read()
+        self.record("ScheduledAuditJobService defaults to 7 days (168h) and persists background findings",
+            "DEFAULT_INTERVAL_HOURS = 168" in sched_code and "DEFAULT_INTERVAL_DAYS = 7" in sched_code and "ScanReportRepository.saveReports" in sched_code)
+
+        with open(settings_path, "r", encoding="utf-8") as f:
+            settings_code = f.read()
+        self.record("SettingsScreen implements 1 to 7 days slider for Scheduled Deep Audit",
+            "scheduledIntervalDays" in settings_code and "valueRange = 1f..7f" in settings_code and "Every 7 Days (1 Week)" in settings_code)
+
+        with open(mitm_path, "r", encoding="utf-8") as f:
+            mitm_code = f.read()
+        self.record("MitmDetector tracks system vs user CAs and protects canary DNS with timeout",
+            "scannedSystemCertCount" in mitm_code and "scannedUserCertCount" in mitm_code and "withTimeoutOrNull" in mitm_code and "isAudited = true" in mitm_code)
+
+        with open(web_path, "r", encoding="utf-8") as f:
+            web_code = f.read()
+        self.record("WebProtectionScreen renders MITM telemetry checkpoints and feedback Toast",
+            "Root CAs Inspected" in web_code and "Gateway & Proxy" in web_code and "DNS Canary Integrity" in web_code and "Network Integrity Audit Clean" in web_code)
+
+        with open(shield_path, "r", encoding="utf-8") as f:
+            shield_code = f.read()
+        self.record("RealtimeDownloadShieldService implements zero-overhead MediaStore fast filename gating",
+            "Instant zero-overhead bypass for images" in shield_code and "DISPLAY_NAME" in shield_code)
+
+        with open(watchdog_path, "r", encoding="utf-8") as f:
+            watchdog_code = f.read()
+        self.record("ShieldWatchdogJobService checks shield enabled state and uses 60-minute interval",
+            "key_realtime_shield_enabled" in watchdog_code and "cancelWatchdog" in watchdog_code and "60 * 60 * 1000L" in watchdog_code)
+
+        with open(scanner_path, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        self.record("FullSystemScanner supports startFolderScan, startSelectedAppsScan, and startSingleFileScan",
+            "fun startFolderScan" in scanner_code and "fun startSelectedAppsScan" in scanner_code and "fun startSingleFileScan" in scanner_code and "collectFolderTargets" in scanner_code)
+
+        self.record("AppSelectionSheet.kt exists", os.path.exists(sheet_path))
+        with open(sheet_path, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        self.record("AppSelectionSheet provides search, user apps filter, and batch scan button",
+            "SELECT APPS TO AUDIT" in sheet_code and "userOnlyFilter" in sheet_code and "SCAN SELECTED APP" in sheet_code)
+
+        with open(fullscan_path, "r", encoding="utf-8") as f:
+            fullscan_code = f.read()
+        self.record("FullScanScreen renders SCAN FOLDER, SCAN APPS, and SCAN FILE actions",
+            "SCAN FOLDER" in fullscan_code and "SCAN APPS" in fullscan_code and "SCAN SPECIFIC FILE / APK" in fullscan_code and "AppSelectionSheet" in fullscan_code)
+
+        with open(gradle_path, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+        self.record("Version bumped to 1.7.0 (versionCode 25)",
+            'versionName = "1.7.0"' in gradle_code and 'versionCode = 25' in gradle_code)
+
 
 if __name__ == "__main__":
     runner = RegressionTestRunner()

@@ -96,8 +96,8 @@ fun SettingsScreen(
     var scheduledAuditEnabled by remember {
         mutableStateOf(io.threatlens.core.realtime.ScheduledAuditJobService.isEnabled(context))
     }
-    var scheduledIntervalHours by remember {
-        mutableStateOf(io.threatlens.core.realtime.ScheduledAuditJobService.getIntervalHours(context))
+    var scheduledIntervalDays by remember {
+        mutableStateOf(io.threatlens.core.realtime.ScheduledAuditJobService.getIntervalDays(context))
     }
     val totalLiveFeedRules by io.threatlens.core.vpn.DomainFilterEngine.totalLiveFeedRules.collectAsState()
     var isSyncingLiveFeeds by remember { mutableStateOf(false) }
@@ -1356,7 +1356,7 @@ fun SettingsScreen(
                                     fontSize = 14.sp
                                 )
                                 Text(
-                                    text = "Daily deep scan • Idle & Charging only (0% battery drain)",
+                                    text = "Autonomous deep scan • Charging & Idle only (0% battery drain)",
                                     color = TextSecondary,
                                     fontSize = 11.sp
                                 )
@@ -1366,7 +1366,8 @@ fun SettingsScreen(
                             checked = scheduledAuditEnabled,
                             onCheckedChange = {
                                 scheduledAuditEnabled = it
-                                io.threatlens.core.realtime.ScheduledAuditJobService.setEnabled(context, it, scheduledIntervalHours)
+                                io.threatlens.core.realtime.ScheduledAuditJobService.setIntervalDays(context, scheduledIntervalDays)
+                                io.threatlens.core.realtime.ScheduledAuditJobService.setEnabled(context, it, scheduledIntervalDays * 24)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = CyberBlack,
@@ -1375,6 +1376,83 @@ fun SettingsScreen(
                                 uncheckedTrackColor = CyberDarkSurface
                             )
                         )
+                    }
+
+                    if (scheduledAuditEnabled) {
+                        Surface(
+                            color = CyberDarkSurface,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = when (scheduledIntervalDays) {
+                                            7 -> "Frequency: Every 7 Days (1 Week) [Default]"
+                                            1 -> "Frequency: Every 24 Hours (Daily)"
+                                            else -> "Frequency: Every $scheduledIntervalDays Days"
+                                        },
+                                        color = NeonCyan,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                    Text(
+                                        text = "$scheduledIntervalDays ${if (scheduledIntervalDays == 1) "day" else "days"}",
+                                        color = TextMuted,
+                                        fontSize = 11.sp
+                                    )
+                                }
+
+                                Slider(
+                                    value = scheduledIntervalDays.toFloat(),
+                                    onValueChange = {
+                                        val rounded = kotlin.math.roundToInt(it).coerceIn(1, 7)
+                                        scheduledIntervalDays = rounded
+                                        io.threatlens.core.realtime.ScheduledAuditJobService.setIntervalDays(context, rounded)
+                                    },
+                                    valueRange = 1f..7f,
+                                    steps = 5,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = NeonCyan,
+                                        activeTrackColor = NeonCyan,
+                                        inactiveTrackColor = CyberCardBorder
+                                    )
+                                )
+
+                                val lastAuditTime = io.threatlens.core.realtime.ScheduledAuditJobService.getLastAuditTimestamp(context)
+                                val lastAuditText = if (lastAuditTime > 0L) {
+                                    val formatted = java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(lastAuditTime))
+                                    "Last Audit: $formatted"
+                                } else {
+                                    "Last Audit: Pending first overnight charge"
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = lastAuditText,
+                                        color = TextMuted,
+                                        fontSize = 11.sp
+                                    )
+                                    Text(
+                                        text = "Requires AC Power + Idle",
+                                        color = NeonEmerald.copy(alpha = 0.8f),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     HorizontalDivider(color = CyberCardBorder.copy(alpha = 0.5f))

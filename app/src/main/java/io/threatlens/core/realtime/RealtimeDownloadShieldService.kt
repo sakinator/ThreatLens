@@ -119,12 +119,26 @@ class RealtimeDownloadShieldService : Service() {
             val projection = arrayOf(MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DISPLAY_NAME)
             contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
+                    // Fast filter: Check DISPLAY_NAME before any filesystem access
+                    val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        val name = cursor.getString(nameIndex)?.lowercase() ?: ""
+                        if (name.isNotEmpty() && !name.endsWith(".apk") && !name.endsWith(".dex") &&
+                            !name.endsWith(".jar") && !name.endsWith(".so") && !name.endsWith(".bin")) {
+                            return // Instant zero-overhead bypass for images, audio, video, documents
+                        }
+                    }
+
                     val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
                     if (dataIndex != -1) {
                         val path = cursor.getString(dataIndex)
                         if (!path.isNullOrBlank()) {
-                            val file = File(path)
-                            RealtimeScanCoordinator.scanFileAsync(applicationContext, file)
+                            val lowerPath = path.lowercase()
+                            if (lowerPath.endsWith(".apk") || lowerPath.endsWith(".dex") ||
+                                lowerPath.endsWith(".jar") || lowerPath.endsWith(".so") || lowerPath.endsWith(".bin")) {
+                                val file = File(path)
+                                RealtimeScanCoordinator.scanFileAsync(applicationContext, file)
+                            }
                         }
                     }
                 }

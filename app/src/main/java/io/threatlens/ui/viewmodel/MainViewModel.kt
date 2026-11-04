@@ -81,13 +81,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ApiKeyVault.init(application)
         reloadKeysFromPrefs()
 
+        // Initialize persistent scan repository and load previous verdicts
+        io.threatlens.core.scanner.ScanReportRepository.init(application)
+        val initialReports = io.threatlens.core.scanner.ScanReportRepository.getAllReports(application)
+        _scansList.value = initialReports
+
+        viewModelScope.launch {
+            io.threatlens.core.scanner.ScanReportRepository.persistedReportsFlow.collect { persistedList ->
+                _scansList.value = persistedList
+            }
+        }
+
         viewModelScope.launch {
             RealtimeScanCoordinator.scanReports.collect { newReport ->
-                val current = _scansList.value.toMutableList()
-                current.removeAll { it.sha256 == newReport.sha256 }
-                current.add(0, newReport)
-                _scansList.value = current
-
                 // Dynamically update the currently opened detail sheet in real-time
                 if (_selectedReport.value?.sha256 == newReport.sha256) {
                     _selectedReport.value = newReport
@@ -173,6 +179,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         FullSystemScanner.startFullScan(getApplication())
     }
 
+    fun startSelectedAppsScan(packageNames: List<String>) {
+        FullSystemScanner.startSelectedAppsScan(getApplication(), packageNames)
+    }
+
+    fun startFolderScan(treeUri: android.net.Uri) {
+        FullSystemScanner.startFolderScan(getApplication(), treeUri)
+    }
+
+    fun startSingleFileScan(file: File, displayName: String? = null) {
+        FullSystemScanner.startSingleFileScan(getApplication(), file, displayName)
+    }
+
     fun pauseFullScan() {
         FullSystemScanner.pauseScan()
     }
@@ -240,6 +258,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
+            io.threatlens.core.scanner.ScanReportRepository.removeReportBySha256(app, report.sha256)
+            if (!report.packageName.isNullOrBlank()) {
+                io.threatlens.core.scanner.ScanReportRepository.removeReportByPackage(app, report.packageName)
+            }
             val current = _scansList.value.toMutableList()
             current.removeAll { it.targetPath == report.targetPath || it.sha256 == report.sha256 }
             _scansList.value = current
@@ -255,6 +277,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 deleted = file.delete()
             }
             val current = _scansList.value.toMutableList()
+            val targetReport = current.firstOrNull { it.targetPath == path }
+            if (targetReport != null) {
+                io.threatlens.core.scanner.ScanReportRepository.removeReportBySha256(getApplication(), targetReport.sha256)
+            }
             current.removeAll { it.targetPath == path }
             _scansList.value = current
             _selectedReport.value = null

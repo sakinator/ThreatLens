@@ -1129,6 +1129,7 @@ object RealtimeScanCoordinator {
         )
 
         ScanThrottleManager.cacheReport(finalReport)
+        io.threatlens.core.scanner.ScanReportRepository.saveReport(context, finalReport)
         _scanReports.emit(finalReport)
 
         if (finalReport.severity == ThreatSeverity.MALICIOUS || finalReport.severity == ThreatSeverity.HIGH_RISK) {
@@ -1221,6 +1222,7 @@ object RealtimeScanCoordinator {
         )
 
         ScanThrottleManager.cacheReport(updatedReport)
+        io.threatlens.core.scanner.ScanReportRepository.saveReport(context, updatedReport)
         _scanReports.emit(updatedReport)
         return updatedReport
     }

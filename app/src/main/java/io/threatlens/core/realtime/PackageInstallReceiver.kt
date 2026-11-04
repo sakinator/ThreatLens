@@ -10,11 +10,21 @@ class PackageInstallReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
+        val packageName = intent.data?.schemeSpecificPart ?: return
+
+        // Do not process ourselves
+        if (packageName == context.packageName) return
+
+        if (action == Intent.ACTION_PACKAGE_REMOVED || action == Intent.ACTION_PACKAGE_FULLY_REMOVED) {
+            val isReplacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+            // If the package is being completely uninstalled (not replaced/updated)
+            if (!isReplacing) {
+                io.threatlens.core.scanner.ScanReportRepository.removeReportByPackage(context, packageName)
+            }
+            return
+        }
+
         if (action == Intent.ACTION_PACKAGE_ADDED || action == Intent.ACTION_PACKAGE_REPLACED) {
-            val packageName = intent.data?.schemeSpecificPart ?: return
-            
-            // Do not scan ourselves or excluded packages
-            if (packageName == context.packageName) return
             if (io.threatlens.core.exclusions.ExclusionManager.isPackageExcluded(packageName)) return
 
             try {

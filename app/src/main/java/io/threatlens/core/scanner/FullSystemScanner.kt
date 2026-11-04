@@ -3,8 +3,10 @@ package io.threatlens.core.scanner
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.realtime.RealtimeScanCoordinator
@@ -44,13 +46,57 @@ object FullSystemScanner {
 
     fun startFullScan(context: Context) {
         if (_scanState.value.status == FullScanStatus.SCANNING) return
+        val targets = collectAllTargets(context)
+        runScanPipeline(context, targets)
+    }
 
+    fun startSelectedAppsScan(context: Context, packageNames: List<String>) {
+        if (_scanState.value.status == FullScanStatus.SCANNING || packageNames.isEmpty()) return
+        val pm = context.packageManager
+        val targets = mutableListOf<ScanItem>()
+
+        for (pkg in packageNames) {
+            try {
+                val app = pm.getApplicationInfo(pkg, 0)
+                val apkFile = File(app.publicSourceDir)
+                if (apkFile.exists()) {
+                    val appName = pm.getApplicationLabel(app).toString()
+                    val pInfo = try { pm.getPackageInfo(pkg, 0) } catch (_: Exception) { null }
+                    val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (pInfo?.versionCode?.toLong() ?: 0L)
+                    val uTime = pInfo?.lastUpdateTime ?: 0L
+                    targets.add(ScanItem(appName, apkFile, pkg, vCode, uTime))
+                }
+            } catch (_: Exception) {}
+        }
+        runScanPipeline(context, targets)
+    }
+
+    fun startFolderScan(context: Context, treeUri: Uri) {
+        if (_scanState.value.status == FullScanStatus.SCANNING) return
+        scannerScope.launch {
+            _scanState.value = FullScanState(status = FullScanStatus.SCANNING, currentItemName = "Enumerating folder targets...")
+            val targets = collectFolderTargets(context, treeUri)
+            if (targets.isEmpty()) {
+                _scanState.value = FullScanState(status = FullScanStatus.COMPLETED, currentItemName = "No executable files found in folder")
+                return@launch
+            }
+            runScanPipeline(context, targets)
+        }
+    }
+
+    fun startSingleFileScan(context: Context, file: File, displayName: String? = null) {
+        if (!file.exists()) return
+        val name = displayName ?: file.name
+        val targets = listOf(ScanItem(name, file, null, 0L, 0L))
+        runScanPipeline(context, targets)
+    }
+
+    private fun runScanPipeline(context: Context, targets: List<ScanItem>) {
         scanJob?.cancel()
         scanJob = scannerScope.launch {
             val startTime = System.currentTimeMillis()
             _scanState.value = FullScanState(status = FullScanStatus.SCANNING)
 
-            val targets = collectAllTargets(context)
             val total = targets.size
             var scanned = 0
             var clean = 0
@@ -153,7 +199,7 @@ object FullSystemScanner {
             }
 
             val elapsed = System.currentTimeMillis() - startTime
-            _scanState.value = FullScanState(
+            val completedState = FullScanState(
                 status = FullScanStatus.COMPLETED,
                 progress = 1.0f,
                 scannedCount = scanned,
@@ -164,6 +210,12 @@ object FullSystemScanner {
                 durationMs = elapsed,
                 allScannedReports = allReports.toList()
             )
+            _scanState.value = completedState
+
+            // Persist all scanned reports to disk so results survive reboots and app restarts
+            if (allReports.isNotEmpty()) {
+                ScanReportRepository.saveReports(context, allReports)
+            }
         }
     }
 
@@ -244,6 +296,83 @@ object FullSystemScanner {
         } catch (_: Exception) {}
 
         return list.distinctBy { it.file.absolutePath }
+    }
+
+    private fun collectFolderTargets(context: Context, treeUri: Uri): List<ScanItem> {
+        val list = mutableListOf<ScanItem>()
+        val pm = context.packageManager
+        val contentResolver = context.contentResolver
+        val targetExtensions = setOf("apk", "dex", "jar", "so", "bin")
+        val cacheFolder = File(context.cacheDir, "folder_scan_temp").apply { mkdirs() }
+
+        try {
+            val treeDocumentId = if (DocumentsContract.isDocumentUri(context, treeUri)) {
+                DocumentsContract.getDocumentId(treeUri)
+            } else {
+                DocumentsContract.getTreeDocumentId(treeUri)
+            }
+            val rootChildrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocumentId)
+            val queue = ArrayDeque<Uri>()
+            queue.add(rootChildrenUri)
+
+            while (queue.isNotEmpty() && list.size < 300) {
+                val currentUri = queue.removeFirst()
+                try {
+                    contentResolver.query(
+                        currentUri,
+                        arrayOf(
+                            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                            DocumentsContract.Document.COLUMN_MIME_TYPE
+                        ),
+                        null, null, null
+                    )?.use { cursor ->
+                        val idIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                        val nameIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                        val mimeIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
+
+                        while (cursor.moveToNext() && list.size < 300) {
+                            val docId = cursor.getString(idIdx) ?: continue
+                            val name = cursor.getString(nameIdx) ?: "file"
+                            val mime = cursor.getString(mimeIdx) ?: ""
+
+                            if (mime == DocumentsContract.Document.MIME_TYPE_DIR) {
+                                val childDirUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
+                                queue.add(childDirUri)
+                            } else {
+                                val ext = name.substringAfterLast('.', "").lowercase()
+                                if (ext in targetExtensions) {
+                                    val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                                    val tempFile = File(cacheFolder, "${System.currentTimeMillis()}_$name")
+                                    contentResolver.openInputStream(docUri)?.use { input ->
+                                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                                    }
+                                    if (tempFile.exists() && tempFile.length() > 0) {
+                                        var pkgName: String? = null
+                                        var appName = name
+                                        if (ext == "apk") {
+                                            try {
+                                                val pi = pm.getPackageArchiveInfo(tempFile.absolutePath, 0)
+                                                if (pi != null) {
+                                                    pkgName = pi.packageName
+                                                    pi.applicationInfo.sourceDir = tempFile.absolutePath
+                                                    pi.applicationInfo.publicSourceDir = tempFile.absolutePath
+                                                    val lbl = pm.getApplicationLabel(pi.applicationInfo).toString()
+                                                    if (lbl.isNotBlank()) appName = lbl
+                                                }
+                                            } catch (_: Exception) {}
+                                        }
+                                        list.add(ScanItem(appName, tempFile, pkgName))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {}
+
+        return list
     }
 
     private data class ScanItem(
