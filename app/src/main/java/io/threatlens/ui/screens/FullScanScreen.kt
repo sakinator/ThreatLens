@@ -69,6 +69,59 @@ fun FullScanScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val isUpdatingSignatures by io.threatlens.core.update.SignatureUpdateService.isUpdating.collectAsState()
+    val persistedScans by viewModel.scansList.collectAsState()
+
+    // Folder Picker Launcher (Registered at top level unconditionally to prevent lifecycle crash)
+    val folderPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            val folderName = uri.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/') ?: "folder"
+            Toast.makeText(context, "Scanning folder: $folderName...", Toast.LENGTH_SHORT).show()
+            viewModel.startFolderScan(uri)
+        }
+    }
+
+    // File Picker Launcher (Registered at top level unconditionally to prevent lifecycle crash)
+    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val fileName = try {
+                var name: String? = null
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1 && cursor.moveToFirst()) {
+                        name = cursor.getString(nameIndex)
+                    }
+                }
+                name ?: uri.lastPathSegment ?: "file"
+            } catch (_: Exception) {
+                uri.lastPathSegment ?: "file"
+            }
+            Toast.makeText(context, "Scanning file: $fileName...", Toast.LENGTH_SHORT).show()
+            isScanningFile = true
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val tempFile = java.io.File(context.cacheDir, "manual_scan_${System.currentTimeMillis()}.apk")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    if (tempFile.exists()) {
+                        val report = io.threatlens.core.realtime.RealtimeScanCoordinator.streamScan(context, tempFile)
+                        withContext(Dispatchers.Main) {
+                            isScanningFile = false
+                            viewModel.selectReport(report)
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) { isScanningFile = false }
+                    }
+                } catch (_: Exception) {
+                    withContext(Dispatchers.Main) { isScanningFile = false }
+                }
+            }
+        }
+    }
 
     Scaffold(
         containerColor = CyberBlack,
@@ -418,58 +471,6 @@ fun FullScanScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Folder Picker Launcher
-                    val folderPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-                    ) { uri ->
-                        if (uri != null) {
-                            val folderName = uri.lastPathSegment?.substringAfterLast(':')?.substringAfterLast('/') ?: "folder"
-                            Toast.makeText(context, "Scanning folder: $folderName...", Toast.LENGTH_SHORT).show()
-                            viewModel.startFolderScan(uri)
-                        }
-                    }
-
-                    // File Picker Launcher
-                    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
-                    ) { uri ->
-                        if (uri != null) {
-                            val fileName = try {
-                                var name: String? = null
-                                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                                    if (nameIndex != -1 && cursor.moveToFirst()) {
-                                        name = cursor.getString(nameIndex)
-                                    }
-                                }
-                                name ?: uri.lastPathSegment ?: "file"
-                            } catch (_: Exception) {
-                                uri.lastPathSegment ?: "file"
-                            }
-                            Toast.makeText(context, "Scanning file: $fileName...", Toast.LENGTH_SHORT).show()
-                            isScanningFile = true
-                            coroutineScope.launch(Dispatchers.IO) {
-                                try {
-                                    val tempFile = java.io.File(context.cacheDir, "manual_scan_${System.currentTimeMillis()}.apk")
-                                    context.contentResolver.openInputStream(uri)?.use { input ->
-                                        tempFile.outputStream().use { output -> input.copyTo(output) }
-                                    }
-                                    if (tempFile.exists()) {
-                                        val report = io.threatlens.core.realtime.RealtimeScanCoordinator.streamScan(context, tempFile)
-                                        withContext(Dispatchers.Main) {
-                                            isScanningFile = false
-                                            viewModel.selectReport(report)
-                                        }
-                                    } else {
-                                        withContext(Dispatchers.Main) { isScanningFile = false }
-                                    }
-                                } catch (_: Exception) {
-                                    withContext(Dispatchers.Main) { isScanningFile = false }
-                                }
-                            }
-                        }
-                    }
-
                     // Targeted Manual Scans: Apps & Folder
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -609,14 +610,57 @@ fun FullScanScreen(
                 }
             }
 
-            // Results and Filter Section: visible whenever scanned reports exist (live progressive during scan or completed)
-            val allReportsList = if (scanState.allScannedReports.isNotEmpty()) {
-                scanState.allScannedReports
-            } else {
+            // Results and Filter Section: visible whenever scanned reports exist (live progressive during scan, completed, or from persistent history)
+            val allReportsList = when {
+                scanState.allScannedReports.isNotEmpty() -> scanState.allScannedReports
+                scanState.threatsFound.isNotEmpty() -> scanState.threatsFound
+                persistedScans.isNotEmpty() -> persistedScans
+                else -> emptyList()
+            }
+
+            val effectiveThreats = if (scanState.allScannedReports.isNotEmpty() || scanState.status != FullScanStatus.IDLE) {
                 scanState.threatsFound
+            } else {
+                allReportsList.filter { it.severity != ThreatSeverity.SAFE }
             }
 
             if (allReportsList.isNotEmpty()) {
+                if (scanState.status == FullScanStatus.IDLE && scanState.allScannedReports.isEmpty()) {
+                    item {
+                        Surface(
+                            color = CyberDarkSurface,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CyberCardBorder),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.History, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "LAST AUDIT RESULTS (${allReportsList.size} ITEMS)",
+                                        color = TextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                                Text(
+                                    text = if (effectiveThreats.isNotEmpty()) "${effectiveThreats.size} AT RISK" else "ALL CLEAN",
+                                    color = if (effectiveThreats.isNotEmpty()) NeonCrimson else NeonEmerald,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Filter Tabs: ALL | THREATS | SAFE
                 val allCount = allReportsList.size
                 item {
@@ -649,21 +693,21 @@ fun FullScanScreen(
                         Surface(
                             onClick = { selectedFilter = ScanResultFilter.THREATS },
                             color = if (selectedFilter == ScanResultFilter.THREATS) {
-                                if (hasThreats) NeonCrimson.copy(alpha = 0.2f) else CyberDarkSurface
+                                if (effectiveThreats.isNotEmpty()) NeonCrimson.copy(alpha = 0.2f) else CyberDarkSurface
                             } else CyberDarkSurface,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
                                 if (selectedFilter == ScanResultFilter.THREATS) {
-                                    if (hasThreats) NeonCrimson else NeonCyan
+                                    if (effectiveThreats.isNotEmpty()) NeonCrimson else NeonCyan
                                 } else CyberCardBorder
                             ),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "THREATS (${scanState.threatsFound.size})",
+                                text = "THREATS (${effectiveThreats.size})",
                                 color = if (selectedFilter == ScanResultFilter.THREATS) {
-                                    if (hasThreats) NeonCrimson else NeonCyan
+                                    if (effectiveThreats.isNotEmpty()) NeonCrimson else NeonCyan
                                 } else TextSecondary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -779,7 +823,7 @@ fun FullScanScreen(
 
             // Display Scanned Items based on scan state, filter and sort order
             val baseList = when (selectedFilter) {
-                ScanResultFilter.THREATS -> scanState.threatsFound
+                ScanResultFilter.THREATS -> effectiveThreats
                 ScanResultFilter.SAFE -> allReportsList.filter { it.severity == ThreatSeverity.SAFE }
                 ScanResultFilter.ALL -> allReportsList
             }
@@ -807,17 +851,17 @@ fun FullScanScreen(
                 val hasMalicious = displayList.any { it.severity == ThreatSeverity.MALICIOUS }
                 val hasAnyThreatsInList = displayList.any { it.severity != ThreatSeverity.SAFE }
 
-                if (hasAnyThreatsInList && (selectedFilter == ScanResultFilter.THREATS || (selectedFilter == ScanResultFilter.ALL && scanState.threatsFound.isNotEmpty()))) {
+                if (hasAnyThreatsInList && (selectedFilter == ScanResultFilter.THREATS || (selectedFilter == ScanResultFilter.ALL && effectiveThreats.isNotEmpty()))) {
                     val sectionTitle = if (hasMalicious) {
-                        "CRITICAL THREATS REQUIRING ATTENTION (${scanState.threatsFound.size})"
+                        "CRITICAL THREATS REQUIRING ATTENTION (${effectiveThreats.size})"
                     } else {
-                        "SUSPICIOUS APPS REQUIRING REVIEW (${scanState.threatsFound.size})"
+                        "SUSPICIOUS APPS REQUIRING REVIEW (${effectiveThreats.size})"
                     }
                     val sectionColor = if (hasMalicious) NeonCrimson else CyberAmber
                     val buttonText = if (hasMalicious) {
-                        "UNINSTALL / DELETE ALL ${scanState.threatsFound.size} DETECTED THREATS"
+                        "UNINSTALL / DELETE ALL ${effectiveThreats.size} DETECTED THREATS"
                     } else {
-                        "REVIEW / REMOVE ALL ${scanState.threatsFound.size} SUSPICIOUS APPS"
+                        "REVIEW / REMOVE ALL ${effectiveThreats.size} SUSPICIOUS APPS"
                     }
 
                     item {
@@ -904,7 +948,7 @@ fun FullScanScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DeleteForever, contentDescription = null, tint = NeonCrimson, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Remove All ${scanState.threatsFound.size} Threats?", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Remove All ${effectiveThreats.size} Threats?", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             },
             text = {
@@ -919,7 +963,7 @@ fun FullScanScreen(
                 Button(
                     onClick = {
                         showConfirmDeleteAllDialog = false
-                        scanState.threatsFound.forEach { threat ->
+                        effectiveThreats.forEach { threat ->
                             viewModel.deleteThreat(threat)
                         }
                     },

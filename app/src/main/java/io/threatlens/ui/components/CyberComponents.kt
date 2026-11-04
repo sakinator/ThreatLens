@@ -151,7 +151,7 @@ fun computeSecurityCapabilities(report: ThreatReport): List<SecurityCapabilityBa
     val list = mutableListOf<SecurityCapabilityBadge>()
     val perms = report.dangerousPermissions
     val behaviors = report.detectedBehaviors
-    val family = report.threatFamily.lowercase()
+    val family = (report.threatFamily ?: "").lowercase()
 
     // 1. Banking & Overlay risk
     val hasOverlay = perms.any { it.endsWith("SYSTEM_ALERT_WINDOW", ignoreCase = true) } ||
@@ -344,6 +344,23 @@ fun ThreatItemRow(
                     }
                 }
 
+                // 2b. Target Source Vector Pill: DOWNLOAD vs INSTALLED
+                val isDownloadIntercept = report.targetPath.contains("/Download", ignoreCase = true) || (!report.targetName.equals("base.apk", ignoreCase = true) && !report.targetName.equals(report.appName, ignoreCase = true))
+                Surface(
+                    color = CyberDarkSurface,
+                    shape = RoundedCornerShape(4.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberCardBorder)
+                ) {
+                    Text(
+                        text = if (isDownloadIntercept) "DOWNLOAD" else "INSTALLED",
+                        color = if (isDownloadIntercept) CyberAmber else NeonCyan,
+                        fontSize = 8.5.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+
                 // 3. Target File Name (if different from base.apk or app name)
                 if (!report.targetName.equals("base.apk", ignoreCase = true) && !report.targetName.equals(report.appName, ignoreCase = true)) {
                     Surface(
@@ -438,7 +455,7 @@ fun ThreatItemRow(
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                capabilities.take(3).forEach { cap ->
+                capabilities.forEach { cap ->
                     Surface(
                         color = cap.color.copy(alpha = 0.10f),
                         shape = RoundedCornerShape(4.dp),
@@ -458,21 +475,6 @@ fun ThreatItemRow(
                                 fontFamily = FontFamily.Monospace
                             )
                         }
-                    }
-                }
-                if (capabilities.size > 3) {
-                    Surface(
-                        color = CyberDarkSurface,
-                        shape = RoundedCornerShape(4.dp),
-                        border = androidx.compose.foundation.BorderStroke(0.8.dp, CyberCardBorder)
-                    ) {
-                        Text(
-                            text = "+${capabilities.size - 3} more",
-                            color = TextMuted,
-                            fontSize = 9.sp,
-                            fontFamily = FontFamily.Monospace,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
                     }
                 }
             }

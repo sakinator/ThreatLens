@@ -94,134 +94,140 @@ object FullSystemScanner {
     private fun runScanPipeline(context: Context, targets: List<ScanItem>) {
         scanJob?.cancel()
         scanJob = scannerScope.launch {
-            val startTime = System.currentTimeMillis()
-            _scanState.value = FullScanState(status = FullScanStatus.SCANNING)
+            try {
+                val startTime = System.currentTimeMillis()
+                _scanState.value = FullScanState(status = FullScanStatus.SCANNING)
 
-            val total = targets.size
-            var scanned = 0
-            var clean = 0
-            val threats = mutableListOf<ThreatReport>()
-            val allReports = mutableListOf<ThreatReport>()
+                val total = targets.size
+                var scanned = 0
+                var clean = 0
+                val threats = mutableListOf<ThreatReport>()
+                val allReports = mutableListOf<ThreatReport>()
 
-            for (target in targets) {
-                if (!isActive) {
-                    _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
-                    return@launch
-                }
-
-                // Check and handle paused state
-                while (_scanState.value.status == FullScanStatus.PAUSED) {
+                for (target in targets) {
                     if (!isActive) {
                         _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
                         return@launch
                     }
-                    delay(150)
-                }
 
-                _scanState.value = _scanState.value.copy(
-                    progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
-                    scannedCount = scanned,
-                    totalCount = total,
-                    currentItemName = target.name,
-                    threatsFound = threats.toList(),
-                    cleanCount = clean,
-                    allScannedReports = allReports.toList()
-                )
-
-                // 1. Fast Cache Check: If already verified clean and un-updated, instant skip deep parsing
-                if (target.packageName != null && target.lastUpdateTime > 0L) {
-                    val cached = ScanCacheManager.getCachedVerdict(context, target.packageName, target.versionCode, target.lastUpdateTime)
-                    if (cached != null) {
-                        clean++
-                        scanned++
-                        val cachedReport = ThreatReport(
-                            targetName = target.file.name,
-                            targetPath = target.file.absolutePath,
-                            appName = target.name,
-                            packageName = target.packageName,
-                            sha256 = "",
-                            fileSize = target.file.length(),
-                            isApk = true,
-                            localScore = 0,
-                            cloudScore = 0,
-                            currentScore = 0,
-                            severity = ThreatSeverity.SAFE,
-                            threatFamily = "Clean",
-                            detectionType = io.threatlens.core.model.DetectionType.CLEAN,
-                            engineVerdictMap = mapOf(
-                                "ThreatLens Local Engine" to "Clean (Cached Safe)",
-                                "ThreatLens Offline Signature DB" to "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
-                            )
-                        )
-                        allReports.add(cachedReport)
-                        continue
+                    // Check and handle paused state
+                    while (_scanState.value.status == FullScanStatus.PAUSED) {
+                        if (!isActive) {
+                            _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
+                            return@launch
+                        }
+                        delay(150)
                     }
-                }
 
-                try {
-                    val report = RealtimeScanCoordinator.performScan(
-                        context = context,
-                        file = target.file,
-                        customAppName = target.name,
-                        customPackageName = target.packageName,
-                        isFullScan = true,
-                        totalScanCount = targets.size
+                    _scanState.value = _scanState.value.copy(
+                        progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
+                        scannedCount = scanned,
+                        totalCount = total,
+                        currentItemName = target.name,
+                        threatsFound = threats.toList(),
+                        cleanCount = clean,
+                        allScannedReports = allReports.toList()
                     )
-                    allReports.add(report)
-                    if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
-                        threats.add(report)
-                    } else {
-                        clean++
-                        if (target.packageName != null && target.lastUpdateTime > 0L) {
-                            ScanCacheManager.putCachedVerdict(
-                                context,
-                                target.packageName,
-                                target.versionCode,
-                                target.lastUpdateTime,
-                                io.threatlens.core.local.LocalAntivirusEngine.LocalScanVerdict(
-                                    isMalicious = false,
-                                    localScore = report.currentScore,
-                                    threatFamily = report.threatFamily,
-                                    category = "Clean",
-                                    detectedBehaviors = emptyList(),
-                                    dangerousPermissions = emptyList(),
-                                    matchedSignatures = emptyList(),
-                                    engineSources = listOf("ThreatLens Local Engine (Cached Safe)")
+
+                    // 1. Fast Cache Check: If already verified clean and un-updated, instant skip deep parsing
+                    if (target.packageName != null && target.lastUpdateTime > 0L) {
+                        val cached = ScanCacheManager.getCachedVerdict(context, target.packageName, target.versionCode, target.lastUpdateTime)
+                        if (cached != null) {
+                            clean++
+                            scanned++
+                            val cachedReport = ThreatReport(
+                                targetName = target.file.name,
+                                targetPath = target.file.absolutePath,
+                                appName = target.name,
+                                packageName = target.packageName,
+                                sha256 = "",
+                                fileSize = target.file.length(),
+                                isApk = true,
+                                localScore = 0,
+                                cloudScore = 0,
+                                currentScore = 0,
+                                severity = ThreatSeverity.SAFE,
+                                threatFamily = "Clean",
+                                detectionType = io.threatlens.core.model.DetectionType.CLEAN,
+                                engineVerdictMap = mapOf(
+                                    "ThreatLens Local Engine" to "Clean (Cached Safe)",
+                                    "ThreatLens Offline Signature DB" to "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
                                 )
                             )
+                            allReports.add(cachedReport)
+                            continue
                         }
                     }
-                } catch (_: Exception) {}
 
-                scanned++
-                _scanState.value = _scanState.value.copy(
-                    progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
+                    try {
+                        val report = RealtimeScanCoordinator.performScan(
+                            context = context,
+                            file = target.file,
+                            customAppName = target.name,
+                            customPackageName = target.packageName,
+                            isFullScan = true,
+                            totalScanCount = targets.size
+                        )
+                        allReports.add(report)
+                        if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
+                            threats.add(report)
+                        } else {
+                            clean++
+                            if (target.packageName != null && target.lastUpdateTime > 0L) {
+                                ScanCacheManager.putCachedVerdict(
+                                    context,
+                                    target.packageName,
+                                    target.versionCode,
+                                    target.lastUpdateTime,
+                                    io.threatlens.core.local.LocalAntivirusEngine.LocalScanVerdict(
+                                        isMalicious = false,
+                                        localScore = report.currentScore,
+                                        threatFamily = report.threatFamily,
+                                        category = "Clean",
+                                        detectedBehaviors = emptyList(),
+                                        dangerousPermissions = emptyList(),
+                                        matchedSignatures = emptyList(),
+                                        engineSources = listOf("ThreatLens Local Engine (Cached Safe)")
+                                    )
+                                )
+                            }
+                        }
+                    } catch (_: Exception) {}
+
+                    scanned++
+                    _scanState.value = _scanState.value.copy(
+                        progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
+                        scannedCount = scanned,
+                        cleanCount = clean,
+                        threatsFound = threats.toList(),
+                        allScannedReports = allReports.toList()
+                    )
+                    // Brief cooperative yield to keep UI responsive
+                    delay(15)
+                }
+
+                val elapsed = System.currentTimeMillis() - startTime
+                val completedState = FullScanState(
+                    status = FullScanStatus.COMPLETED,
+                    progress = 1.0f,
                     scannedCount = scanned,
+                    totalCount = total,
+                    currentItemName = "Scan Complete",
+                    threatsFound = threats,
                     cleanCount = clean,
-                    threatsFound = threats.toList(),
+                    durationMs = elapsed,
                     allScannedReports = allReports.toList()
                 )
-                // Brief cooperative yield to keep UI responsive
-                delay(15)
-            }
+                _scanState.value = completedState
 
-            val elapsed = System.currentTimeMillis() - startTime
-            val completedState = FullScanState(
-                status = FullScanStatus.COMPLETED,
-                progress = 1.0f,
-                scannedCount = scanned,
-                totalCount = total,
-                currentItemName = "Scan Complete",
-                threatsFound = threats,
-                cleanCount = clean,
-                durationMs = elapsed,
-                allScannedReports = allReports.toList()
-            )
-            _scanState.value = completedState
-
-            // Persist all scanned reports to disk so results survive reboots and app restarts
-            if (allReports.isNotEmpty()) {
-                ScanReportRepository.saveReports(context, allReports)
+                // Persist all scanned reports to disk so results survive reboots and app restarts
+                if (allReports.isNotEmpty()) {
+                    ScanReportRepository.saveReports(context, allReports)
+                }
+            } catch (_: kotlinx.coroutines.CancellationException) {
+                _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
+            } catch (e: Exception) {
+                AppDiagnosticLogger.log("FullSystemScanner", "Scan error: ${e.message}")
             }
         }
     }

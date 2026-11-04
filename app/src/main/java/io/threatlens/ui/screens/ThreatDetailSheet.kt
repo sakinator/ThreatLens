@@ -774,11 +774,27 @@ fun ThreatDetailSheet(
                                         )
 
                                         val details = report.engineDetailsMap[sourceName] ?: emptyList()
-                                        if (details.isNotEmpty()) {
+                                        val hasThreats = isMaliciousFlag || isSuspicious
+                                        val threatFindings = details.filter { item ->
+                                            !item.contains("clean", ignoreCase = true) &&
+                                            !item.contains("no threat", ignoreCase = true) &&
+                                            !item.contains("0 cvd", ignoreCase = true) &&
+                                            !item.contains("0 threat", ignoreCase = true) &&
+                                            !item.contains("zero network", ignoreCase = true) &&
+                                            !item.contains("no embedded", ignoreCase = true) &&
+                                            !item.contains("normal", ignoreCase = true) &&
+                                            !item.contains("verified production", ignoreCase = true) &&
+                                            !item.contains("no commercial crypter", ignoreCase = true) &&
+                                            !item.contains("no debug keys", ignoreCase = true) &&
+                                            !item.contains("definitions checked", ignoreCase = true) &&
+                                            !item.contains("signatures queried", ignoreCase = true)
+                                        }
+
+                                        if (hasThreats && threatFindings.isNotEmpty()) {
                                             Spacer(modifier = Modifier.height(6.dp))
                                             Text(
-                                                text = if (sourceName == "VirusTotal") "Security Vendor Findings (${details.size} detections):" else "Observed Technical Findings:",
-                                                color = if (isMaliciousFlag) NeonCrimson else if (isSuspicious) CyberAmber else NeonCyan,
+                                                text = if (sourceName == "VirusTotal") "Security Vendor Findings (${threatFindings.size} detections):" else "Observed Threat Indicators & Findings:",
+                                                color = if (isMaliciousFlag) NeonCrimson else CyberAmber,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -791,8 +807,24 @@ fun ThreatDetailSheet(
                                                     .padding(8.dp),
                                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                                             ) {
-                                                details.forEach { item ->
+                                                threatFindings.forEach { item ->
                                                     VendorFindingBadge(item = item, isMalicious = isMaliciousFlag)
+                                                }
+                                            }
+                                        } else if (isClean) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Surface(
+                                                color = NeonEmerald.copy(alpha = 0.08f),
+                                                shape = RoundedCornerShape(6.dp),
+                                                border = androidx.compose.foundation.BorderStroke(0.8.dp, NeonEmerald.copy(alpha = 0.35f))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NeonEmerald, modifier = Modifier.size(12.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text("Verified Clean: Zero threat indicators detected", color = NeonEmerald, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                                                 }
                                             }
                                         }
@@ -1236,19 +1268,28 @@ fun ThreatDetailSheet(
             }
 
             // Observed Heuristics
-            if (report.detectedBehaviors.isNotEmpty()) {
+            val meaningfulBehaviors = report.detectedBehaviors.filter { b ->
+                !b.contains("Clean", ignoreCase = true) &&
+                !b.contains("Normal", ignoreCase = true) &&
+                !b.contains("Zero threat", ignoreCase = true) &&
+                !b.contains("0 threat", ignoreCase = true) &&
+                !b.contains("No embedded", ignoreCase = true) &&
+                !b.contains("Zero network", ignoreCase = true) &&
+                !b.contains("Verified", ignoreCase = true)
+            }
+            if (meaningfulBehaviors.isNotEmpty()) {
                 GlassCard {
                     Text(
-                        text = "Observed Findings & Heuristics",
+                        text = "Observed Threat Behaviors & Heuristics",
                         color = TextPrimary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    report.detectedBehaviors.forEach { behavior ->
+                    meaningfulBehaviors.forEach { behavior ->
                         Text(
                             text = "• $behavior",
-                            color = TextSecondary,
+                            color = if (report.currentScore >= 75) NeonCrimson else if (report.currentScore >= 25) CyberAmber else TextSecondary,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
@@ -1332,7 +1373,7 @@ fun ThreatDetailSheet(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            explainedPerms.take(4).forEach { (_, expl) ->
+                            explainedPerms.forEach { (_, expl) ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1348,15 +1389,6 @@ fun ThreatDetailSheet(
                                         lineHeight = 15.sp
                                     )
                                 }
-                            }
-                            if (explainedPerms.size > 4) {
-                                Text(
-                                    text = "+${explainedPerms.size - 4} more declared capabilities analyzed",
-                                    color = TextMuted,
-                                    fontSize = 10.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(start = 12.dp)
-                                )
                             }
                         }
                     }
@@ -1898,15 +1930,18 @@ private fun parseAiMarkdownSections(rawMarkdown: String): List<AiSectionBlock> {
 
     fun flushCurrentSection() {
         if (currentHeading.isNotEmpty() && (currentLines.any { it.isNotBlank() } || currentHeading.contains("notice", ignoreCase = true))) {
-            val (title, badge, color) = getSectionHeaderStyle(currentHeading)
-            sections.add(
-                AiSectionBlock(
-                    title = title,
-                    badgeLabel = badge,
-                    accentColor = color,
-                    rawLines = currentLines.filter { it.isNotBlank() }
+            // Skip duplicate Executive Threat Assessment since it is prominently displayed in the top card
+            if (!currentHeading.contains("Executive Threat Assessment", ignoreCase = true)) {
+                val (title, badge, color) = getSectionHeaderStyle(currentHeading)
+                sections.add(
+                    AiSectionBlock(
+                        title = title,
+                        badgeLabel = badge,
+                        accentColor = color,
+                        rawLines = currentLines.filter { it.isNotBlank() }
+                    )
                 )
-            )
+            }
         }
         currentLines = mutableListOf()
     }
@@ -2031,6 +2066,24 @@ fun ExecutiveAssessmentCard(
             "No hostile signatures, suspicious behavioral matrices, or trojan backdoors were detected. This application operates safely within normal boundaries."
     }
 
+    val aiSummary = remember(report.aiExplanation) {
+        report.aiExplanation?.let { text ->
+            val lines = text.lines()
+            val startIdx = lines.indexOfFirst { it.contains("Executive Threat Assessment", ignoreCase = true) }
+            if (startIdx >= 0) {
+                val endIdx = lines.drop(startIdx + 1).indexOfFirst {
+                    val trimmed = it.trim()
+                    trimmed.startsWith("#") || trimmed.startsWith("🔬") || trimmed.startsWith("⚡") || trimmed.startsWith("🔑") || trimmed.startsWith("🛑")
+                }
+                val slice = if (endIdx >= 0) lines.subList(startIdx + 1, startIdx + 1 + endIdx) else lines.drop(startIdx + 1)
+                val cleaned = slice.map { it.replace("**", "").trim() }.filter { it.isNotBlank() }.joinToString(" ")
+                if (cleaned.isNotBlank()) cleaned else null
+            } else null
+        }
+    }
+
+    val finalSummary = aiSummary ?: plainEnglishSummary
+
     val recommendedAction = when {
         isWhitelisted ->
             "No action required. If you no longer trust this application, you can revoke trust at any time below."
@@ -2096,7 +2149,7 @@ fun ExecutiveAssessmentCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = plainEnglishSummary,
+                text = finalSummary,
                 color = TextSecondary,
                 fontSize = 12.sp,
                 lineHeight = 17.sp
@@ -2140,7 +2193,7 @@ fun ExecutiveAssessmentCard(
 fun SecurityPillarsMatrix(report: ThreatReport) {
     val perms = report.dangerousPermissions
     val behaviors = report.detectedBehaviors
-    val family = report.threatFamily.lowercase()
+    val family = (report.threatFamily ?: "").lowercase()
 
     // Pillar 1: Banking & Financial
     val hasBankingRisk = perms.any { it.endsWith("SYSTEM_ALERT_WINDOW", ignoreCase = true) || it.endsWith("BIND_ACCESSIBILITY_SERVICE", ignoreCase = true) || it.endsWith("BIND_DEVICE_ADMIN", ignoreCase = true) } ||

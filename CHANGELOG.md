@@ -4,6 +4,33 @@ All notable changes to ThreatLens are documented in this file.
 
 ---
 
+## [v1.7.3] - 2026-11-04
+### 🛠️ Full Audit & Stability Hardening, Zero-Crash Scans, Unified Executive Assessment & False-Positive Elimination
+* **Full Scan, Abort & Pause Crash Elimination (Compose Lifecycle Fix)**:
+  - Fixed a critical Jetpack Compose lifecycle violation where `rememberLauncherForActivityResult` contracts for folder and file selection were registered conditionally inside `LazyColumn` item branches. When starting a full scan, pausing, or aborting, recomposition in `RESUMED` state triggered fatal `IllegalStateException: LifecycleOwner is attempting to register while current state is RESUMED`. Launchers are now registered unconditionally at the composable top level.
+  - Fixed an unhandled `NullPointerException` in `computeSecurityCapabilities` and `SecurityPillarsMatrix` when handling reports with nullable `threatFamily` (e.g. cached clean items).
+  - Hardened coroutine cancellation in `FullSystemScanner.runScanPipeline`: `CancellationException` is now cleanly caught and updates `_scanState` to `CANCELLED` without throwing unhandled exceptions.
+* **Elimination of False-Positive "Storage Filler" Detections**:
+  - Completely removed false-positive bytecode scanning rules `SC_INSUFFICIENT_STORAGE` (standard HTTP 507 status code from Apache/Retrofit) and `fillBuffer` (internal method on `okio.RealBufferedSource` / Java NIO ByteBuffer used in virtually all modern Android apps).
+  - Removed flawed `isStorageExhaustion` manifest heuristic that penalized standard `WRITE_EXTERNAL_STORAGE` permissions if launcher activities didn't strictly contain "Main" or "Launch" in their class names.
+* **ThreatLens Self-Scan False-Positive Immunity**:
+  - ThreatLens internally contains legitimate malware signatures, YARA rules, and DEX pattern definitions for scanning. Cloud sandboxes (e.g. Filescan.io) occasionally flag these embedded definition strings.
+  - `RealtimeScanCoordinator` now explicitly identifies authentic ThreatLens APK packages (`io.threatlens`) and suppresses false-positive cloud sandbox detections on its own binary.
+* **Single Authoritative Executive Threat Assessment**:
+  - Eliminated duplicate "Executive Threat Assessment" cards: `ExecutiveAssessmentCard` is now the single unified assessment card synthesizing threat family, cloud consensus, dangerous permissions, runtime behaviors, and provenance into an actionable summary.
+  - `FormattedAiAnalysisView` cleanly skips duplicate Section 1 and focuses on deep technical capabilities, IOC breakdown, and remediation steps.
+* **Uncropped Security & Privacy Capabilities**:
+  - Removed arbitrary `.take(4)` and `+3 more` clipping in the "Security & Privacy Impact" section of `ThreatDetailSheet`; all declared sensitive capabilities are now displayed with complete plain-English explanations.
+  - In `ThreatItemRow`, capabilities chips now flow naturally across wrapped lines without being hidden behind `+more` badges.
+* **Suppression of Negative "Clean" Assertions as Findings**:
+  - Filtered out negative statements ("Clean", "0 threat detections", "No embedded RAT stagers", "Zero network dependency") from "Observed Findings & Heuristics".
+  - Clean engines now display an elegant green verified badge (`✓ Verified Clean: Zero threat indicators detected`) rather than rendering clean statements inside warning boxes.
+* **Scanner Separation & Telemetry Feed Clarity**:
+  - `FullScanScreen` now seamlessly falls back to persistent scan history when idle, ensuring the screen is never blank after app restarts or completed audits.
+  - Renamed Dashboard stream from "REAL-TIME INTERCEPTION STREAM" to "RECENT SECURITY ACTIVITY & AUDIT STREAM" and added explicit `DOWNLOAD` vs `INSTALLED` vector badges to `ThreatItemRow`.
+
+---
+
 ## [v1.7.2] - 2026-11-04
 ### 🛡️ Filescan Integrity Guard, Official Provenance Self-Whitelist, Live Progressive Results & Score-First Sorting
 * **Filescan.io Hash Equality & Public Detonation Isolation**:

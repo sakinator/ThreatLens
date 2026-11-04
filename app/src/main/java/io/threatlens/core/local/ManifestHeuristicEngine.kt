@@ -217,23 +217,9 @@ object ManifestHeuristicEngine {
                 behaviors.add("Potential Ransomware pattern (Combines wide storage access with device admin lockout or persistent overlay)")
             }
 
-            // 7. Stealth Check: No Launcher Activity
+            // 7. Background Service Without UI
             val activities = packageInfo.activities ?: emptyArray()
-            hasLauncher = activities.any { it.name.contains("Main", ignoreCase = true) || it.name.contains("Launch", ignoreCase = true) }
-            if (activities.isNotEmpty() && !hasLauncher) {
-                behaviorPts += 20
-                behaviors.add("Stealth application: Disguises icon or hides from app launcher")
-            }
-
-            // 8. Storage Exhaustion Loops / DoS Heuristic (StorageFiller Pattern)
-            val hasWriteStorage = permSet.contains("android.permission.WRITE_EXTERNAL_STORAGE") ||
-                                  permSet.contains("android.permission.MANAGE_EXTERNAL_STORAGE")
-            if (hasWriteStorage && !isKnownTrustedVendor && !hasLauncher) {
-                behaviorPts += 25
-                isStorageExhaustion = true
-                behaviors.add("Potential Storage Exhaustion Loop: Unverified background process requesting full external storage write access")
-            }
-
+            hasLauncher = activities.isNotEmpty()
         } catch (e: Exception) {
             behaviors.add("Analysis error: ${e.message}")
         }

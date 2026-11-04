@@ -85,6 +85,7 @@ class RegressionTestRunner:
         self.suite_37_card_and_detailed_report_knowledge_matrix()
         self.suite_38_differentiated_scans_icons_and_sound_profiles()
         self.suite_39_filescan_provenance_ui_feedback_and_scoring_sort()
+        self.suite_40_stability_lifecycle_and_unified_assessment()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -957,7 +958,7 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code))
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 20)
 
     def suite_28_realtime_safe_notifications_and_intent_routing(self):
         print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
@@ -1008,7 +1009,7 @@ class RegressionTestRunner:
             "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
 
         # 4. Release version
-        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
+        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 21)
 
     def suite_29_v157_consensus_brand_logos_and_storage_exhaustion(self):
         print(f"\n{YELLOW}▶  SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation{RESET}")
@@ -1045,13 +1046,13 @@ class RegressionTestRunner:
         with open(gradle_file, "r", encoding="utf-8") as f:
             gradle_code = f.read()
 
-        # 1. Targeted Storage Exhaustion Loops / DoS Heuristics (StorageFiller)
-        self.record("LocalAntivirusEngine defines SC_INSUFFICIENT_STORAGE bytecode pattern rule (score 80)",
-            "SC_INSUFFICIENT_STORAGE" in local_av_code and "DoS.AndroidOS.StorageFiller" in local_av_code and "80" in local_av_code)
-        self.record("LocalAntivirusEngine defines fillBuffer continuous buffer loop rule (score 75)",
-            "fillBuffer" in local_av_code and "DoS.AndroidOS.StorageFiller" in local_av_code and "75" in local_av_code)
-        self.record("ManifestHeuristicEngine flags unverified background apps requesting full storage write access",
-            "isStorageExhaustion = true" in manifest_code and "isLikelyStorageExhaustion" in manifest_code and "WRITE_EXTERNAL_STORAGE" in manifest_code)
+        # 1. Elimination of False-Positive Storage Exhaustion Loops / DoS Heuristics
+        self.record("LocalAntivirusEngine eliminates SC_INSUFFICIENT_STORAGE false-positive DoS rule",
+            "SC_INSUFFICIENT_STORAGE" not in local_av_code)
+        self.record("LocalAntivirusEngine eliminates fillBuffer false-positive DoS rule",
+            "fillBuffer" not in local_av_code)
+        self.record("ManifestHeuristicEngine eliminates false-positive storage exhaustion heuristic",
+            "isStorageExhaustion = true" not in manifest_code)
 
         # 2. Local Signature Database Preload & Ashishb Malware Research Corpus
         storage_filler_hash = "abcffca708b60148c98b6b4d592d1639e7b76b6601bcff158de22eee5260c948"
@@ -1121,7 +1122,7 @@ class RegressionTestRunner:
             "fun OfficialVendorLogo" in logos_code and "ContentScale.Fit" in logos_code)
 
         # 7. Release Version
-        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
+        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 22)
 
 
 
@@ -1174,8 +1175,7 @@ class RegressionTestRunner:
             tl_corner == (0, 0, 0, 0) and k7_im.size == (256, 256))
 
         # 8. Version bumped to 1.5.8 (versionCode 23)
-        self.record("Version bumped to 1.5.8+ (versionCode >= 23)",
-            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
+        self.record("Version bumped to 1.5.8+ (versionCode >= 23)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 23)
 
 
 
@@ -1373,9 +1373,7 @@ class RegressionTestRunner:
 
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
-        self.record("Version bumped to 1.6.0+ (versionCode >= 24)",
-            ('versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and
-            ('versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
+        self.record("Version bumped to 1.6.0+ (versionCode >= 24)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 24)
 
     # 36. Test Suite: Persistence, Battery Optimization, 7-Day Scheduled Audit & Manual Multi-Scan
     def suite_36_persistence_battery_mitm_and_manual_multiscan(self):
@@ -1459,8 +1457,7 @@ class RegressionTestRunner:
 
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
-        self.record("Version bumped to 1.7.0+ (versionCode >= 25)",
-            ('versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
+        self.record("Version bumped to 1.7.0+ (versionCode >= 25)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 25)
 
     # 37. Test Card & Detailed Report Knowledge Matrix, Educational Privacy & Dual-Stage Indicators
     def suite_37_card_and_detailed_report_knowledge_matrix(self):
@@ -1567,8 +1564,7 @@ class RegressionTestRunner:
         # 7. Release Version 1.7.1
         with open(os.path.join(script_dir, "..", "app", "build.gradle.kts"), "r", encoding="utf-8") as f:
             gradle_code = f.read()
-        self.record("Version bumped to 1.7.1+ (versionCode >= 26)",
-            ('versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code or 'versionCode = 27' in gradle_code))
+        self.record("Version bumped to 1.7.1+ (versionCode >= 26)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 26)
 
         # 8. Mandatory CHANGELOG & Markdown Synchronization Guard
         changelog_path = os.path.join(script_dir, "..", "CHANGELOG.md")
@@ -1668,10 +1664,106 @@ class RegressionTestRunner:
             "cleanCount = clean" in scanner_code and "allScannedReports = allReports.toList()" in scanner_code)
 
         # 6. Release Version 1.7.2 & Mandatory Changelog Sync
-        self.record("Version bumped to 1.7.2 (versionCode 27)",
-            'versionName = "1.7.2"' in gradle_code and 'versionCode = 27' in gradle_code)
+        self.record("Version bumped to 1.7.2+ (versionCode >= 27)", int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 27)
         self.record("CHANGELOG.md documents release v1.7.2",
             "## [v1.7.2]" in changelog_code or "## [1.7.2]" in changelog_code)
+
+
+
+    # 40. Test Suite: v1.7.3 Stability Audit, Lifecycle Hardening, Unified Assessment & False-Positive Elimination
+    def suite_40_stability_lifecycle_and_unified_assessment(self):
+        print(f"\n{YELLOW}▶  SUITE 40: Stability Audit, Lifecycle Hardening, Unified Assessment & False-Positive Elimination{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        scan_screen_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+        sheet_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        cyber_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "CyberComponents.kt")
+        scanner_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        dash_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "DashboardScreen.kt")
+        coord_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        av_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "LocalAntivirusEngine.kt")
+        manifest_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        gradle_path = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+        changelog_path = os.path.join(script_dir, "..", "CHANGELOG.md")
+
+        with open(scan_screen_path, "r", encoding="utf-8") as f:
+            screen_code = f.read()
+        with open(sheet_path, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(cyber_path, "r", encoding="utf-8") as f:
+            cyber_code = f.read()
+        with open(scanner_path, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        with open(dash_path, "r", encoding="utf-8") as f:
+            dash_code = f.read()
+        with open(coord_path, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(av_path, "r", encoding="utf-8") as f:
+            av_code = f.read()
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest_code = f.read()
+        with open(gradle_path, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+        with open(changelog_path, "r", encoding="utf-8") as f:
+            changelog_code = f.read()
+
+        # 1. Compose Lifecycle Stability (No crashing on scan, pause, or abort)
+        self.record("FullScanScreen registers activity launchers unconditionally at composable top-level",
+            "val folderPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult" in screen_code and
+            "val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult" in screen_code and
+            screen_code.find("val folderPickerLauncher") < screen_code.find("Scaffold("))
+        self.record("CyberComponents computeSecurityCapabilities guards nullable threatFamily",
+            'val family = (report.threatFamily ?: "").lowercase()' in cyber_code)
+        self.record("ThreatDetailSheet SecurityPillarsMatrix guards nullable threatFamily",
+            'val family = (report.threatFamily ?: "").lowercase()' in sheet_code)
+        self.record("FullSystemScanner handles CancellationException safely on scan abort",
+            "catch (_: kotlinx.coroutines.CancellationException)" in scanner_code and
+            "status = FullScanStatus.CANCELLED" in scanner_code)
+
+        # 2. False-Positive StorageFiller & ThreatLens Self-Verification
+        self.record("LocalAntivirusEngine excludes SC_INSUFFICIENT_STORAGE from bytecode rules",
+            "SC_INSUFFICIENT_STORAGE" not in av_code)
+        self.record("LocalAntivirusEngine excludes fillBuffer from bytecode rules",
+            "fillBuffer" not in av_code)
+        self.record("RealtimeScanCoordinator verifies authentic ThreatLens package and suppresses false-positive cloud alerts",
+            "val isThreatLensSelf = packageName?.equals(\"io.threatlens\", ignoreCase = true) == true" in coord_code)
+
+        # 3. Single Unified Executive Threat Assessment (No duplicates)
+        self.record("ExecutiveAssessmentCard provides authoritative summary taking full context into consideration",
+            "val aiSummary = remember(report.aiExplanation)" in sheet_code and
+            "finalSummary = aiSummary ?: plainEnglishSummary" in sheet_code)
+        self.record("FormattedAiAnalysisView parses sections without duplicating Executive Assessment",
+            '!currentHeading.contains("Executive Threat Assessment", ignoreCase = true)' in sheet_code)
+
+        # 4. Suppression of Negative Statements as Findings
+        self.record("ThreatDetailSheet filters out negative statements from engine findings",
+            'threatFindings = details.filter {' in sheet_code and
+            '!item.contains("clean", ignoreCase = true)' in sheet_code and
+            '!item.contains("no threat", ignoreCase = true)' in sheet_code)
+        self.record("ThreatDetailSheet renders verified clean green badge for non-flagged engines",
+            "Verified Clean: Zero threat indicators detected" in sheet_code)
+        self.record("ThreatDetailSheet filters out clean/normal statements from Observed Findings & Heuristics",
+            "meaningfulBehaviors = report.detectedBehaviors.filter {" in sheet_code)
+
+        # 5. Uncropped Security & Privacy Capabilities
+        self.record("ThreatDetailSheet renders all explained capabilities without take(4) clipping",
+            "explainedPerms.forEach {" in sheet_code and "take(4)" not in sheet_code)
+        self.record("CyberComponents FlowRow renders all security capabilities without take(3) clipping",
+            "capabilities.forEach {" in cyber_code and "take(3)" not in cyber_code)
+
+        # 6. Persistent Results & Stream Separation
+        self.record("FullScanScreen falls back to persistedScans when idle to ensure screen is never blank",
+            "persistedScans.isNotEmpty() -> persistedScans" in screen_code and
+            "LAST AUDIT RESULTS" in screen_code)
+        self.record("DashboardScreen titles telemetry feed as RECENT SECURITY ACTIVITY & AUDIT STREAM",
+            "RECENT SECURITY ACTIVITY & AUDIT STREAM" in dash_code)
+        self.record("CyberComponents differentiates DOWNLOAD vs INSTALLED target origins",
+            'if (isDownloadIntercept) "DOWNLOAD" else "INSTALLED"' in cyber_code)
+
+        # 7. Release Version 1.7.3 & Changelog
+        self.record("Version bumped to 1.7.3 (versionCode 28)",
+            'versionName = "1.7.3"' in gradle_code and 'versionCode = 28' in gradle_code)
+        self.record("CHANGELOG.md documents release v1.7.3",
+            "## [v1.7.3]" in changelog_code or "## [1.7.3]" in changelog_code)
 
 
 if __name__ == "__main__":

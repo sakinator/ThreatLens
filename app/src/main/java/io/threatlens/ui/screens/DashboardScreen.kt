@@ -469,7 +469,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Real-Time Interception Stream Header
+            // Recent Security Activity & Audit Stream Header
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -477,7 +477,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "REAL-TIME INTERCEPTION STREAM",
+                        text = "RECENT SECURITY ACTIVITY & AUDIT STREAM",
                         color = TextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -511,7 +511,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Zero threats detected in downloads.\nTap 'SCAN NOW' to run a deep device audit.",
+                                text = "Zero threats detected across downloads and installed apps.\nTap 'SCAN NOW' to run a deep on-demand device audit.",
                                 color = TextMuted,
                                 fontSize = 13.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

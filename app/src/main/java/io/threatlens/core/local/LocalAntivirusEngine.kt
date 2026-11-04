@@ -103,20 +103,6 @@ object LocalAntivirusEngine {
             description = "Spawns unauthorized background root daemon to bypass Android security sandbox"
         ),
         BytecodeRule(
-            pattern = "SC_INSUFFICIENT_STORAGE",
-            family = "DoS.AndroidOS.StorageFiller",
-            category = "Storage Exhaustion Denial-of-Service",
-            score = 80,
-            description = "Storage exhaustion loop detected: repeatedly writes dummy data until disk space is depleted (Denial of Service)"
-        ),
-        BytecodeRule(
-            pattern = "fillBuffer",
-            family = "DoS.AndroidOS.StorageFiller",
-            category = "Storage Exhaustion Denial-of-Service",
-            score = 75,
-            description = "Continuous buffer filling routine targeting external storage exhaustion"
-        ),
-        BytecodeRule(
             pattern = "DoubleLocker",
             family = "Ransomware.AndroidOS.DoubleLocker",
             category = "Mobile Ransomware",

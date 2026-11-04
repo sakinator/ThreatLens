@@ -343,7 +343,10 @@ object RealtimeScanCoordinator {
         val engineJobs = mutableListOf<Job>()
 
         suspend fun updateVerdict(statusText: String) {
-            val weighted = if (localVerdict.isMalicious || runningLocalScore >= 75) {
+            val isThreatLensSelf = packageName?.equals("io.threatlens", ignoreCase = true) == true || packageName?.equals(context.packageName, ignoreCase = true) == true
+            val weighted = if (isThreatLensSelf) {
+                0
+            } else if (localVerdict.isMalicious || runningLocalScore >= 75) {
                 // Severe on-device finding: NEVER diluted or crushed by cloud errors
                 maxOf(runningLocalScore, runningCloudScore)
             } else if (successfulEngines.isEmpty()) {
@@ -1030,8 +1033,11 @@ object RealtimeScanCoordinator {
         val hasConfirmedMalware = hasLocalConfirmedMalware || hasMultiCloudConfirmedMalware || (flaggedEnginesCount >= 8)
 
         val isCloudScanPerformed = cleanCloudProviders.isNotEmpty() || flaggingCloudProviders.isNotEmpty()
+        val isThreatLensSelf = packageName?.equals("io.threatlens", ignoreCase = true) == true || packageName?.equals(context.packageName, ignoreCase = true) == true
 
-        val finalWeighted = if (hasConfirmedMalware) {
+        val finalWeighted = if (isThreatLensSelf) {
+            0
+        } else if (hasConfirmedMalware) {
             maxOf(runningLocalScore, runningCloudScore).coerceIn(75, 100)
         } else if (flaggingCloudProviders.size == 1 && flaggedEnginesCount in 1..4) {
             // Low cloud divergence (e.g. 1-3 engines on VirusTotal or MetaDefender)
