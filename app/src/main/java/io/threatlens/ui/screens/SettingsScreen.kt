@@ -1413,7 +1413,7 @@ fun SettingsScreen(
                                 Slider(
                                     value = scheduledIntervalDays.toFloat(),
                                     onValueChange = {
-                                        val rounded = kotlin.math.roundToInt(it).coerceIn(1, 7)
+                                        val rounded = Math.round(it).toInt().coerceIn(1, 7)
                                         scheduledIntervalDays = rounded
                                         io.threatlens.core.realtime.ScheduledAuditJobService.setIntervalDays(context, rounded)
                                     },

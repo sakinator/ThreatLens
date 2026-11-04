@@ -33,12 +33,18 @@ object ScanReportRepository {
     val persistedReportsFlow: StateFlow<List<ThreatReport>> = _persistedReportsFlow.asStateFlow()
 
     private val lock = Any()
+    private var appContext: Context? = null
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         synchronized(lock) {
             val loaded = loadReportsFromDisk(context, pruneMissing = true)
             _persistedReportsFlow.value = loaded
         }
+    }
+
+    fun saveReport(report: ThreatReport) {
+        appContext?.let { saveReport(it, report) }
     }
 
     fun getAllReports(context: Context, pruneMissing: Boolean = true): List<ThreatReport> {

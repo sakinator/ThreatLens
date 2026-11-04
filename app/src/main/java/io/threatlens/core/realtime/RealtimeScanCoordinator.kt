@@ -1222,7 +1222,7 @@ object RealtimeScanCoordinator {
         )
 
         ScanThrottleManager.cacheReport(updatedReport)
-        io.threatlens.core.scanner.ScanReportRepository.saveReport(context, updatedReport)
+        io.threatlens.core.scanner.ScanReportRepository.saveReport(updatedReport)
         _scanReports.emit(updatedReport)
         return updatedReport
     }
