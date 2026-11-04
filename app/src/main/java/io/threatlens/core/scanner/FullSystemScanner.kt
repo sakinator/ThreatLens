@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import io.threatlens.core.diagnostics.AppDiagnosticLogger
 import io.threatlens.core.model.ThreatReport
 import io.threatlens.core.model.ThreatSeverity
 import io.threatlens.core.realtime.RealtimeScanCoordinator
