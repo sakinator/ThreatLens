@@ -1569,6 +1569,17 @@ class RegressionTestRunner:
         self.record("Version bumped to 1.7.1 (versionCode 26)",
             'versionName = "1.7.1"' in gradle_code and 'versionCode = 26' in gradle_code)
 
+        # 8. Mandatory CHANGELOG & Markdown Synchronization Guard
+        changelog_path = os.path.join(script_dir, "..", "CHANGELOG.md")
+        self.record("CHANGELOG.md exists", os.path.exists(changelog_path))
+        with open(changelog_path, "r", encoding="utf-8") as f:
+            changelog_content = f.read()
+        self.record("CHANGELOG.md documents release v1.7.1",
+            "## [v1.7.1]" in changelog_content or "## [1.7.1]" in changelog_content)
+        gemini_rules_path = os.path.join(script_dir, "..", "GEMINI.md")
+        self.record("GEMINI.md exists and enforces Ship-Ready protocol",
+            os.path.exists(gemini_rules_path))
+
 
 if __name__ == "__main__":
     runner = RegressionTestRunner()
