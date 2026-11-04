@@ -3,7 +3,6 @@ package io.threatlens.core.realtime
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import java.io.File
 
 class PackageInstallReceiver : BroadcastReceiver() {
@@ -33,7 +32,7 @@ class PackageInstallReceiver : BroadcastReceiver() {
                 val apkPath = appInfo.publicSourceDir
                 if (!apkPath.isNullOrBlank()) {
                     val apkFile = File(apkPath)
-                    RealtimeScanCoordinator.scanFileAsync(context, apkFile)
+                    RealtimeScanCoordinator.scanFileAsync(context, apkFile, isPackageInstall = true)
                 }
             } catch (_: Exception) {}
         }

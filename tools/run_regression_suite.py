@@ -83,6 +83,7 @@ class RegressionTestRunner:
         self.suite_35_block_webpage_sinkhole_and_whitelist_manager()
         self.suite_36_persistence_battery_mitm_and_manual_multiscan()
         self.suite_37_card_and_detailed_report_knowledge_matrix()
+        self.suite_38_differentiated_scans_icons_and_sound_profiles()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -1496,6 +1497,71 @@ class RegressionTestRunner:
             "fun getPermissionExplainer(" in detail_code and "Security & Privacy Impact:" in detail_code)
         self.record("ThreatDetailSheet renders Two-Stage Scan Status & Verification Indicator",
             "Two-Stage Threat Audit in Progress" in detail_code and "Dual-Stage Threat Audit Complete" in detail_code)
+
+
+
+    # 38. Test Differentiated Scans, Vector Icons & Sound Profiles
+    def suite_38_differentiated_scans_icons_and_sound_profiles(self):
+        print(f"\n{YELLOW}▶  SUITE 38: Differentiated Scans (Download vs Install), Vector Icons & Acoustic Profiles{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        notif_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "ThreatNotificationManager.kt")
+        receiver_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "PackageInstallReceiver.kt")
+        coord_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        danger_icon_path = os.path.join(script_dir, "..", "app", "src", "main", "res", "drawable", "ic_notification_danger.xml")
+        warning_icon_path = os.path.join(script_dir, "..", "app", "src", "main", "res", "drawable", "ic_notification_warning.xml")
+        safe_icon_path = os.path.join(script_dir, "..", "app", "src", "main", "res", "drawable", "ic_notification_safe.xml")
+        siren_wav_path = os.path.join(script_dir, "..", "app", "src", "main", "res", "raw", "threat_alert_siren.wav")
+        pulse_wav_path = os.path.join(script_dir, "..", "app", "src", "main", "res", "raw", "threat_caution_pulse.wav")
+
+        # 1. Vector Notification Drawables
+        self.record("ic_notification_danger.xml exists", os.path.exists(danger_icon_path))
+        self.record("ic_notification_warning.xml exists", os.path.exists(warning_icon_path))
+        self.record("ic_notification_safe.xml exists", os.path.exists(safe_icon_path))
+
+        # 2. Raw Acoustic Alert Assets
+        self.record("threat_alert_siren.wav exists and valid", os.path.exists(siren_wav_path) and os.path.getsize(siren_wav_path) > 10000)
+        self.record("threat_caution_pulse.wav exists and valid", os.path.exists(pulse_wav_path) and os.path.getsize(pulse_wav_path) > 10000)
+
+        # 3. Notification Channels & Sound Profiles
+        with open(notif_path, "r", encoding="utf-8") as f:
+            notif_code = f.read()
+
+        self.record("ThreatNotificationManager registers CRITICAL_MALWARE_CHANNEL_ID with Cyber Siren",
+            "CRITICAL_MALWARE_CHANNEL_ID" in notif_code and "threat_alert_siren" in notif_code and "setSound(sirenUri" in notif_code)
+        self.record("ThreatNotificationManager registers SUSPICIOUS_ALERT_CHANNEL_ID with Caution Pulse",
+            "SUSPICIOUS_ALERT_CHANNEL_ID" in notif_code and "threat_caution_pulse" in notif_code and "setSound(cautionUri" in notif_code)
+        self.record("ThreatNotificationManager configures Safe Scan channel as 100% silent",
+            "setSound(null, null)" in notif_code and "enableVibration(false)" in notif_code and "vibrationPattern = longArrayOf(0)" in notif_code)
+
+        # 4. Icon & Accent Color Routing
+        self.record("ThreatNotificationManager maps icons by severity (danger, warning, safe)",
+            "ic_notification_danger" in notif_code and "ic_notification_warning" in notif_code and "ic_notification_safe" in notif_code)
+        self.record("ThreatNotificationManager applies Neon Crimson, Cyber Amber and Neon Emerald accents",
+            "0xFFFF1744" in notif_code and "0xFFFFB300" in notif_code and "0xFF00E676" in notif_code)
+
+        # 5. Differentiated Origins (Download Shield vs App Install Shield)
+        self.record("ThreatNotificationManager implements isAppInstallTarget origin differentiator",
+            "fun isAppInstallTarget" in notif_code and 'startsWith("/data/app")' in notif_code)
+        self.record("ThreatNotificationManager renders Download Shield vs App Install Shield titles",
+            "App Install Shield: Malware Detected" in notif_code and
+            "Download Shield: Malware Intercepted" in notif_code and
+            "App Install Shield: Suspicious App" in notif_code and
+            "Download Shield: Caution Advised" in notif_code and
+            "App Install Shield: Verified Safe" in notif_code and
+            "Download Shield: Verified Safe" in notif_code)
+        self.record("ThreatNotificationManager adds one-tap UNINSTALL APP action for installed threats",
+            "UNINSTALL APP" in notif_code and "Intent.ACTION_DELETE" in notif_code)
+
+        # 6. Package Install Receiver & Fast Cache Resolution
+        with open(receiver_path, "r", encoding="utf-8") as f:
+            rec_code = f.read()
+        with open(coord_path, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+
+        self.record("PackageInstallReceiver triggers scan with isPackageInstall flag",
+            "scanFileAsync(context, apkFile, isPackageInstall = true)" in rec_code)
+        self.record("RealtimeScanCoordinator fast-resolves cached download report for package install",
+            "if (isPackageInstall)" in coord_code and "ScanThrottleManager.cacheReport(updated)" in coord_code)
 
 
 if __name__ == "__main__":

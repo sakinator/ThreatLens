@@ -47,11 +47,11 @@ object RealtimeScanCoordinator {
     var geminiKey: String? = null
     var groqKey: String? = null
 
-    fun scanFileAsync(context: Context, file: File) {
+    fun scanFileAsync(context: Context, file: File, isPackageInstall: Boolean = false) {
         if (!file.exists() || !file.canRead()) return
 
         val extension = file.extension
-        if (!ScanThrottleManager.shouldScanFile(file.absolutePath, extension)) {
+        if (!isPackageInstall && !ScanThrottleManager.shouldScanFile(file.absolutePath, extension)) {
             return
         }
 
@@ -61,7 +61,7 @@ object RealtimeScanCoordinator {
         }
 
         scanScope.launch {
-            streamScan(context, file)
+            streamScan(context, file, isPackageInstall = isPackageInstall)
         }
     }
 
@@ -71,7 +71,8 @@ object RealtimeScanCoordinator {
         customAppName: String? = null,
         customPackageName: String? = null,
         isFullScan: Boolean = false,
-        totalScanCount: Int = 1
+        totalScanCount: Int = 1,
+        isPackageInstall: Boolean = false
     ): ThreatReport = withContext(Dispatchers.IO) {
         // Resolve application name and package identity
         var appName = customAppName
@@ -135,6 +136,21 @@ object RealtimeScanCoordinator {
         // 2. Check LRU Cache (Instant 0ms hit)
         ScanThrottleManager.getCachedReport(sha256)?.let { cached ->
             _scanReports.emit(cached)
+            if (isPackageInstall) {
+                // If package was just installed and we have a cached report from a recent download scan:
+                val updated = cached.copy(
+                    packageName = if (!packageName.isNullOrBlank()) packageName else cached.packageName,
+                    appName = if (!resolvedAppName.isNullOrBlank()) resolvedAppName else cached.appName,
+                    targetPath = file.absolutePath
+                )
+                ScanThrottleManager.cacheReport(updated)
+                io.threatlens.core.scanner.ScanReportRepository.saveReport(context, updated)
+                if (updated.severity == ThreatSeverity.MALICIOUS || updated.severity == ThreatSeverity.HIGH_RISK) {
+                    ThreatNotificationManager.showThreatAlert(context, updated, isPackageInstall = true)
+                } else if (!isFullScan) {
+                    ThreatNotificationManager.showSafeScanNotification(context, updated, isPackageInstall = true)
+                }
+            }
             return@withContext cached
         }
 
@@ -319,7 +335,7 @@ object RealtimeScanCoordinator {
         _scanReports.emit(currentReport)
 
         if (localVerdict.isMalicious) {
-            ThreatNotificationManager.showThreatAlert(context, currentReport)
+            ThreatNotificationManager.showThreatAlert(context, currentReport, isPackageInstall = isPackageInstall)
         }
 
         // 4. Progressive Cloud Engine Querying with API Failure Mitigation
@@ -1133,10 +1149,10 @@ object RealtimeScanCoordinator {
         _scanReports.emit(finalReport)
 
         if (finalReport.severity == ThreatSeverity.MALICIOUS || finalReport.severity == ThreatSeverity.HIGH_RISK) {
-            ThreatNotificationManager.showThreatAlert(context, finalReport)
+            ThreatNotificationManager.showThreatAlert(context, finalReport, isPackageInstall = isPackageInstall)
         } else if (!isFullScan) {
             // Realtime scanner: download or package install verified clean!
-            ThreatNotificationManager.showSafeScanNotification(context, finalReport)
+            ThreatNotificationManager.showSafeScanNotification(context, finalReport, isPackageInstall = isPackageInstall)
         }
         return@withContext finalReport
     }
