@@ -123,6 +123,19 @@ fun FullScanScreen(
         }
     }
 
+    val allReportsList = when {
+        scanState.allScannedReports.isNotEmpty() -> scanState.allScannedReports
+        scanState.threatsFound.isNotEmpty() -> scanState.threatsFound
+        persistedScans.isNotEmpty() -> persistedScans
+        else -> emptyList()
+    }
+
+    val effectiveThreats = if (scanState.allScannedReports.isNotEmpty() || scanState.status != FullScanStatus.IDLE) {
+        scanState.threatsFound
+    } else {
+        allReportsList.filter { it.severity != ThreatSeverity.SAFE }
+    }
+
     Scaffold(
         containerColor = CyberBlack,
         topBar = {
@@ -611,19 +624,6 @@ fun FullScanScreen(
             }
 
             // Results and Filter Section: visible whenever scanned reports exist (live progressive during scan, completed, or from persistent history)
-            val allReportsList = when {
-                scanState.allScannedReports.isNotEmpty() -> scanState.allScannedReports
-                scanState.threatsFound.isNotEmpty() -> scanState.threatsFound
-                persistedScans.isNotEmpty() -> persistedScans
-                else -> emptyList()
-            }
-
-            val effectiveThreats = if (scanState.allScannedReports.isNotEmpty() || scanState.status != FullScanStatus.IDLE) {
-                scanState.threatsFound
-            } else {
-                allReportsList.filter { it.severity != ThreatSeverity.SAFE }
-            }
-
             if (allReportsList.isNotEmpty()) {
                 if (scanState.status == FullScanStatus.IDLE && scanState.allScannedReports.isEmpty()) {
                     item {
