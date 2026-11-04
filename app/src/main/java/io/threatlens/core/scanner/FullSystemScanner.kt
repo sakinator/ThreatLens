@@ -47,41 +47,83 @@ object FullSystemScanner {
 
     fun startFullScan(context: Context) {
         if (_scanState.value.status == FullScanStatus.SCANNING) return
-        val targets = collectAllTargets(context)
-        runScanPipeline(context, targets)
+        _scanState.value = FullScanState(
+            status = FullScanStatus.SCANNING,
+            currentItemName = "Enumerating installed applications & targets..."
+        )
+        scanJob?.cancel()
+        scanJob = scannerScope.launch {
+            val targets = collectAllTargets(context)
+            if (!isActive) return@launch
+            if (targets.isEmpty()) {
+                _scanState.value = FullScanState(
+                    status = FullScanStatus.COMPLETED,
+                    currentItemName = "No applications or targets found"
+                )
+                return@launch
+            }
+            executeScanPipeline(context, targets)
+        }
     }
 
     fun startSelectedAppsScan(context: Context, packageNames: List<String>) {
         if (_scanState.value.status == FullScanStatus.SCANNING || packageNames.isEmpty()) return
-        val pm = context.packageManager
-        val targets = mutableListOf<ScanItem>()
+        _scanState.value = FullScanState(
+            status = FullScanStatus.SCANNING,
+            currentItemName = "Preparing selected applications..."
+        )
+        scanJob?.cancel()
+        scanJob = scannerScope.launch {
+            val pm = context.packageManager
+            val targets = mutableListOf<ScanItem>()
 
-        for (pkg in packageNames) {
-            try {
-                val app = pm.getApplicationInfo(pkg, 0)
-                val apkFile = File(app.publicSourceDir)
-                if (apkFile.exists()) {
-                    val appName = pm.getApplicationLabel(app).toString()
+            for (pkg in packageNames) {
+                if (!isActive) return@launch
+                try {
                     val pInfo = try { pm.getPackageInfo(pkg, 0) } catch (_: Exception) { null }
-                    val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (pInfo?.versionCode?.toLong() ?: 0L)
-                    val uTime = pInfo?.lastUpdateTime ?: 0L
-                    targets.add(ScanItem(appName, apkFile, pkg, vCode, uTime))
-                }
-            } catch (_: Exception) {}
+                    val app = pInfo?.applicationInfo
+                    val publicDir = app?.publicSourceDir
+                    if (app != null && publicDir != null) {
+                        val apkFile = File(publicDir)
+                        if (apkFile.exists()) {
+                            val appName = try { pm.getApplicationLabel(app).toString() } catch (_: Exception) { pkg }
+                            val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else @Suppress("DEPRECATION") (pInfo.versionCode.toLong())
+                            val uTime = pInfo.lastUpdateTime
+                            targets.add(ScanItem(appName, apkFile, pkg, vCode, uTime))
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+            if (!isActive) return@launch
+            if (targets.isEmpty()) {
+                _scanState.value = FullScanState(
+                    status = FullScanStatus.COMPLETED,
+                    currentItemName = "No valid applications found"
+                )
+                return@launch
+            }
+            executeScanPipeline(context, targets)
         }
-        runScanPipeline(context, targets)
     }
 
     fun startFolderScan(context: Context, treeUri: Uri) {
         if (_scanState.value.status == FullScanStatus.SCANNING) return
-        scannerScope.launch {
-            _scanState.value = FullScanState(status = FullScanStatus.SCANNING, currentItemName = "Enumerating folder targets...")
+        _scanState.value = FullScanState(
+            status = FullScanStatus.SCANNING,
+            currentItemName = "Enumerating folder targets..."
+        )
+        scanJob?.cancel()
+        scanJob = scannerScope.launch {
             val targets = collectFolderTargets(context, treeUri)
+            if (!isActive) return@launch
             if (targets.isEmpty()) {
-                _scanState.value = FullScanState(status = FullScanStatus.COMPLETED, currentItemName = "No executable files found in folder")
+                _scanState.value = FullScanState(
+                    status = FullScanStatus.COMPLETED,
+                    currentItemName = "No executable files found in folder"
+                )
                 return@launch
             }
-            runScanPipeline(context, targets)
+            executeScanPipeline(context, targets)
         }
     }
 
@@ -89,147 +131,159 @@ object FullSystemScanner {
         if (!file.exists()) return
         val name = displayName ?: file.name
         val targets = listOf(ScanItem(name, file, null, 0L, 0L))
-        runScanPipeline(context, targets)
-    }
-
-    private fun runScanPipeline(context: Context, targets: List<ScanItem>) {
+        _scanState.value = FullScanState(
+            status = FullScanStatus.SCANNING,
+            currentItemName = "Preparing single file scan..."
+        )
         scanJob?.cancel()
         scanJob = scannerScope.launch {
-            try {
-                val startTime = System.currentTimeMillis()
-                _scanState.value = FullScanState(status = FullScanStatus.SCANNING)
+            executeScanPipeline(context, targets)
+        }
+    }
 
-                val total = targets.size
-                var scanned = 0
-                var clean = 0
-                val threats = mutableListOf<ThreatReport>()
-                val allReports = mutableListOf<ThreatReport>()
+    private suspend fun executeScanPipeline(context: Context, targets: List<ScanItem>) {
+        try {
+            val startTime = System.currentTimeMillis()
+            val total = targets.size
+            var scanned = 0
+            var clean = 0
+            val threats = mutableListOf<ThreatReport>()
+            val allReports = mutableListOf<ThreatReport>()
 
-                for (target in targets) {
-                    if (!isActive) {
+            _scanState.value = FullScanState(
+                status = FullScanStatus.SCANNING,
+                totalCount = total,
+                scannedCount = 0,
+                progress = 0f,
+                currentItemName = if (targets.isNotEmpty()) targets[0].name else "Initializing scan..."
+            )
+
+            for (target in targets) {
+                if (!coroutineContext.isActive) {
+                    _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
+                    return
+                }
+
+                // Check and handle paused state
+                while (_scanState.value.status == FullScanStatus.PAUSED) {
+                    if (!coroutineContext.isActive) {
                         _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
-                        return@launch
+                        return
                     }
+                    delay(150)
+                }
 
-                    // Check and handle paused state
-                    while (_scanState.value.status == FullScanStatus.PAUSED) {
-                        if (!isActive) {
-                            _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
-                            return@launch
-                        }
-                        delay(150)
+                // 1. Fast Cache Check: If already verified clean and un-updated, instant skip deep parsing
+                if (target.packageName != null && target.lastUpdateTime > 0L) {
+                    val cached = ScanCacheManager.getCachedVerdict(context, target.packageName, target.versionCode, target.lastUpdateTime)
+                    if (cached != null) {
+                        clean++
+                        scanned++
+                        val cachedReport = ThreatReport(
+                            targetName = target.file.name,
+                            targetPath = target.file.absolutePath,
+                            appName = target.name,
+                            packageName = target.packageName,
+                            sha256 = "",
+                            fileSize = target.file.length(),
+                            isApk = true,
+                            localScore = 0,
+                            cloudScore = 0,
+                            currentScore = 0,
+                            severity = ThreatSeverity.SAFE,
+                            threatFamily = "Clean",
+                            detectionType = io.threatlens.core.model.DetectionType.CLEAN,
+                            engineVerdictMap = mapOf(
+                                "ThreatLens Local Engine" to "Clean (Cached Safe)",
+                                "ThreatLens Offline Signature DB" to "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
+                            )
+                        )
+                        allReports.add(cachedReport)
+                        _scanState.value = _scanState.value.copy(
+                            progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
+                            scannedCount = scanned,
+                            totalCount = total,
+                            currentItemName = target.name,
+                            cleanCount = clean,
+                            threatsFound = threats.toList(),
+                            allScannedReports = allReports.toList()
+                        )
+                        delay(10) // Brief yield for UI looper
+                        continue
                     }
+                }
 
-                    _scanState.value = _scanState.value.copy(
-                        progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
-                        scannedCount = scanned,
-                        totalCount = total,
-                        currentItemName = target.name,
-                        threatsFound = threats.toList(),
-                        cleanCount = clean,
-                        allScannedReports = allReports.toList()
+                try {
+                    val report = RealtimeScanCoordinator.performScan(
+                        context = context,
+                        file = target.file,
+                        customAppName = target.name,
+                        customPackageName = target.packageName,
+                        isFullScan = true,
+                        totalScanCount = targets.size
                     )
-
-                    // 1. Fast Cache Check: If already verified clean and un-updated, instant skip deep parsing
-                    if (target.packageName != null && target.lastUpdateTime > 0L) {
-                        val cached = ScanCacheManager.getCachedVerdict(context, target.packageName, target.versionCode, target.lastUpdateTime)
-                        if (cached != null) {
-                            clean++
-                            scanned++
-                            val cachedReport = ThreatReport(
-                                targetName = target.file.name,
-                                targetPath = target.file.absolutePath,
-                                appName = target.name,
-                                packageName = target.packageName,
-                                sha256 = "",
-                                fileSize = target.file.length(),
-                                isApk = true,
-                                localScore = 0,
-                                cloudScore = 0,
-                                currentScore = 0,
-                                severity = ThreatSeverity.SAFE,
-                                threatFamily = "Clean",
-                                detectionType = io.threatlens.core.model.DetectionType.CLEAN,
-                                engineVerdictMap = mapOf(
-                                    "ThreatLens Local Engine" to "Clean (Cached Safe)",
-                                    "ThreatLens Offline Signature DB" to "Clean (${io.threatlens.core.local.LocalSignatureDatabase.totalSignatures} definitions checked)"
+                    allReports.add(report)
+                    if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
+                        threats.add(report)
+                    } else {
+                        clean++
+                        if (target.packageName != null && target.lastUpdateTime > 0L) {
+                            ScanCacheManager.putCachedVerdict(
+                                context,
+                                target.packageName,
+                                target.versionCode,
+                                target.lastUpdateTime,
+                                io.threatlens.core.local.LocalAntivirusEngine.LocalScanVerdict(
+                                    isMalicious = false,
+                                    localScore = report.currentScore,
+                                    threatFamily = report.threatFamily,
+                                    category = "Clean",
+                                    detectedBehaviors = emptyList(),
+                                    dangerousPermissions = emptyList(),
+                                    matchedSignatures = emptyList(),
+                                    engineSources = listOf("ThreatLens Local Engine (Cached Safe)")
                                 )
                             )
-                            allReports.add(cachedReport)
-                            continue
                         }
                     }
+                } catch (_: Exception) {}
 
-                    try {
-                        val report = RealtimeScanCoordinator.performScan(
-                            context = context,
-                            file = target.file,
-                            customAppName = target.name,
-                            customPackageName = target.packageName,
-                            isFullScan = true,
-                            totalScanCount = targets.size
-                        )
-                        allReports.add(report)
-                        if (report.severity == ThreatSeverity.MALICIOUS || report.severity == ThreatSeverity.HIGH_RISK || report.severity == ThreatSeverity.SUSPICIOUS) {
-                            threats.add(report)
-                        } else {
-                            clean++
-                            if (target.packageName != null && target.lastUpdateTime > 0L) {
-                                ScanCacheManager.putCachedVerdict(
-                                    context,
-                                    target.packageName,
-                                    target.versionCode,
-                                    target.lastUpdateTime,
-                                    io.threatlens.core.local.LocalAntivirusEngine.LocalScanVerdict(
-                                        isMalicious = false,
-                                        localScore = report.currentScore,
-                                        threatFamily = report.threatFamily,
-                                        category = "Clean",
-                                        detectedBehaviors = emptyList(),
-                                        dangerousPermissions = emptyList(),
-                                        matchedSignatures = emptyList(),
-                                        engineSources = listOf("ThreatLens Local Engine (Cached Safe)")
-                                    )
-                                )
-                            }
-                        }
-                    } catch (_: Exception) {}
-
-                    scanned++
-                    _scanState.value = _scanState.value.copy(
-                        progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
-                        scannedCount = scanned,
-                        cleanCount = clean,
-                        threatsFound = threats.toList(),
-                        allScannedReports = allReports.toList()
-                    )
-                    // Brief cooperative yield to keep UI responsive
-                    delay(15)
-                }
-
-                val elapsed = System.currentTimeMillis() - startTime
-                val completedState = FullScanState(
-                    status = FullScanStatus.COMPLETED,
-                    progress = 1.0f,
+                scanned++
+                _scanState.value = _scanState.value.copy(
+                    progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
                     scannedCount = scanned,
                     totalCount = total,
-                    currentItemName = "Scan Complete",
-                    threatsFound = threats,
+                    currentItemName = target.name,
                     cleanCount = clean,
-                    durationMs = elapsed,
+                    threatsFound = threats.toList(),
                     allScannedReports = allReports.toList()
                 )
-                _scanState.value = completedState
-
-                // Persist all scanned reports to disk so results survive reboots and app restarts
-                if (allReports.isNotEmpty()) {
-                    ScanReportRepository.saveReports(context, allReports)
-                }
-            } catch (_: kotlinx.coroutines.CancellationException) {
-                _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
-            } catch (e: Exception) {
-                AppDiagnosticLogger.log("FullSystemScanner", "Scan error: ${e.message}")
+                // Brief cooperative yield to keep UI responsive
+                delay(20)
             }
+
+            val elapsed = System.currentTimeMillis() - startTime
+            val completedState = FullScanState(
+                status = FullScanStatus.COMPLETED,
+                progress = 1.0f,
+                scannedCount = scanned,
+                totalCount = total,
+                currentItemName = "Scan Complete",
+                threatsFound = threats,
+                cleanCount = clean,
+                durationMs = elapsed,
+                allScannedReports = allReports.toList()
+            )
+            _scanState.value = completedState
+
+            // Persist all scanned reports to disk so results survive reboots and app restarts
+            if (allReports.isNotEmpty()) {
+                ScanReportRepository.saveReports(context, allReports)
+            }
+        } catch (_: kotlinx.coroutines.CancellationException) {
+            _scanState.value = _scanState.value.copy(status = FullScanStatus.CANCELLED)
+        } catch (e: Exception) {
+            AppDiagnosticLogger.log("FullSystemScanner", "Scan error: ${e.message}")
         }
     }
 
@@ -258,29 +312,54 @@ object FullSystemScanner {
         val list = mutableListOf<ScanItem>()
         val pm = context.packageManager
 
-        // 1. Installed Applications
+        // 1. Installed Applications (High-speed batch retrieval via getInstalledPackages to prevent Binder IPC ANR)
         try {
-            val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            for (app in installedApps) {
-                // Filter out system apps unless they are third-party or updated
+            val installedPackages = pm.getInstalledPackages(0)
+            for (pInfo in installedPackages) {
+                val app = pInfo.applicationInfo ?: continue
                 val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                 val isUpdatedSystem = (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
 
                 if (!isSystem || isUpdatedSystem) {
-                    if (io.threatlens.core.exclusions.ExclusionManager.isPackageExcluded(app.packageName)) {
+                    val pkgName = pInfo.packageName
+                    if (io.threatlens.core.exclusions.ExclusionManager.isPackageExcluded(pkgName)) {
                         continue
                     }
-                    val apkFile = File(app.publicSourceDir)
+                    val publicDir = app.publicSourceDir ?: continue
+                    val apkFile = File(publicDir)
                     if (apkFile.exists() && !io.threatlens.core.exclusions.ExclusionManager.isPathExcluded(apkFile.absolutePath)) {
-                        val appName = pm.getApplicationLabel(app).toString()
-                        val pInfo = try { pm.getPackageInfo(app.packageName, 0) } catch (_: Exception) { null }
-                        val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (pInfo?.versionCode?.toLong() ?: 0L)
-                        val uTime = pInfo?.lastUpdateTime ?: 0L
-                        list.add(ScanItem(appName, apkFile, app.packageName, vCode, uTime))
+                        val appName = try { pm.getApplicationLabel(app).toString() } catch (_: Exception) { pkgName }
+                        val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else @Suppress("DEPRECATION") (pInfo.versionCode.toLong())
+                        val uTime = pInfo.lastUpdateTime
+                        list.add(ScanItem(appName, apkFile, pkgName, vCode, uTime))
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            // Fallback to getInstalledApplications
+            try {
+                val installedApps = pm.getInstalledApplications(0)
+                for (app in installedApps) {
+                    val isSystem = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    val isUpdatedSystem = (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+
+                    if (!isSystem || isUpdatedSystem) {
+                        if (io.threatlens.core.exclusions.ExclusionManager.isPackageExcluded(app.packageName)) {
+                            continue
+                        }
+                        val publicDir = app.publicSourceDir ?: continue
+                        val apkFile = File(publicDir)
+                        if (apkFile.exists() && !io.threatlens.core.exclusions.ExclusionManager.isPathExcluded(apkFile.absolutePath)) {
+                            val appName = pm.getApplicationLabel(app).toString()
+                            val pInfo = try { pm.getPackageInfo(app.packageName, 0) } catch (_: Exception) { null }
+                            val vCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo?.longVersionCode ?: 0L else @Suppress("DEPRECATION") (pInfo?.versionCode?.toLong() ?: 0L)
+                            val uTime = pInfo?.lastUpdateTime ?: 0L
+                            list.add(ScanItem(appName, apkFile, app.packageName, vCode, uTime))
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
 
         // 2. Downloaded APKs & Executables in /Downloads
         try {

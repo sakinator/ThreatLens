@@ -27,6 +27,8 @@ import io.threatlens.ui.theme.NeonCyan
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private val iconCache = android.util.LruCache<String, Bitmap>(150)
+
 @Composable
 fun AppIconBadge(
     packageName: String?,
@@ -36,9 +38,13 @@ fun AppIconBadge(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var iconBitmap by remember(packageName, apkPath) { mutableStateOf<Bitmap?>(null) }
+    val cacheKey = packageName?.takeIf { it.isNotBlank() } ?: apkPath?.takeIf { it.isNotBlank() } ?: ""
+    var iconBitmap by remember(cacheKey) {
+        mutableStateOf(if (cacheKey.isNotBlank()) iconCache.get(cacheKey) else null)
+    }
 
-    LaunchedEffect(packageName, apkPath) {
+    LaunchedEffect(cacheKey) {
+        if (cacheKey.isBlank() || iconCache.get(cacheKey) != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
             var drawable: Drawable? = null
@@ -66,16 +72,22 @@ fun AppIconBadge(
             val targetDrawable = drawable
             if (targetDrawable != null) {
                 try {
-                    if (targetDrawable is BitmapDrawable && targetDrawable.bitmap != null) {
-                        iconBitmap = targetDrawable.bitmap
+                    val bmp = if (targetDrawable is BitmapDrawable && targetDrawable.bitmap != null) {
+                        targetDrawable.bitmap
                     } else {
                         val w = if (targetDrawable.intrinsicWidth > 0) targetDrawable.intrinsicWidth else 96
                         val h = if (targetDrawable.intrinsicHeight > 0) targetDrawable.intrinsicHeight else 96
-                        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                        val canvas = Canvas(bmp)
+                        val created = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                        val canvas = Canvas(created)
                         targetDrawable.setBounds(0, 0, canvas.width, canvas.height)
                         targetDrawable.draw(canvas)
-                        iconBitmap = bmp
+                        created
+                    }
+                    if (bmp != null) {
+                        iconCache.put(cacheKey, bmp)
+                        withContext(Dispatchers.Main) {
+                            iconBitmap = bmp
+                        }
                     }
                 } catch (_: Exception) {}
             }

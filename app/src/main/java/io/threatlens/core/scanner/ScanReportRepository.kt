@@ -34,12 +34,14 @@ object ScanReportRepository {
 
     private val lock = Any()
     private var appContext: Context? = null
+    private var inMemoryReports: MutableList<ThreatReport>? = null
 
     fun init(context: Context) {
         appContext = context.applicationContext
         synchronized(lock) {
-            val loaded = loadReportsFromDisk(context, pruneMissing = true)
-            _persistedReportsFlow.value = loaded
+            val loaded = loadReportsFromDisk(context, pruneMissing = true).toMutableList()
+            inMemoryReports = loaded
+            _persistedReportsFlow.value = loaded.toList()
         }
     }
 
@@ -49,15 +51,19 @@ object ScanReportRepository {
 
     fun getAllReports(context: Context, pruneMissing: Boolean = true): List<ThreatReport> {
         synchronized(lock) {
-            val list = loadReportsFromDisk(context, pruneMissing)
-            _persistedReportsFlow.value = list
-            return list
+            if (pruneMissing || inMemoryReports == null) {
+                val list = loadReportsFromDisk(context, pruneMissing).toMutableList()
+                inMemoryReports = list
+                _persistedReportsFlow.value = list.toList()
+                return list
+            }
+            return inMemoryReports!!.toList()
         }
     }
 
     fun saveReport(context: Context, report: ThreatReport) {
         synchronized(lock) {
-            val current = loadReportsFromDisk(context, pruneMissing = false).toMutableList()
+            val current = inMemoryReports ?: loadReportsFromDisk(context, pruneMissing = false).toMutableList().also { inMemoryReports = it }
             // Replace if exact same SHA-256 or same package name exists
             current.removeAll {
                 (it.sha256.isNotBlank() && it.sha256.equals(report.sha256, ignoreCase = true)) ||
@@ -65,7 +71,7 @@ object ScanReportRepository {
             }
             current.add(0, report)
             writeReportsToDisk(context, current)
-            _persistedReportsFlow.value = current
+            _persistedReportsFlow.value = current.toList()
             AppDiagnosticLogger.log(TAG, "Persisted scan report for ${report.appName ?: report.targetName}")
         }
     }
@@ -73,7 +79,7 @@ object ScanReportRepository {
     fun saveReports(context: Context, reports: List<ThreatReport>) {
         if (reports.isEmpty()) return
         synchronized(lock) {
-            val current = loadReportsFromDisk(context, pruneMissing = false).toMutableList()
+            val current = inMemoryReports ?: loadReportsFromDisk(context, pruneMissing = false).toMutableList().also { inMemoryReports = it }
             for (newReport in reports) {
                 current.removeAll {
                     (it.sha256.isNotBlank() && it.sha256.equals(newReport.sha256, ignoreCase = true)) ||
@@ -82,7 +88,7 @@ object ScanReportRepository {
                 current.add(0, newReport)
             }
             writeReportsToDisk(context, current)
-            _persistedReportsFlow.value = current
+            _persistedReportsFlow.value = current.toList()
             AppDiagnosticLogger.log(TAG, "Persisted batch of ${reports.size} scan reports")
         }
     }
@@ -90,12 +96,12 @@ object ScanReportRepository {
     fun removeReportByPackage(context: Context, packageName: String) {
         if (packageName.isBlank()) return
         synchronized(lock) {
-            val current = loadReportsFromDisk(context, pruneMissing = false).toMutableList()
+            val current = inMemoryReports ?: loadReportsFromDisk(context, pruneMissing = false).toMutableList().also { inMemoryReports = it }
             val initialSize = current.size
             current.removeAll { it.packageName.equals(packageName, ignoreCase = true) }
             if (current.size != initialSize) {
                 writeReportsToDisk(context, current)
-                _persistedReportsFlow.value = current
+                _persistedReportsFlow.value = current.toList()
                 AppDiagnosticLogger.log(TAG, "Pruned uninstalled package report: $packageName")
             }
         }
@@ -104,12 +110,12 @@ object ScanReportRepository {
     fun removeReportBySha256(context: Context, sha256: String) {
         if (sha256.isBlank()) return
         synchronized(lock) {
-            val current = loadReportsFromDisk(context, pruneMissing = false).toMutableList()
+            val current = inMemoryReports ?: loadReportsFromDisk(context, pruneMissing = false).toMutableList().also { inMemoryReports = it }
             val initialSize = current.size
             current.removeAll { it.sha256.equals(sha256, ignoreCase = true) }
             if (current.size != initialSize) {
                 writeReportsToDisk(context, current)
-                _persistedReportsFlow.value = current
+                _persistedReportsFlow.value = current.toList()
                 AppDiagnosticLogger.log(TAG, "Pruned report by sha256: $sha256")
             }
         }
@@ -117,6 +123,7 @@ object ScanReportRepository {
 
     fun clearAll(context: Context) {
         synchronized(lock) {
+            inMemoryReports?.clear()
             writeReportsToDisk(context, emptyList())
             _persistedReportsFlow.value = emptyList()
         }

@@ -86,6 +86,7 @@ class RegressionTestRunner:
         self.suite_38_differentiated_scans_icons_and_sound_profiles()
         self.suite_39_filescan_provenance_ui_feedback_and_scoring_sort()
         self.suite_40_stability_lifecycle_and_unified_assessment()
+        self.suite_41_anr_immunity_async_target_enumeration_and_batch_persistence()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -1760,10 +1761,86 @@ class RegressionTestRunner:
             'if (isDownloadIntercept) "DOWNLOAD" else "INSTALLED"' in cyber_code)
 
         # 7. Release Version 1.7.3 & Changelog
-        self.record("Version bumped to 1.7.3 (versionCode 28)",
-            'versionName = "1.7.3"' in gradle_code and 'versionCode = 28' in gradle_code)
+        self.record("Version bumped to 1.7.3+ (versionCode >= 28)",
+            int(re.search(r"versionCode\s*=\s*(\d+)", gradle_code).group(1)) >= 28)
         self.record("CHANGELOG.md documents release v1.7.3",
             "## [v1.7.3]" in changelog_code or "## [1.7.3]" in changelog_code)
+
+
+    # 41. Test Suite: v1.7.4 ANR Immunity, Async Target Enumeration, 60fps Progressive Scan & Persistence Optimization
+    def suite_41_anr_immunity_async_target_enumeration_and_batch_persistence(self):
+        print(f"\n{YELLOW}▶  SUITE 41: ANR Immunity, Async Target Enumeration & Batch Persistence Optimization{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        scanner_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        coord_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        repo_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "ScanReportRepository.kt")
+        prov_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "AppProvenanceVerifier.kt")
+        whitelist_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ThreatWhitelistManager.kt")
+        badge_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "AppIconBadge.kt")
+        screen_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+        gradle_path = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+        changelog_path = os.path.join(script_dir, "..", "CHANGELOG.md")
+
+        with open(scanner_path, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        with open(coord_path, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(repo_path, "r", encoding="utf-8") as f:
+            repo_code = f.read()
+        with open(prov_path, "r", encoding="utf-8") as f:
+            prov_code = f.read()
+        with open(whitelist_path, "r", encoding="utf-8") as f:
+            whitelist_code = f.read()
+        with open(badge_path, "r", encoding="utf-8") as f:
+            badge_code = f.read()
+        with open(screen_path, "r", encoding="utf-8") as f:
+            screen_code = f.read()
+        with open(gradle_path, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+        with open(changelog_path, "r", encoding="utf-8") as f:
+            changelog_code = f.read()
+
+        # 1. Async Target Enumeration Off Main Looper
+        self.record("FullSystemScanner startFullScan enumerates targets inside coroutine scope",
+            "scanJob = scannerScope.launch {" in scanner_code and
+            "val targets = collectAllTargets(context)" in scanner_code and
+            scanner_code.find("scanJob = scannerScope.launch") < scanner_code.find("val targets = collectAllTargets(context)"))
+        self.record("FullSystemScanner startSelectedAppsScan launches inside coroutine scope",
+            "scanJob = scannerScope.launch {" in scanner_code and
+            "for (pkg in packageNames)" in scanner_code and
+            scanner_code.find("scanJob = scannerScope.launch") < scanner_code.find("for (pkg in packageNames)"))
+        self.record("FullSystemScanner uses high-speed batch getInstalledPackages to prevent Binder IPC ANR",
+            "val installedPackages = pm.getInstalledPackages(0)" in scanner_code)
+        self.record("FullSystemScanner yields looper breathing room on cached and live items",
+            "delay(10)" in scanner_code and "delay(20)" in scanner_code)
+
+        # 2. Storage Persistence Gating & In-Memory Repo Caching
+        self.record("RealtimeScanCoordinator gates individual disk writes for safe items during full scan",
+            "if (!isFullScan || finalReport.severity != ThreatSeverity.SAFE)" in coord_code and
+            "io.threatlens.core.scanner.ScanReportRepository.saveReport(context, finalReport)" in coord_code)
+        self.record("ScanReportRepository caches reports in memory to eliminate redundant disk reads",
+            "inMemoryReports" in repo_code and "writeReportsToDisk" in repo_code)
+
+        # 3. In-Memory Performance Caching for Provenance, Whitelist & Icons
+        self.record("AppProvenanceVerifier implements thread-safe in-memory provenanceCache",
+            "provenanceCache" in prov_code and "provenanceCache[packageName]" in prov_code)
+        self.record("ThreatWhitelistManager implements synchronized in-memory cachedWhitelistedApps",
+            "cachedWhitelistedApps" in whitelist_code and "synchronized(whitelistLock)" in whitelist_code)
+        self.record("AppIconBadge implements in-memory LruCache to reuse APK drawables",
+            "iconCache = android.util.LruCache<String, Bitmap>" in badge_code and
+            "iconCache.get(cacheKey)" in badge_code)
+
+        # 4. Compose List Recomposition Optimization
+        self.record("FullScanScreen wraps displayList sorting in remember to prevent sorting churn",
+            "val displayList = remember(allReportsList, effectiveThreats, selectedFilter, selectedSortOption)" in screen_code)
+        self.record("FullScanScreen provides item keys to LazyColumn for zero-jank recycling",
+            "items(displayList, key = { it.id })" in screen_code)
+
+        # 5. Version 1.7.4 & Changelog Documentation
+        self.record("Version bumped to 1.7.4 (versionCode 29)",
+            'versionName = "1.7.4"' in gradle_code and 'versionCode = 29' in gradle_code)
+        self.record("CHANGELOG.md documents release v1.7.4",
+            "## [v1.7.4]" in changelog_code or "## [1.7.4]" in changelog_code)
 
 
 if __name__ == "__main__":

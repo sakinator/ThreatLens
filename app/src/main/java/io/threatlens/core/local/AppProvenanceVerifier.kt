@@ -70,6 +70,12 @@ object AppProvenanceVerifier {
         "com.duckduckgo.mobile.android"
     )
 
+    private val provenanceCache = java.util.concurrent.ConcurrentHashMap<String, ProvenanceResult>()
+
+    fun clearCache() {
+        provenanceCache.clear()
+    }
+
     fun inspectProvenance(context: Context, packageName: String?): ProvenanceResult {
         if (packageName.isNullOrBlank()) {
             return ProvenanceResult(
@@ -85,7 +91,9 @@ object AppProvenanceVerifier {
             )
         }
 
-        try {
+        provenanceCache[packageName]?.let { return it }
+
+        val res = try {
             val pm = context.packageManager
             val appInfo = try {
                 pm.getApplicationInfo(packageName, 0)
@@ -247,7 +255,7 @@ object AppProvenanceVerifier {
                 }
             }
         } catch (_: Exception) {
-            return ProvenanceResult(
+            ProvenanceResult(
                 source = ProvenanceSource.SIDELOAD_OR_UNKNOWN,
                 installerPackage = null,
                 isVerifiedStore = false,
@@ -259,6 +267,8 @@ object AppProvenanceVerifier {
                 details = "Provenance check unavailable"
             )
         }
+        provenanceCache[packageName] = res
+        return res
     }
 
     private fun getInstaller(context: Context, packageName: String): String? {

@@ -23,6 +23,9 @@ object ThreatWhitelistManager {
         val addedTimestamp: Long
     )
 
+    private var cachedWhitelistedApps: List<WhitelistedApp>? = null
+    private val whitelistLock = Any()
+
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -43,50 +46,66 @@ object ThreatWhitelistManager {
      * Adds an application to the user's trusted whitelist.
      */
     fun addApp(context: Context, packageName: String, appName: String, sha256: String) {
-        val current = getWhitelistedApps(context).toMutableList()
-        current.removeAll { it.packageName.equals(packageName.trim(), ignoreCase = true) }
-        current.add(
-            WhitelistedApp(
-                packageName = packageName.trim(),
-                appName = appName.ifBlank { packageName },
-                sha256 = sha256.trim(),
-                addedTimestamp = System.currentTimeMillis()
+        synchronized(whitelistLock) {
+            val current = getWhitelistedApps(context).toMutableList()
+            current.removeAll { it.packageName.equals(packageName.trim(), ignoreCase = true) }
+            current.add(
+                WhitelistedApp(
+                    packageName = packageName.trim(),
+                    appName = appName.ifBlank { packageName },
+                    sha256 = sha256.trim(),
+                    addedTimestamp = System.currentTimeMillis()
+                )
             )
-        )
-        saveWhitelistedApps(context, current)
+            saveWhitelistedApps(context, current)
+            cachedWhitelistedApps = current.toList()
+        }
     }
 
     /**
      * Removes an application from the user's trusted whitelist.
      */
     fun removeApp(context: Context, packageName: String) {
-        val current = getWhitelistedApps(context).toMutableList()
-        current.removeAll { it.packageName.equals(packageName.trim(), ignoreCase = true) }
-        saveWhitelistedApps(context, current)
+        synchronized(whitelistLock) {
+            val current = getWhitelistedApps(context).toMutableList()
+            current.removeAll { it.packageName.equals(packageName.trim(), ignoreCase = true) }
+            saveWhitelistedApps(context, current)
+            cachedWhitelistedApps = current.toList()
+        }
     }
 
     /**
      * Retrieves all whitelisted applications.
      */
     fun getWhitelistedApps(context: Context): List<WhitelistedApp> {
-        val jsonStr = getPrefs(context).getString(KEY_WHITELISTED_JSON, null) ?: return emptyList()
-        return try {
-            val array = JSONArray(jsonStr)
-            val list = mutableListOf<WhitelistedApp>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                list.add(
-                    WhitelistedApp(
-                        packageName = obj.optString("packageName"),
-                        appName = obj.optString("appName"),
-                        sha256 = obj.optString("sha256"),
-                        addedTimestamp = obj.optLong("addedTimestamp", System.currentTimeMillis())
-                    )
-                )
+        synchronized(whitelistLock) {
+            cachedWhitelistedApps?.let { return it }
+            val jsonStr = getPrefs(context).getString(KEY_WHITELISTED_JSON, null)
+            if (jsonStr == null) {
+                val empty = emptyList<WhitelistedApp>()
+                cachedWhitelistedApps = empty
+                return empty
             }
-            list
-        } catch (_: Exception) {
-            emptyList()
+            val list = try {
+                val array = JSONArray(jsonStr)
+                val result = mutableListOf<WhitelistedApp>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    result.add(
+                        WhitelistedApp(
+                            packageName = obj.optString("packageName"),
+                            appName = obj.optString("appName"),
+                            sha256 = obj.optString("sha256"),
+                            addedTimestamp = obj.optLong("addedTimestamp", System.currentTimeMillis())
+                        )
+                    )
+                }
+                result
+            } catch (_: Exception) {
+                emptyList()
+            }
+            cachedWhitelistedApps = list
+            return list
         }
     }
 
