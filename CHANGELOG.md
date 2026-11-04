@@ -4,6 +4,24 @@ All notable changes to ThreatLens are documented in this file.
 
 ---
 
+## [v1.7.1] - 2026-11-04
+### 🚨 Differentiated Scan Channels, Modern Cyber Siren, Caution Pulse & Custom Vector Icons
+* **Dedicated Notification Channels & Acoustic Profiles**:
+  - **Critical Threat Alerts (`threatlens_critical_malware`)**: Triggers a modern electronic **Cyber Tactical Siren** (`threat_alert_siren.wav`) with a high-urgency 3-burst emergency vibration pattern (`[0, 500, 200, 500, 200, 500]`) and Neon Crimson (`#FF1744`) alert light.
+  - **Suspicious Warnings (`threatlens_suspicious_alerts`)**: Triggers an **Amber Caution Pulse** (`threat_caution_pulse.wav`) two-tone prompt chime with dual-pulse vibration (`[0, 250, 150, 250]`) and Cyber Amber (`#FFB300`) light.
+  - **Safe Verifications (`threatlens_safe_results`)**: **100% Silent delivery** (`NotificationManager.IMPORTANCE_LOW`, `setSound(null, null)`, `enableVibration(false)`). Verified clean scans quietly register in the drawer without interrupting meetings, calls, or sleep.
+* **Distinct Severity Vector Drawables**:
+  - Safe Scans: `ic_notification_safe.xml` (Shield + verified checkmark `✓` in Neon Emerald).
+  - Suspicious Scans: `ic_notification_warning.xml` (Shield + exclamation point `!` in Cyber Amber).
+  - Malicious Scans: `ic_notification_danger.xml` (Shield + alert cross `✕` in Neon Crimson).
+* **Origin-Aware Protection (Download Shield vs. App Install Shield)**:
+  - Distinguishes file downloads (`📥 Download Shield`) from installed applications (`📦 App Install Shield`).
+  - Added direct one-touch **`[UNINSTALL APP]`** context action button for installed malware notifications.
+* **0ms Smart Deduplication**:
+  - `PackageInstallReceiver` queries the LRU memory cache before querying cloud engines; apps verified safe during download resolve instantly in 0ms without duplicate network requests.
+* **5-Pillar Security & Privacy Matrix & Human-Friendly Capability Chips**:
+  - Evaluates apps across Banking & Financial Security, 2FA & Message Privacy, Location & Sensory Privacy, Device Storage & Files, and Network Transmission.
+
 ## [v1.6.0] - 2026-11-03
 ### 🚀 7 Core Security Capabilities, Webpage Block Landing Page, Interactive Blocked Counter & Full App Whitelist
 * **P1: Accessibility & 2FA Notification Hijack Auditor (`AccessibilityHijackAuditor`)**:

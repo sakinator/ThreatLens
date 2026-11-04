@@ -11,8 +11,8 @@ android {
         applicationId = "io.threatlens"
         minSdk = 26
         targetSdk = 34
-        versionCode = 25
-        versionName = "1.7.0"
+        versionCode = 26
+        versionName = "1.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

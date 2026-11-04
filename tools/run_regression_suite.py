@@ -956,7 +956,7 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code))
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code))
 
     def suite_28_realtime_safe_notifications_and_intent_routing(self):
         print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
@@ -1007,7 +1007,7 @@ class RegressionTestRunner:
             "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
 
         # 4. Release version
-        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
+        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
 
     def suite_29_v157_consensus_brand_logos_and_storage_exhaustion(self):
         print(f"\n{YELLOW}▶  SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation{RESET}")
@@ -1120,7 +1120,7 @@ class RegressionTestRunner:
             "fun OfficialVendorLogo" in logos_code and "ContentScale.Fit" in logos_code)
 
         # 7. Release Version
-        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
+        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
 
 
 
@@ -1174,7 +1174,7 @@ class RegressionTestRunner:
 
         # 8. Version bumped to 1.5.8 (versionCode 23)
         self.record("Version bumped to 1.5.8+ (versionCode >= 23)",
-            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
+            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
 
 
 
@@ -1373,8 +1373,8 @@ class RegressionTestRunner:
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
         self.record("Version bumped to 1.6.0+ (versionCode >= 24)",
-            ('versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code) and
-            ('versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code))
+            ('versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and
+            ('versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
 
     # 36. Test Suite: Persistence, Battery Optimization, 7-Day Scheduled Audit & Manual Multi-Scan
     def suite_36_persistence_battery_mitm_and_manual_multiscan(self):
@@ -1458,8 +1458,8 @@ class RegressionTestRunner:
 
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
-        self.record("Version bumped to 1.7.0 (versionCode 25)",
-            'versionName = "1.7.0"' in gradle_code and 'versionCode = 25' in gradle_code)
+        self.record("Version bumped to 1.7.0+ (versionCode >= 25)",
+            ('versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
 
     # 37. Test Card & Detailed Report Knowledge Matrix, Educational Privacy & Dual-Stage Indicators
     def suite_37_card_and_detailed_report_knowledge_matrix(self):
@@ -1562,6 +1562,12 @@ class RegressionTestRunner:
             "scanFileAsync(context, apkFile, isPackageInstall = true)" in rec_code)
         self.record("RealtimeScanCoordinator fast-resolves cached download report for package install",
             "if (isPackageInstall)" in coord_code and "ScanThrottleManager.cacheReport(updated)" in coord_code)
+
+        # 7. Release Version 1.7.1
+        with open(os.path.join(script_dir, "..", "app", "build.gradle.kts"), "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+        self.record("Version bumped to 1.7.1 (versionCode 26)",
+            'versionName = "1.7.1"' in gradle_code and 'versionCode = 26' in gradle_code)
 
 
 if __name__ == "__main__":
