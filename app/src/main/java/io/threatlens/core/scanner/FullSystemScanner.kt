@@ -194,6 +194,13 @@ object FullSystemScanner {
                 } catch (_: Exception) {}
 
                 scanned++
+                _scanState.value = _scanState.value.copy(
+                    progress = if (total > 0) scanned.toFloat() / total.toFloat() else 0f,
+                    scannedCount = scanned,
+                    cleanCount = clean,
+                    threatsFound = threats.toList(),
+                    allScannedReports = allReports.toList()
+                )
                 // Brief cooperative yield to keep UI responsive
                 delay(15)
             }

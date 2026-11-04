@@ -61,21 +61,48 @@ object ManifestHeuristicEngine {
 
         try {
             val pm = context.packageManager
-            val packageInfo: PackageInfo? = pm.getPackageArchiveInfo(
+            var packageInfo: PackageInfo? = pm.getPackageArchiveInfo(
                 apkFile.absolutePath,
                 PackageManager.GET_PERMISSIONS or PackageManager.GET_ACTIVITIES or PackageManager.GET_RECEIVERS or PackageManager.GET_SERVICES
             )
 
             if (packageInfo == null) {
-                behaviors.add("Malformed or heavily obfuscated APK header")
-                return HeuristicResult(40, behaviors, emptyList(), false, false, false, permissionScore = 15, behavioralScore = 25)
+                // Fallback attempt with minimal flags (resolves Android 11+ parsing restrictions on downloaded APKs)
+                packageInfo = try {
+                    pm.getPackageArchiveInfo(apkFile.absolutePath, 0)
+                } catch (_: Exception) { null }
+            }
+
+            if (packageInfo == null) {
+                // Verify whether the file is a structurally valid Android APK ZIP archive
+                val isValidZipApk = try {
+                    java.util.zip.ZipFile(apkFile).use { zip ->
+                        zip.getEntry("AndroidManifest.xml") != null && zip.getEntry("classes.dex") != null
+                    }
+                } catch (_: Exception) { false }
+
+                if (isValidZipApk) {
+                    // Valid Android APK binary; do not falsely penalize valid binaries whose complex components were unparsed
+                    return HeuristicResult(0, emptyList(), emptyList(), false, false, false, permissionScore = 0, behavioralScore = 0)
+                } else {
+                    behaviors.add("Malformed or heavily obfuscated APK header")
+                    return HeuristicResult(40, behaviors, emptyList(), false, false, false, permissionScore = 15, behavioralScore = 25)
+                }
             }
 
             val pkg = packageInfo.packageName?.lowercase() ?: ""
+
+            // Whitelist ThreatLens itself (Official GitHub / Release builds)
+            if (pkg == context.packageName.lowercase() || pkg == "io.threatlens") {
+                return HeuristicResult(0, emptyList(), emptyList(), false, false, false, permissionScore = 0, behavioralScore = 0)
+            }
+
             val provenance = AppProvenanceVerifier.inspectProvenance(context, pkg)
             val isVerifiedStore = provenance.isVerifiedStore || provenance.isSystemApp
 
             isKnownTrustedVendor = isVerifiedStore ||
+                    pkg == context.packageName.lowercase() ||
+                    pkg == "io.threatlens" ||
                     pkg.startsWith("com.google.") ||
                     pkg.startsWith("com.android.") ||
                     pkg.startsWith("com.microsoft.") ||

@@ -48,6 +48,11 @@ object FilescanProvider {
                     val raw = response.body?.string() ?: return null
                     val root = JSONObject(raw)
 
+                    val respHash = root.optString("sha256", "")
+                    if (respHash.isNotBlank() && !respHash.equals(cleanHash, ignoreCase = true)) {
+                        return FilescanResult("BENIGN", 0, emptyList(), isUnindexed = true)
+                    }
+
                     val overallVerdict = root.optString("overall_verdict", "unknown").uppercase()
                     val mdcloud = root.optJSONObject("mdcloud")
                     val detectedAv = mdcloud?.optInt("detected_av_engines", 0) ?: 0
@@ -110,7 +115,7 @@ object FilescanProvider {
 
             // 2. Fallback to reports/search if reputation endpoint had unexpected response
             val searchRequest = Request.Builder()
-                .url("https://www.filescan.io/api/reports/search?sha256=$cleanHash")
+                .url("https://www.filescan.io/api/reports/search?query=$cleanHash")
                 .addHeader("X-Api-Key", cleanKey)
                 .addHeader("Authorization", "Bearer $cleanKey")
                 .addHeader("User-Agent", "ThreatLens-Security/1.5.5")
@@ -125,9 +130,29 @@ object FilescanProvider {
                 val items = root.optJSONArray("items") ?: root.optJSONArray("reports") ?: return FilescanResult("BENIGN", 0, emptyList(), isUnindexed = true)
                 if (items.length() == 0) return FilescanResult("BENIGN", 0, emptyList(), isUnindexed = true)
 
-                val latest = items.getJSONObject(0)
-                val verdict = latest.optString("verdict", "UNKNOWN").uppercase()
-                val reportId = latest.optString("report_id", "").ifBlank { latest.optString("id", "").ifBlank { null } }
+                // CRITICAL SECURITY FIX: Find the specific report matching the target cleanHash.
+                // Filescan's search endpoint without matching returns global public detonations!
+                var matchedReport: JSONObject? = null
+                for (i in 0 until items.length()) {
+                    val candidate = items.optJSONObject(i) ?: continue
+                    val fileObj = candidate.optJSONObject("file")
+                    val candidateHash = fileObj?.optString("sha256")
+                        ?: fileObj?.optString("hash")
+                        ?: candidate.optString("sha256")
+                        ?: candidate.optString("hash")
+                    if (candidateHash.isNotBlank() && candidateHash.equals(cleanHash, ignoreCase = true)) {
+                        matchedReport = candidate
+                        break
+                    }
+                }
+
+                if (matchedReport == null) {
+                    // No report found for this specific hash
+                    return FilescanResult("BENIGN", 0, emptyList(), isUnindexed = true)
+                }
+
+                val verdict = matchedReport.optString("verdict", "UNKNOWN").uppercase()
+                val reportId = matchedReport.optString("report_id", "").ifBlank { matchedReport.optString("id", "").ifBlank { null } }
                 val isUnindexed = verdict == "UNKNOWN" || verdict.isBlank()
                 val finalVerdict = if (isUnindexed) "UNINDEXED" else verdict
                 val threatScore = when (finalVerdict) {
@@ -136,14 +161,14 @@ object FilescanProvider {
                     else -> 0
                 }
                 val tagList = mutableListOf<String>()
-                val tagsArray = latest.optJSONArray("tags")
+                val tagsArray = matchedReport.optJSONArray("tags")
                 if (tagsArray != null) {
                     for (i in 0 until tagsArray.length()) {
                         val item = tagsArray.opt(i)
                         if (item is JSONObject) {
                             val tagName = item.optJSONObject("tag")?.optString("name") ?: item.optString("name")
-                            if (!tagName.isNullOrBlank()) tagList.add(tagName)
-                        } else if (item is String) {
+                            if (!tagName.isNullOrBlank() && tagName !in tagList) tagList.add(tagName)
+                        } else if (item is String && item.isNotBlank() && item !in tagList) {
                             tagList.add(item)
                         }
                     }

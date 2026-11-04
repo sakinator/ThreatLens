@@ -909,6 +909,7 @@ fun getOfficialVendorDrawable(name: String): Int? {
         .replace(" ", "")
 
     return when {
+        clean.contains("threatlens") || clean.contains("gemini") -> R.drawable.ic_threatlens_emblem
         clean.contains("virustotal") || clean == "vt" -> R.drawable.ic_vendor_virustotal
         clean.contains("metadefender") || clean.contains("metascan") || clean.contains("opswat") -> R.drawable.ic_vendor_metadefender
         clean.contains("hybridanalysis") || clean.contains("hybrid") -> R.drawable.ic_vendor_hybridanalysis

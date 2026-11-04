@@ -1025,8 +1025,7 @@ object RealtimeScanCoordinator {
             (localVerdict.yaraResult != null && localVerdict.yaraResult.isMatched)
 
         val hasMultiCloudConfirmedMalware = flaggingCloudProviders.size >= 2 ||
-            (flaggedEnginesCount >= 6) ||
-            (flaggingCloudProviders.size == 1 && runningCloudScore >= 85)
+            (flaggedEnginesCount >= 6)
 
         val hasConfirmedMalware = hasLocalConfirmedMalware || hasMultiCloudConfirmedMalware || (flaggedEnginesCount >= 8)
 
@@ -1068,8 +1067,8 @@ object RealtimeScanCoordinator {
         }
 
         val effectiveDetectionType = when {
-            hasConfirmedMalware -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
-            flaggedEnginesCount > 0 -> io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
+            hasLocalConfirmedMalware -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE
+            hasMultiCloudConfirmedMalware || flaggedEnginesCount > 0 -> io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE
             localVerdict.detectionType == io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN ->
                 io.threatlens.core.model.DetectionType.HEURISTIC_PATTERN
             else -> io.threatlens.core.model.DetectionType.CLEAN

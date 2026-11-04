@@ -4,6 +4,30 @@ All notable changes to ThreatLens are documented in this file.
 
 ---
 
+## [v1.7.2] - 2026-11-04
+### 🛡️ Filescan Integrity Guard, Official Provenance Self-Whitelist, Live Progressive Results & Score-First Sorting
+* **Filescan.io Hash Equality & Public Detonation Isolation**:
+  - Fixed a critical attribution bug in `FilescanProvider`: Filescan's `/api/reports/search` endpoint ignored `?sha256=` and returned the latest 10 public detonations platform-wide (which frequently included unrelated Windows PE executables like `peexe` and `microsoft_visual_cc`).
+  - Added strict hash equality verification (`candidateHash.equals(cleanHash, ignoreCase = true)`) across all reports; files unindexed on Filescan now accurately return `UNINDEXED` (Safe) instead of adopting unrelated global platform detonations.
+* **Separation of Cloud Consensus from Cryptographic Signature Matches**:
+  - `RealtimeScanCoordinator` now strictly reserves `DetectionType.CONFIRMED_SIGNATURE` for verified local database hash matches, ClamAV CVD rules, or YARA rules.
+  - Multi-cloud consensus detections are classified as `DetectionType.CLOUD_INTELLIGENCE`, preventing cloud-scored files from showing a false `(SIGNATURE MATCH)` banner.
+* **ThreatLens Self-Verification & Provenance Whitelist**:
+  - Added official application provenance recognition for `io.threatlens`: authentic ThreatLens releases (including GitHub APK downloads) are recognized with `OFFICIAL THREATLENS RELEASE` provenance and 0 heuristic threat points.
+  - Hardened `ManifestHeuristicEngine` to attempt lightweight parsing (`flags = 0`) and verify ZIP structural integrity (`classes.dex` and `AndroidManifest.xml`) before assigning malformed header penalties.
+* **ThreatLens AI Logo & Spacing Optimization**:
+  - Updated "ThreatLens AI Threat Analysis" card to display ThreatLens's official cyan cyber shield emblem (`ic_threatlens_emblem`) instead of Google Play Protect's green vendor shield.
+  - Fixed excessive blank vertical space above the "Multi-Engine Threat Intelligence" heading and filtered out empty AI markdown sections.
+* **UI Feedback, Live Progressive Results & Score-First Sorting**:
+  - **Instant Toast Feedback**: Added informative Android toasts on scan launch:
+    - *Scan Apps*: `Scanning X selected application(s)...`
+    - *Scan Folder*: `Scanning folder: <folder_name>...`
+    - *Scan Specific File/APK*: `Scanning file: <file_name>...`
+    - *Start Full Device Scan*: `Starting full system scan...`
+  - **Button Running Indicators**: Added spinning `CircularProgressIndicator` inside active buttons and dedicated live scanning status banners (`SCAN RUNNING • X/Y COMPLETED`).
+  - **Live Progressive Results**: `FullScanScreen` now renders scanned items in real-time as each app or folder file completes, rather than suppressing the list until the full scan finishes.
+  - **Threat Score Sorting**: Defaulted sort order to `ScanSortOption.SCORE_DESC` so high-threat items (100/100 -> 90/100 -> 60/100) immediately appear at the top.
+
 ## [v1.7.1] - 2026-11-04
 ### 🚨 Differentiated Scan Channels, Modern Cyber Siren, Caution Pulse & Custom Vector Icons
 * **Dedicated Notification Channels & Acoustic Profiles**:

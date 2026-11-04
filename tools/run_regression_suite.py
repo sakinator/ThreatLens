@@ -84,6 +84,7 @@ class RegressionTestRunner:
         self.suite_36_persistence_battery_mitm_and_manual_multiscan()
         self.suite_37_card_and_detailed_report_knowledge_matrix()
         self.suite_38_differentiated_scans_icons_and_sound_profiles()
+        self.suite_39_filescan_provenance_ui_feedback_and_scoring_sort()
 
         print(f"\n{CYAN}----------------------------------------------------------------------{RESET}")
         summary_color = GREEN if self.failed == 0 else RED
@@ -956,7 +957,7 @@ class RegressionTestRunner:
         self.record("VendorFindingBadge colors clean checks green and malicious crimson", "isItemClean" in logos_code and "NeonEmerald" in logos_code and "NeonCrimson" in logos_code)
         self.record("ThreatItemRow renders scanned-by row with brand logos", "Scanned by:" in cyber_code and "EngineLogoIcon" in cyber_code)
         self.record("ThreatDetailSheet renders active engine badge row", "Active Engines (" in sheet_code and "EngineLogoIcon" in sheet_code)
-        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code))
+        self.record("Version bumped to 1.5.5+ (versionCode >= 20)", ('versionName = "1.5.5"' in gradle_code or 'versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code))
 
     def suite_28_realtime_safe_notifications_and_intent_routing(self):
         print(f"\n{YELLOW}▶  SUITE 28: v1.5.6 Real-Time Safe Scan Notifications & Direct Result Sheet Routing{RESET}")
@@ -1007,7 +1008,7 @@ class RegressionTestRunner:
             "selectedReport?.let" in dashboard_code and "ThreatDetailSheet(" in dashboard_code)
 
         # 4. Release version
-        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
+        self.record("Version bumped to 1.5.6+ (versionCode >= 21)", ('versionName = "1.5.6"' in gradle_code or 'versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 21' in gradle_code or 'versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
 
     def suite_29_v157_consensus_brand_logos_and_storage_exhaustion(self):
         print(f"\n{YELLOW}▶  SUITE 29: v1.5.7 Consensus Brand Logos, Storage Exhaustion Heuristics & Multi-Cloud Reconciliation{RESET}")
@@ -1120,7 +1121,7 @@ class RegressionTestRunner:
             "fun OfficialVendorLogo" in logos_code and "ContentScale.Fit" in logos_code)
 
         # 7. Release Version
-        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
+        self.record("Version bumped to 1.5.7+ (versionCode >= 22)", ('versionName = "1.5.7"' in gradle_code or 'versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 22' in gradle_code or 'versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
 
 
 
@@ -1174,7 +1175,7 @@ class RegressionTestRunner:
 
         # 8. Version bumped to 1.5.8 (versionCode 23)
         self.record("Version bumped to 1.5.8+ (versionCode >= 23)",
-            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
+            ('versionName = "1.5.8"' in gradle_code or 'versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 23' in gradle_code or 'versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
 
 
 
@@ -1373,8 +1374,8 @@ class RegressionTestRunner:
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
         self.record("Version bumped to 1.6.0+ (versionCode >= 24)",
-            ('versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and
-            ('versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
+            ('versionName = "1.6.0"' in gradle_code or 'versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and
+            ('versionCode = 24' in gradle_code or 'versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
 
     # 36. Test Suite: Persistence, Battery Optimization, 7-Day Scheduled Audit & Manual Multi-Scan
     def suite_36_persistence_battery_mitm_and_manual_multiscan(self):
@@ -1459,7 +1460,7 @@ class RegressionTestRunner:
         with open(gradle_path, "r", encoding="utf-8") as f:
             gradle_code = f.read()
         self.record("Version bumped to 1.7.0+ (versionCode >= 25)",
-            ('versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code) and ('versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code))
+            ('versionName = "1.7.0"' in gradle_code or 'versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 25' in gradle_code or 'versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code))
 
     # 37. Test Card & Detailed Report Knowledge Matrix, Educational Privacy & Dual-Stage Indicators
     def suite_37_card_and_detailed_report_knowledge_matrix(self):
@@ -1566,8 +1567,8 @@ class RegressionTestRunner:
         # 7. Release Version 1.7.1
         with open(os.path.join(script_dir, "..", "app", "build.gradle.kts"), "r", encoding="utf-8") as f:
             gradle_code = f.read()
-        self.record("Version bumped to 1.7.1 (versionCode 26)",
-            'versionName = "1.7.1"' in gradle_code and 'versionCode = 26' in gradle_code)
+        self.record("Version bumped to 1.7.1+ (versionCode >= 26)",
+            ('versionName = "1.7.1"' in gradle_code or 'versionName = "1.7.2"' in gradle_code or 'versionName = "1.7.2"' in gradle_code) and ('versionCode = 26' in gradle_code or 'versionCode = 27' in gradle_code or 'versionCode = 27' in gradle_code))
 
         # 8. Mandatory CHANGELOG & Markdown Synchronization Guard
         changelog_path = os.path.join(script_dir, "..", "CHANGELOG.md")
@@ -1579,6 +1580,98 @@ class RegressionTestRunner:
         gemini_rules_path = os.path.join(script_dir, "..", "GEMINI.md")
         self.record("GEMINI.md exists and enforces Ship-Ready protocol",
             os.path.exists(gemini_rules_path))
+
+
+
+    def suite_39_filescan_provenance_ui_feedback_and_scoring_sort(self):
+        print(f"\n{YELLOW}▶  SUITE 39: Filescan Integrity, Provenance Self-Whitelist, UI Feedback & Score Sorting{RESET}")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        filescan_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "cloud", "FilescanProvider.kt")
+        coord_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "realtime", "RealtimeScanCoordinator.kt")
+        heur_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "ManifestHeuristicEngine.kt")
+        prov_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "local", "AppProvenanceVerifier.kt")
+        sheet_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "ThreatDetailSheet.kt")
+        logos_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "components", "EngineLogos.kt")
+        scan_screen_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "ui", "screens", "FullScanScreen.kt")
+        scanner_path = os.path.join(script_dir, "..", "app", "src", "main", "java", "io", "threatlens", "core", "scanner", "FullSystemScanner.kt")
+        gradle_path = os.path.join(script_dir, "..", "app", "build.gradle.kts")
+        changelog_path = os.path.join(script_dir, "..", "CHANGELOG.md")
+
+        with open(filescan_path, "r", encoding="utf-8") as f:
+            fs_code = f.read()
+        with open(coord_path, "r", encoding="utf-8") as f:
+            coord_code = f.read()
+        with open(heur_path, "r", encoding="utf-8") as f:
+            heur_code = f.read()
+        with open(prov_path, "r", encoding="utf-8") as f:
+            prov_code = f.read()
+        with open(sheet_path, "r", encoding="utf-8") as f:
+            sheet_code = f.read()
+        with open(logos_path, "r", encoding="utf-8") as f:
+            logos_code = f.read()
+        with open(scan_screen_path, "r", encoding="utf-8") as f:
+            screen_code = f.read()
+        with open(scanner_path, "r", encoding="utf-8") as f:
+            scanner_code = f.read()
+        with open(gradle_path, "r", encoding="utf-8") as f:
+            gradle_code = f.read()
+        with open(changelog_path, "r", encoding="utf-8") as f:
+            changelog_code = f.read()
+
+        # 1. Filescan Hash Matching & Search Parameter
+        self.record("FilescanProvider enforces strict candidateHash equality on reports",
+            "candidateHash.equals(cleanHash, ignoreCase = true)" in fs_code)
+        self.record("FilescanProvider uses ?query= parameter on search endpoint",
+            "api/reports/search?query=$cleanHash" in fs_code)
+        self.record("FilescanProvider returns UNINDEXED benign when target hash is not matched",
+            "isUnindexed = true" in fs_code and "matchedReport == null" in fs_code)
+
+        # 2. Separation of Confirmed Signature from Cloud Consensus
+        self.record("RealtimeScanCoordinator maps local signature match to CONFIRMED_SIGNATURE",
+            "hasLocalConfirmedMalware -> io.threatlens.core.model.DetectionType.CONFIRMED_SIGNATURE" in coord_code)
+        self.record("RealtimeScanCoordinator maps cloud consensus detections to CLOUD_INTELLIGENCE",
+            "hasMultiCloudConfirmedMalware || flaggedEnginesCount > 0 -> io.threatlens.core.model.DetectionType.CLOUD_INTELLIGENCE" in coord_code)
+        self.record("RealtimeScanCoordinator requires >= 2 providers or >= 6 engines for multi-cloud confirmed malware",
+            "flaggingCloudProviders.size >= 2 ||" in coord_code and "(flaggedEnginesCount >= 6)" in coord_code)
+
+        # 3. ThreatLens Self-Verification & Provenance Whitelist
+        self.record("ManifestHeuristicEngine fallbacks to flags=0 on unparsed downloaded APKs",
+            "pm.getPackageArchiveInfo(apkFile.absolutePath, 0)" in heur_code)
+        self.record("ManifestHeuristicEngine verifies valid ZIP APK structure before flagging header",
+            'zip.getEntry("AndroidManifest.xml") != null && zip.getEntry("classes.dex") != null' in heur_code)
+        self.record("ManifestHeuristicEngine whitelists ThreatLens package to 0 score",
+            'pkg == context.packageName.lowercase() || pkg == "io.threatlens"' in heur_code)
+        self.record("AppProvenanceVerifier recognizes OFFICIAL THREATLENS RELEASE",
+            "OFFICIAL THREATLENS RELEASE" in prov_code and "io.threatlens.release" in prov_code)
+
+        # 4. ThreatLens AI Logo & Spacing Optimization
+        self.record("ThreatDetailSheet renders ic_threatlens_emblem for ThreatLens AI",
+            "ic_threatlens_emblem" in sheet_code and "ThreatLens AI Threat Analysis" in sheet_code)
+        self.record("ThreatDetailSheet gives Multi-Engine heading Column Modifier.weight(1f)",
+            "Column(modifier = Modifier.weight(1f))" in sheet_code and "Multi-Engine Threat Intelligence" in sheet_code)
+        self.record("EngineLogos maps threatlens and gemini brand queries to ic_threatlens_emblem",
+            'clean.contains("threatlens") || clean.contains("gemini") -> R.drawable.ic_threatlens_emblem' in logos_code)
+
+        # 5. UI Feedback & Scanner Controls
+        self.record("FullScanScreen shows Toast notification for Scan Apps, Scan Folder, and Specific File",
+            ("Scanning selected application(s)..." in screen_code or "selected application(s)..." in screen_code) and
+            "Scanning folder:" in screen_code and "Scanning file:" in screen_code)
+        self.record("FullScanScreen renders running spinner in SCAN SPECIFIC FILE button",
+            "isScanningFile" in screen_code and "SCANNING FILE..." in screen_code)
+        self.record("FullScanScreen renders active SCAN RUNNING status indicator with progress",
+            "SCAN RUNNING •" in screen_code and "CircularProgressIndicator" in screen_code)
+        self.record("FullScanScreen renders live progressive scan results during active scan",
+            "allReportsList.isNotEmpty()" in screen_code and "scanState.allScannedReports" in screen_code)
+        self.record("FullScanScreen defaults sort order to Threat Score (Highest First)",
+            "mutableStateOf(ScanSortOption.SCORE_DESC)" in screen_code)
+        self.record("FullSystemScanner emits progressive state updates on each completed item",
+            "cleanCount = clean" in scanner_code and "allScannedReports = allReports.toList()" in scanner_code)
+
+        # 6. Release Version 1.7.2 & Mandatory Changelog Sync
+        self.record("Version bumped to 1.7.2 (versionCode 27)",
+            'versionName = "1.7.2"' in gradle_code and 'versionCode = 27' in gradle_code)
+        self.record("CHANGELOG.md documents release v1.7.2",
+            "## [v1.7.2]" in changelog_code or "## [1.7.2]" in changelog_code)
 
 
 if __name__ == "__main__":

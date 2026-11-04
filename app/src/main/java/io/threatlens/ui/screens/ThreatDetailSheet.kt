@@ -461,7 +461,11 @@ fun ThreatDetailSheet(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            EngineLogoIcon("Google Gemini", modifier = Modifier.size(24.dp))
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_threatlens_emblem),
+                                contentDescription = "ThreatLens AI Logo",
+                                modifier = Modifier.size(24.dp)
+                            )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = if (report.isFinal) "ThreatLens AI Threat Analysis" else "ThreatLens AI Initial Assessment (Live Scanning...)",
@@ -511,13 +515,13 @@ fun ThreatDetailSheet(
             }
 
             // Unified Multi-Engine Source-by-Source Intelligence Breakdown
-            GlassCard {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Multi-Engine Threat Intelligence",
                             color = TextPrimary,
@@ -530,6 +534,7 @@ fun ThreatDetailSheet(
                             fontSize = 11.sp
                         )
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Surface(
                         color = CyberDarkSurface,
                         shape = RoundedCornerShape(6.dp),
@@ -546,7 +551,7 @@ fun ThreatDetailSheet(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 val allEngines = report.engineVerdictMap.toList()
                 val (activeEngines, inactiveEngines) = allEngines.partition { (_, verdict) ->
@@ -1896,18 +1901,18 @@ private fun parseAiMarkdownSections(rawMarkdown: String): List<AiSectionBlock> {
     var currentLines = mutableListOf<String>()
 
     fun flushCurrentSection() {
-        if (currentHeading.isNotEmpty() || currentLines.any { it.isNotBlank() }) {
+        if (currentHeading.isNotEmpty() && (currentLines.any { it.isNotBlank() } || currentHeading.contains("notice", ignoreCase = true))) {
             val (title, badge, color) = getSectionHeaderStyle(currentHeading)
             sections.add(
                 AiSectionBlock(
                     title = title,
                     badgeLabel = badge,
                     accentColor = color,
-                    rawLines = currentLines.toList()
+                    rawLines = currentLines.filter { it.isNotBlank() }
                 )
             )
-            currentLines = mutableListOf()
         }
+        currentLines = mutableListOf()
     }
 
     for (line in lines) {
